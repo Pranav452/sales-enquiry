@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \":*)",
+      "Bash(pip install openpyxl --quiet)",
+      "Bash(npm install @supabase/supabase-js @supabase/ssr framer-motion lucide-react recharts clsx tailwind-merge class-variance-authority)",
+      "Bash(npm install @radix-ui/react-slot @radix-ui/react-select @radix-ui/react-tabs @radix-ui/react-label)",
+      "Bash(npm run build)"
+    ]
+  }
+}
