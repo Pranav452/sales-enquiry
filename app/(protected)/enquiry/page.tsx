@@ -3,14 +3,24 @@
 import { useState, useCallback } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { EnquiryForm } from "@/components/enquiry/EnquiryForm"
-import { EnquiryList } from "@/components/enquiry/EnquiryList"
+import { EnquiryList, type Enquiry } from "@/components/enquiry/EnquiryList"
 import { DashboardView } from "@/components/dashboard/DashboardView"
 import { ClipboardList, LayoutDashboard } from "lucide-react"
 
 export default function EnquiryPage() {
   const [refreshKey, setRefreshKey] = useState(0)
+  const [editingEnquiry, setEditingEnquiry] = useState<Enquiry | null>(null)
 
   const handleSuccess = useCallback(() => {
+    setRefreshKey((k) => k + 1)
+  }, [])
+
+  const handleSelectEnquiry = useCallback((row: Enquiry) => {
+    setEditingEnquiry(row)
+  }, [])
+
+  const handleEditComplete = useCallback(() => {
+    setEditingEnquiry(null)
     setRefreshKey((k) => k + 1)
   }, [])
 
@@ -38,7 +48,11 @@ export default function EnquiryPage() {
         <TabsContent value="input">
           {/* Form card */}
           <div className="bg-white border border-border rounded-xl p-6 mb-6 shadow-sm">
-            <EnquiryForm onSuccess={handleSuccess} />
+            <EnquiryForm
+              onSuccess={handleSuccess}
+              editingEnquiry={editingEnquiry}
+              onEditComplete={handleEditComplete}
+            />
           </div>
 
           {/* Recent enquiries table */}
@@ -46,7 +60,11 @@ export default function EnquiryPage() {
             <div className="px-6 py-4 border-b border-border">
               <h3 className="text-sm font-semibold text-foreground">Recent Enquiries</h3>
             </div>
-            <EnquiryList key={refreshKey} />
+            <EnquiryList
+              key={refreshKey}
+              onSelectEnquiry={handleSelectEnquiry}
+              editingId={editingEnquiry?.id ?? null}
+            />
           </div>
         </TabsContent>
 

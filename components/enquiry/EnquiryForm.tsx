@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -49,38 +49,99 @@ interface FormData {
   remarks: string
 }
 
-const defaultForm: FormData = {
-  enq_receipt_date: new Date().toISOString().split("T")[0],
-  mode: "",
-  enq_type: "",
-  exim: "",
-  fn: "",
-  sales_person: "",
-  agent_name: "",
-  country: "",
-  branch: "",
-  network: "",
-  pol: "",
-  pod: "",
-  incoterms: "",
-  container_type: "",
-  status: "",
-  email_subject_line: "",
-  shipper: "",
-  consignee: "",
-  remarks: "",
+function getDefaultForm(): FormData {
+  return {
+    enq_receipt_date: new Date().toISOString().split("T")[0],
+    mode: "",
+    enq_type: "",
+    exim: "",
+    fn: "",
+    sales_person: "",
+    agent_name: "",
+    country: "",
+    branch: "",
+    network: "",
+    pol: "",
+    pod: "",
+    incoterms: "",
+    container_type: "",
+    status: "",
+    email_subject_line: "",
+    shipper: "",
+    consignee: "",
+    remarks: "",
+  }
+}
+
+export interface EnquiryFormEditing {
+  id: string
+  enq_ref_no: string | null
+  enq_receipt_date: string | null
+  enq_type: string | null
+  mode: string | null
+  exim: string | null
+  fn: string | null
+  sales_person: string | null
+  agent_name: string | null
+  country: string | null
+  branch: string | null
+  network: string | null
+  pol: string | null
+  pod: string | null
+  incoterms: string | null
+  container_type: string | null
+  status: string | null
+  email_subject_line: string | null
+  shipper: string | null
+  consignee: string | null
+  remarks: string | null
 }
 
 interface Props {
   onSuccess?: () => void
+  editingEnquiry?: EnquiryFormEditing | null
+  onEditComplete?: () => void
 }
 
-export function EnquiryForm({ onSuccess }: Props) {
+export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props) {
   const supabase = createClient()
-  const [form, setForm] = useState<FormData>(defaultForm)
+  const [form, setForm] = useState<FormData>(getDefaultForm())
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (editingEnquiry) {
+      setEditingId(editingEnquiry.id)
+      setForm({
+        enq_receipt_date:
+          editingEnquiry.enq_receipt_date?.split("T")[0] ??
+          new Date().toISOString().split("T")[0],
+        mode: editingEnquiry.mode ?? "",
+        enq_type: editingEnquiry.enq_type ?? "",
+        exim: editingEnquiry.exim ?? "",
+        fn: editingEnquiry.fn ?? "",
+        sales_person: editingEnquiry.sales_person ?? "",
+        agent_name: editingEnquiry.agent_name ?? "",
+        country: editingEnquiry.country ?? "",
+        branch: editingEnquiry.branch ?? "",
+        network: editingEnquiry.network ?? "",
+        pol: editingEnquiry.pol ?? "",
+        pod: editingEnquiry.pod ?? "",
+        incoterms: editingEnquiry.incoterms ?? "",
+        container_type: editingEnquiry.container_type ?? "",
+        status: editingEnquiry.status ?? "",
+        email_subject_line: editingEnquiry.email_subject_line ?? "",
+        shipper: editingEnquiry.shipper ?? "",
+        consignee: editingEnquiry.consignee ?? "",
+        remarks: editingEnquiry.remarks ?? "",
+      })
+    } else {
+      setEditingId(null)
+      setForm(getDefaultForm())
+    }
+  }, [editingEnquiry])
 
   function setField(field: keyof FormData, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -116,42 +177,108 @@ export function EnquiryForm({ onSuccess }: Props) {
       pod: form.pod || null,
       incoterms: form.incoterms || null,
       container_type: form.container_type || null,
-      status: form.status || null,
+      status: editingId ? (form.status || null) : "PENDING",
       email_subject_line: form.email_subject_line || null,
       shipper: form.shipper || null,
       consignee: form.consignee || null,
       remarks: form.remarks || null,
-      created_by: user.id,
     }
 
-    const { data, error: insertError } = await supabase
-      .from("enquiries")
-      .insert(payload)
-      .select("enq_ref_no")
-      .single()
+    if (editingId) {
+      const { data, error: updateError } = await supabase
+        .from("enquiries")
+        .update(payload)
+        .eq("id", editingId)
+        .select("enq_ref_no")
+        .single()
 
-    if (insertError) {
-      setError(insertError.message)
+      if (updateError) {
+        setError(updateError.message)
+      } else {
+        setSuccess(`Enquiry ${data?.enq_ref_no ?? ""} updated successfully.`)
+        setForm(getDefaultForm())
+        setEditingId(null)
+        onEditComplete?.()
+        onSuccess?.()
+      }
     } else {
-      setSuccess(`Enquiry ${data?.enq_ref_no ?? ""} submitted successfully.`)
-      setForm(defaultForm)
-      onSuccess?.()
+      const { data, error: insertError } = await supabase
+        .from("enquiries")
+        .insert({ ...payload, created_by: user.id })
+        .select("enq_ref_no")
+        .single()
+
+      if (insertError) {
+        setError(insertError.message)
+      } else {
+        setSuccess(`Enquiry ${data?.enq_ref_no ?? ""} submitted successfully.`)
+        setForm(getDefaultForm())
+        onSuccess?.()
+      }
     }
 
     setLoading(false)
   }
 
   function handleReset() {
-    setForm(defaultForm)
+    if (editingEnquiry) {
+      setForm({
+        enq_receipt_date:
+          editingEnquiry.enq_receipt_date?.split("T")[0] ??
+          new Date().toISOString().split("T")[0],
+        mode: editingEnquiry.mode ?? "",
+        enq_type: editingEnquiry.enq_type ?? "",
+        exim: editingEnquiry.exim ?? "",
+        fn: editingEnquiry.fn ?? "",
+        sales_person: editingEnquiry.sales_person ?? "",
+        agent_name: editingEnquiry.agent_name ?? "",
+        country: editingEnquiry.country ?? "",
+        branch: editingEnquiry.branch ?? "",
+        network: editingEnquiry.network ?? "",
+        pol: editingEnquiry.pol ?? "",
+        pod: editingEnquiry.pod ?? "",
+        incoterms: editingEnquiry.incoterms ?? "",
+        container_type: editingEnquiry.container_type ?? "",
+        status: editingEnquiry.status ?? "",
+        email_subject_line: editingEnquiry.email_subject_line ?? "",
+        shipper: editingEnquiry.shipper ?? "",
+        consignee: editingEnquiry.consignee ?? "",
+        remarks: editingEnquiry.remarks ?? "",
+      })
+    } else {
+      setForm(getDefaultForm())
+    }
     setError(null)
     setSuccess(null)
   }
 
+  function handleCancelEdit() {
+    setForm(getDefaultForm())
+    setEditingId(null)
+    setError(null)
+    setSuccess(null)
+    onEditComplete?.()
+  }
+
   return (
-    <form onSubmit={handleSubmit}>
+    <form
+      onSubmit={handleSubmit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && e.target instanceof HTMLElement && e.target.tagName !== "TEXTAREA") {
+          e.preventDefault()
+        }
+      }}
+    >
       {/* Header */}
-      <div className="bg-blue-50 border border-blue-100 rounded-lg px-5 py-3 mb-5">
-        <h2 className="text-sm font-semibold text-blue-900">Enquiry Details</h2>
+      <div className="bg-blue-50 border border-blue-100 rounded-lg px-5 py-3 mb-5 flex items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold text-blue-900">
+          {editingId ? "Edit Enquiry" : "Enquiry Details"}
+        </h2>
+        {editingEnquiry?.enq_ref_no && (
+          <span className="text-xs font-medium text-blue-700 bg-blue-100 px-2 py-1 rounded">
+            {editingEnquiry.enq_ref_no}
+          </span>
+        )}
       </div>
 
       {/* Grid — 4 columns */}
@@ -160,7 +287,11 @@ export function EnquiryForm({ onSuccess }: Props) {
         {/* ── Row 1 ─────────────────────────────────────────── */}
         <div className="space-y-1.5">
           <Label>Enq Ref No.</Label>
-          <Input value="Auto Generated" disabled className="bg-muted text-muted-foreground" />
+          <Input
+            value={editingEnquiry?.enq_ref_no ?? "Auto Generated"}
+            disabled
+            className="bg-muted text-muted-foreground"
+          />
         </div>
 
         <div className="space-y-1.5">
@@ -326,7 +457,9 @@ export function EnquiryForm({ onSuccess }: Props) {
         <div className="space-y-1.5">
           <Label>Status</Label>
           <Select value={form.status} onValueChange={(v) => setField("status", v)}>
-            <SelectTrigger><SelectValue placeholder="--Status--" /></SelectTrigger>
+            <SelectTrigger disabled={!editingId}>
+              <SelectValue placeholder={editingId ? "--Status--" : "PENDING"} />
+            </SelectTrigger>
             <SelectContent>
               {STATUSES.map((s) => (
                 <SelectItem key={s} value={s}>{s}</SelectItem>
@@ -391,12 +524,23 @@ export function EnquiryForm({ onSuccess }: Props) {
       <div className="flex items-center justify-center gap-3 mt-6">
         <Button type="submit" disabled={loading} className="gap-2">
           <Send className="h-4 w-4" />
-          {loading ? "Submitting..." : "Submit"}
+          {loading
+            ? editingId
+              ? "Updating..."
+              : "Submitting..."
+            : editingId
+              ? "Update"
+              : "Submit"}
         </Button>
         <Button type="button" variant="outline" onClick={handleReset} className="gap-2">
           <RotateCcw className="h-4 w-4" />
           Reset
         </Button>
+        {editingId && (
+          <Button type="button" variant="outline" onClick={handleCancelEdit}>
+            Cancel Edit
+          </Button>
+        )}
       </div>
     </form>
   )

@@ -1,37 +1,71 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { cn } from "@/lib/utils"
 
-interface Enquiry {
+export interface Enquiry {
   id: string
   enq_ref_no: string | null
   enq_receipt_date: string | null
   enq_type: string | null
   mode: string | null
   exim: string | null
+  fn: string | null
   sales_person: string | null
+  agent_name: string | null
+  country: string | null
+  branch: string | null
+  network: string | null
+  pol: string | null
+  pod: string | null
+  incoterms: string | null
+  container_type: string | null
+  status: string | null
+  email_subject_line: string | null
   shipper: string | null
   consignee: string | null
-  status: string | null
-  branch: string | null
+  remarks: string | null
 }
 
 function statusVariant(status: string | null) {
-  switch (status) {
-    case "Win": return "success"
-    case "Lose": return "danger"
-    case "Follow Up": return "warning"
-    case "Quote Pending": return "info"
-    default: return "secondary"
+  const s = (status ?? "").toUpperCase()
+  switch (s) {
+    case "WIN":
+      return "success"
+    case "LOSE":
+      return "danger"
+    case "FOLLOW UP":
+      return "warning"
+    case "QUOTED":
+    case "PENDING":
+    case "NO FEEDBACK":
+      return "info"
+    default:
+      return "secondary"
   }
 }
 
-export function EnquiryList() {
+interface EnquiryListProps {
+  onSelectEnquiry?: (row: Enquiry) => void
+  editingId?: string | null
+}
+
+export function EnquiryList({ onSelectEnquiry, editingId }: EnquiryListProps) {
   const supabase = createClient()
   const [rows, setRows] = useState<Enquiry[]>([])
   const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState("")
+
+  const filteredRows = useMemo(() => {
+    return rows.filter(
+      (r) =>
+        !search ||
+        (r.enq_ref_no ?? "").toLowerCase().includes(search.trim().toLowerCase())
+    )
+  }, [rows, search])
 
   useEffect(() => {
     async function load() {
@@ -46,7 +80,7 @@ export function EnquiryList() {
 
       let query = supabase
         .from("enquiries")
-        .select("id,enq_ref_no,enq_receipt_date,enq_type,mode,exim,sales_person,shipper,consignee,status,branch")
+        .select("id,enq_ref_no,enq_receipt_date,enq_type,mode,exim,fn,sales_person,agent_name,country,branch,network,pol,pod,incoterms,container_type,status,email_subject_line,shipper,consignee,remarks")
         .order("created_at", { ascending: false })
         .limit(50)
 
@@ -79,8 +113,19 @@ export function EnquiryList() {
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-xs">
+    <div>
+      <div className="px-6 py-3 border-b border-border flex justify-end">
+        <Input
+          type="search"
+          placeholder="Search by Enquiry No"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-xs"
+          aria-label="Search enquiries by enquiry number"
+        />
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-border">
             {["Enq No", "Date", "Type", "Mode", "EXIM", "Shipper", "Consignee", "Sales Person", "Branch", "Status"].map((h) => (
@@ -94,10 +139,37 @@ export function EnquiryList() {
           </tr>
         </thead>
         <tbody>
-          {rows.map((r) => (
-            <tr key={r.id} className="border-b border-border/50 hover:bg-neutral-50 transition-colors">
-              <td className="px-4 py-3 font-mono text-blue-600 font-medium whitespace-nowrap">
-                {r.enq_ref_no ?? "—"}
+          {filteredRows.length === 0 ? (
+            <tr>
+              <td colSpan={10} className="px-6 py-8 text-sm text-muted-foreground text-center">
+                No enquiries match your search.
+              </td>
+            </tr>
+          ) : (
+          filteredRows.map((r) => (
+            <tr
+              key={r.id}
+              className={cn(
+                "border-b border-border/50 hover:bg-neutral-50 transition-colors",
+                editingId === r.id && "bg-blue-50"
+              )}
+            >
+              <td className="px-4 py-3 font-mono font-medium whitespace-nowrap">
+                {onSelectEnquiry ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelectEnquiry(r)
+                      window.scrollTo({ top: 0, behavior: "smooth" })
+                    }}
+                    className="text-blue-600 hover:underline text-left"
+                    aria-label={`Edit enquiry ${r.enq_ref_no ?? r.id}`}
+                  >
+                    {r.enq_ref_no ?? "—"}
+                  </button>
+                ) : (
+                  <span className="text-blue-600">{r.enq_ref_no ?? "—"}</span>
+                )}
               </td>
               <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
                 {r.enq_receipt_date
@@ -117,9 +189,11 @@ export function EnquiryList() {
                 </Badge>
               </td>
             </tr>
-          ))}
+          ))
+          )}
         </tbody>
       </table>
+      </div>
     </div>
   )
 }
