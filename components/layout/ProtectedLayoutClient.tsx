@@ -54,7 +54,7 @@ export function ProtectedLayoutClient({ role, displayName, branch, children }: P
   }
 
   return (
-    <div className={cn("flex h-screen overflow-hidden bg-neutral-50")}>
+    <div className={cn("flex h-screen overflow-hidden bg-background")}>
       <Sidebar open={open} setOpen={setOpen}>
         <SidebarBody className="justify-between gap-10">
           <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">

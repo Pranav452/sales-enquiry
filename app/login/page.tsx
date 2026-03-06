@@ -52,7 +52,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-neutral-50">
+    <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex items-center justify-center gap-2 mb-8">
@@ -62,7 +62,7 @@ export default function LoginPage() {
           <span className="text-xl font-semibold text-foreground">Links Cargo</span>
         </div>
 
-        <div className="bg-white border border-border rounded-xl shadow-sm p-8">
+        <div className="bg-card border border-border rounded-xl shadow-sm p-8">
           <h1 className="text-lg font-semibold text-foreground mb-1">
             {isSignUp ? "Create account" : "Welcome back"}
           </h1>
@@ -118,7 +118,7 @@ export default function LoginPage() {
             )}
 
             {message && (
-              <p className="text-sm text-green-700 bg-green-50 px-3 py-2 rounded-md">
+              <p className="text-sm text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-500/20 px-3 py-2 rounded-md">
                 {message}
               </p>
             )}

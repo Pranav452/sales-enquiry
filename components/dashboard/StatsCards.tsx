@@ -62,7 +62,7 @@ function DeltaBadge({ curr, prev }: DeltaBadgeProps) {
   return (
     <span
       className={`inline-flex items-center gap-0.5 text-xs font-medium ${
-        d.positive ? "text-green-600" : "text-red-500"
+        d.positive ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"
       }`}
     >
       {d.positive ? (
@@ -111,8 +111,8 @@ export function StatsCards({ filters }: { filters: Filters }) {
       prevValue: prev?.total,
       sub: filters.period === "allTime" ? "All time" : "Selected period",
       icon: FileText,
-      color: "text-blue-600",
-      bg: "bg-blue-50",
+      color: "text-blue-600 dark:text-blue-400",
+      bg: "bg-blue-50 dark:bg-blue-500/20",
     },
     {
       label: "Won",
@@ -120,8 +120,8 @@ export function StatsCards({ filters }: { filters: Filters }) {
       prevValue: prev?.win,
       sub: `${pct(curr.win)}% win rate`,
       icon: TrendingUp,
-      color: "text-green-600",
-      bg: "bg-green-50",
+      color: "text-green-600 dark:text-green-400",
+      bg: "bg-green-50 dark:bg-green-500/20",
     },
     {
       label: "Lost",
@@ -129,8 +129,8 @@ export function StatsCards({ filters }: { filters: Filters }) {
       prevValue: prev?.lose,
       sub: `${pct(curr.lose)}% lose rate`,
       icon: TrendingDown,
-      color: "text-red-500",
-      bg: "bg-red-50",
+      color: "text-red-500 dark:text-red-400",
+      bg: "bg-red-50 dark:bg-red-500/20",
     },
     {
       label: "In Progress",
@@ -138,8 +138,8 @@ export function StatsCards({ filters }: { filters: Filters }) {
       prevValue: prev?.inProgress,
       sub: "Follow up + pending",
       icon: Clock,
-      color: "text-amber-500",
-      bg: "bg-amber-50",
+      color: "text-amber-500 dark:text-amber-400",
+      bg: "bg-amber-50 dark:bg-amber-500/20",
     },
   ]
 

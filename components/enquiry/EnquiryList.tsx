@@ -150,8 +150,8 @@ export function EnquiryList({ onSelectEnquiry, editingId }: EnquiryListProps) {
             <tr
               key={r.id}
               className={cn(
-                "border-b border-border/50 hover:bg-neutral-50 transition-colors",
-                editingId === r.id && "bg-blue-50"
+                "border-b border-border/50 hover:bg-accent transition-colors",
+                editingId === r.id && "bg-primary/10 dark:bg-primary/20"
               )}
             >
               <td className="px-4 py-3 font-mono font-medium whitespace-nowrap">

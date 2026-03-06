@@ -270,12 +270,12 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
       }}
     >
       {/* Header */}
-      <div className="bg-blue-50 border border-blue-100 rounded-lg px-5 py-3 mb-5 flex items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold text-blue-900">
+      <div className="bg-primary/10 dark:bg-primary/20 border border-primary/20 dark:border-primary/30 rounded-lg px-5 py-3 mb-5 flex items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold text-foreground">
           {editingId ? "Edit Enquiry" : "Enquiry Details"}
         </h2>
         {editingEnquiry?.enq_ref_no && (
-          <span className="text-xs font-medium text-blue-700 bg-blue-100 px-2 py-1 rounded">
+          <span className="text-xs font-medium text-primary bg-primary/20 dark:bg-primary/30 px-2 py-1 rounded">
             {editingEnquiry.enq_ref_no}
           </span>
         )}
@@ -503,7 +503,7 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
             rows={2}
             value={form.remarks}
             onChange={(e) => setField("remarks", e.target.value)}
-            className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+            className="flex w-full rounded-md border border-input bg-[hsl(var(--input-bg))] px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
           />
         </div>
       </div>
@@ -515,7 +515,7 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
         </p>
       )}
       {success && (
-        <p className="mt-4 text-sm text-green-700 bg-green-50 px-3 py-2 rounded-md">
+        <p className="mt-4 text-sm text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-500/20 px-3 py-2 rounded-md">
           {success}
         </p>
       )}

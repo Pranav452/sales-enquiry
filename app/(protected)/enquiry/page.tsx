@@ -47,7 +47,7 @@ export default function EnquiryPage() {
 
         <TabsContent value="input">
           {/* Form card */}
-          <div className="bg-white border border-border rounded-xl p-6 mb-6 shadow-sm">
+          <div className="bg-card border border-border rounded-xl p-6 mb-6 shadow-sm">
             <EnquiryForm
               onSuccess={handleSuccess}
               editingEnquiry={editingEnquiry}
@@ -56,7 +56,7 @@ export default function EnquiryPage() {
           </div>
 
           {/* Recent enquiries table */}
-          <div className="bg-white border border-border rounded-xl shadow-sm">
+          <div className="bg-card border border-border rounded-xl shadow-sm">
             <div className="px-6 py-4 border-b border-border">
               <h3 className="text-sm font-semibold text-foreground">Recent Enquiries</h3>
             </div>
