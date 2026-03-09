@@ -31,14 +31,14 @@ export const BRANCHES = [
 export const NETWORKS = ["3F", "ALNA", "COOP", "CROSS TRADE", "NON NETWORK", "UOL"]
 
 export const CONTAINER_TYPES = [
-  "FCL",
-  "ODC",
   "20GP",
   "40HC",
   "ISO TANK",
   "LCL",
-  "GENERAL",
   "REEFER",
+  "PROJECT CARGO",
+  "FR/OT/IG/OOG",
+  "AIR SHIPMENT",
 ]
 
 export const STATUSES = [
@@ -51,10 +51,8 @@ export const STATUSES = [
 ]
 
 export const INCOTERMS = [
-  "C&F",
-  "C&I",
   "CIF",
-  "CPT",
+  "CUSTOM CLEARANCE",
   "DAP",
   "DDP",
   "DDU",

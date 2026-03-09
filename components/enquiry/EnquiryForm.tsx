@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select"
 import { Combobox } from "@/components/ui/combobox"
 import { RotateCcw, Send } from "lucide-react"
+import { cn } from "@/lib/utils"
 import {
   SALES_PERSONS,
   FN_OPTIONS,
@@ -47,7 +48,14 @@ interface FormData {
   shipper: string
   consignee: string
   remarks: string
+  mbl_awb_no: string
+  job_invoice_no: string
+  gop: string
 }
+
+const REQUIRED_FIELDS: (keyof FormData)[] = [
+  "mode", "enq_type", "exim", "fn", "sales_person", "branch",
+]
 
 function getDefaultForm(): FormData {
   return {
@@ -65,11 +73,14 @@ function getDefaultForm(): FormData {
     pod: "",
     incoterms: "",
     container_type: "",
-    status: "",
+    status: "PENDING",
     email_subject_line: "",
     shipper: "",
     consignee: "",
     remarks: "",
+    mbl_awb_no: "",
+    job_invoice_no: "",
+    gop: "",
   }
 }
 
@@ -95,6 +106,9 @@ export interface EnquiryFormEditing {
   shipper: string | null
   consignee: string | null
   remarks: string | null
+  mbl_awb_no?: string | null
+  job_invoice_no?: string | null
+  gop?: string | null
 }
 
 interface Props {
@@ -105,16 +119,17 @@ interface Props {
 
 export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props) {
   const supabase = createClient()
-  const [form, setForm] = useState<FormData>(getDefaultForm())
+  const [form, setFormState] = useState<FormData>(getDefaultForm())
   const [editingId, setEditingId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [errors, setErrors] = useState<Partial<Record<keyof FormData, boolean>>>({})
 
   useEffect(() => {
     if (editingEnquiry) {
       setEditingId(editingEnquiry.id)
-      setForm({
+      setFormState({
         enq_receipt_date:
           editingEnquiry.enq_receipt_date?.split("T")[0] ??
           new Date().toISOString().split("T")[0],
@@ -131,27 +146,48 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
         pod: editingEnquiry.pod ?? "",
         incoterms: editingEnquiry.incoterms ?? "",
         container_type: editingEnquiry.container_type ?? "",
-        status: editingEnquiry.status ?? "",
+        status: editingEnquiry.status ?? "PENDING",
         email_subject_line: editingEnquiry.email_subject_line ?? "",
         shipper: editingEnquiry.shipper ?? "",
         consignee: editingEnquiry.consignee ?? "",
         remarks: editingEnquiry.remarks ?? "",
+        mbl_awb_no: editingEnquiry.mbl_awb_no ?? "",
+        job_invoice_no: editingEnquiry.job_invoice_no ?? "",
+        gop: editingEnquiry.gop ?? "",
       })
+      setErrors({})
     } else {
       setEditingId(null)
-      setForm(getDefaultForm())
+      setFormState(getDefaultForm())
+      setErrors({})
     }
   }, [editingEnquiry])
 
   function setField(field: keyof FormData, value: string) {
-    setForm((prev) => ({ ...prev, [field]: value }))
+    setFormState((prev) => ({ ...prev, [field]: value }))
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: false }))
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+
+    // Validate required fields
+    const missing: Partial<Record<keyof FormData, boolean>> = {}
+    for (const field of REQUIRED_FIELDS) {
+      if (!form[field]) missing[field] = true
+    }
+    if (Object.keys(missing).length > 0) {
+      setErrors(missing)
+      setError("Please fill in all required fields.")
+      return
+    }
+
     setLoading(true)
     setError(null)
     setSuccess(null)
+    setErrors({})
 
     const {
       data: { user },
@@ -177,11 +213,14 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
       pod: form.pod || null,
       incoterms: form.incoterms || null,
       container_type: form.container_type || null,
-      status: editingId ? (form.status || null) : "PENDING",
+      status: form.status || "PENDING",
       email_subject_line: form.email_subject_line || null,
       shipper: form.shipper || null,
       consignee: form.consignee || null,
       remarks: form.remarks || null,
+      mbl_awb_no: form.mbl_awb_no || null,
+      job_invoice_no: form.job_invoice_no || null,
+      gop: form.gop || null,
     }
 
     if (editingId) {
@@ -196,7 +235,7 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
         setError(updateError.message)
       } else {
         setSuccess(`Enquiry ${data?.enq_ref_no ?? ""} updated successfully.`)
-        setForm(getDefaultForm())
+        setFormState(getDefaultForm())
         setEditingId(null)
         onEditComplete?.()
         onSuccess?.()
@@ -212,7 +251,7 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
         setError(insertError.message)
       } else {
         setSuccess(`Enquiry ${data?.enq_ref_no ?? ""} submitted successfully.`)
-        setForm(getDefaultForm())
+        setFormState(getDefaultForm())
         onSuccess?.()
       }
     }
@@ -222,7 +261,7 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
 
   function handleReset() {
     if (editingEnquiry) {
-      setForm({
+      setFormState({
         enq_receipt_date:
           editingEnquiry.enq_receipt_date?.split("T")[0] ??
           new Date().toISOString().split("T")[0],
@@ -239,26 +278,34 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
         pod: editingEnquiry.pod ?? "",
         incoterms: editingEnquiry.incoterms ?? "",
         container_type: editingEnquiry.container_type ?? "",
-        status: editingEnquiry.status ?? "",
+        status: editingEnquiry.status ?? "PENDING",
         email_subject_line: editingEnquiry.email_subject_line ?? "",
         shipper: editingEnquiry.shipper ?? "",
         consignee: editingEnquiry.consignee ?? "",
         remarks: editingEnquiry.remarks ?? "",
+        mbl_awb_no: editingEnquiry.mbl_awb_no ?? "",
+        job_invoice_no: editingEnquiry.job_invoice_no ?? "",
+        gop: editingEnquiry.gop ?? "",
       })
     } else {
-      setForm(getDefaultForm())
+      setFormState(getDefaultForm())
     }
     setError(null)
     setSuccess(null)
+    setErrors({})
   }
 
   function handleCancelEdit() {
-    setForm(getDefaultForm())
+    setFormState(getDefaultForm())
     setEditingId(null)
     setError(null)
     setSuccess(null)
+    setErrors({})
     onEditComplete?.()
   }
+
+  const fieldErr = (f: keyof FormData) =>
+    errors[f] ? "border-destructive focus-visible:ring-destructive" : ""
 
   return (
     <form
@@ -306,79 +353,97 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
         </div>
 
         <div className="space-y-1.5">
-          <Label>Mode</Label>
+          <Label>Enq Mode Air / Sea <span className="text-destructive">*</span></Label>
           <Select value={form.mode} onValueChange={(v) => setField("mode", v)}>
-            <SelectTrigger><SelectValue placeholder="--Mode--" /></SelectTrigger>
+            <SelectTrigger className={fieldErr("mode")}>
+              <SelectValue placeholder="--Mode--" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="Air">Air</SelectItem>
               <SelectItem value="Sea">Sea</SelectItem>
             </SelectContent>
           </Select>
+          {errors.mode && <p className="text-xs text-destructive">Required</p>}
         </div>
 
         <div className="space-y-1.5">
-          <Label>Enq Type</Label>
+          <Label>Enq Recvd from Overseas / Local Office <span className="text-destructive">*</span></Label>
           <Select value={form.enq_type} onValueChange={(v) => setField("enq_type", v)}>
-            <SelectTrigger><SelectValue placeholder="--Enq Type--" /></SelectTrigger>
+            <SelectTrigger className={fieldErr("enq_type")}>
+              <SelectValue placeholder="--Enq Type--" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="Local">Local</SelectItem>
               <SelectItem value="Overseas">Overseas</SelectItem>
             </SelectContent>
           </Select>
+          {errors.enq_type && <p className="text-xs text-destructive">Required</p>}
         </div>
 
         {/* ── Row 2 ─────────────────────────────────────────── */}
         <div className="space-y-1.5">
-          <Label>Exim</Label>
+          <Label>Exim <span className="text-destructive">*</span></Label>
           <Select value={form.exim} onValueChange={(v) => setField("exim", v)}>
-            <SelectTrigger><SelectValue placeholder="--Exim--" /></SelectTrigger>
+            <SelectTrigger className={fieldErr("exim")}>
+              <SelectValue placeholder="--Exim--" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="Export">Export</SelectItem>
               <SelectItem value="Import">Import</SelectItem>
               <SelectItem value="Cross Trade">Cross Trade</SelectItem>
             </SelectContent>
           </Select>
+          {errors.exim && <p className="text-xs text-destructive">Required</p>}
         </div>
 
         <div className="space-y-1.5">
-          <Label>F / N</Label>
+          <Label>F / N <span className="text-destructive">*</span></Label>
           <Select value={form.fn} onValueChange={(v) => setField("fn", v)}>
-            <SelectTrigger><SelectValue placeholder="--F/N--" /></SelectTrigger>
+            <SelectTrigger className={fieldErr("fn")}>
+              <SelectValue placeholder="--F/N--" />
+            </SelectTrigger>
             <SelectContent>
               {FN_OPTIONS.map((o) => (
                 <SelectItem key={o} value={o}>{o}</SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {errors.fn && <p className="text-xs text-destructive">Required</p>}
         </div>
 
         <div className="space-y-1.5">
-          <Label>Sales Person</Label>
+          <Label>Sales Person <span className="text-destructive">*</span></Label>
           <Select value={form.sales_person} onValueChange={(v) => setField("sales_person", v)}>
-            <SelectTrigger><SelectValue placeholder="--Sales Person--" /></SelectTrigger>
+            <SelectTrigger className={fieldErr("sales_person")}>
+              <SelectValue placeholder="--Sales Person--" />
+            </SelectTrigger>
             <SelectContent>
               {SALES_PERSONS.map((p) => (
                 <SelectItem key={p} value={p}>{p}</SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {errors.sales_person && <p className="text-xs text-destructive">Required</p>}
         </div>
 
         <div className="space-y-1.5">
-          <Label>Branch</Label>
+          <Label>Enq Recvd From Branch <span className="text-destructive">*</span></Label>
           <Select value={form.branch} onValueChange={(v) => setField("branch", v)}>
-            <SelectTrigger><SelectValue placeholder="--Branch--" /></SelectTrigger>
+            <SelectTrigger className={fieldErr("branch")}>
+              <SelectValue placeholder="--Branch--" />
+            </SelectTrigger>
             <SelectContent>
               {BRANCHES.map((b) => (
                 <SelectItem key={b} value={b}>{b}</SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {errors.branch && <p className="text-xs text-destructive">Required</p>}
         </div>
 
         {/* ── Row 3 ─────────────────────────────────────────── */}
         <div className="space-y-1.5">
-          <Label>Agent Name</Label>
+          <Label>Enq Recvd from Agent</Label>
           <Combobox
             value={form.agent_name}
             onChange={(v) => setField("agent_name", v)}
@@ -393,7 +458,7 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
             value={form.country}
             onChange={(v) => setField("country", v)}
             options={COUNTRIES}
-            placeholder="Search country..."
+            placeholder="Overseas agent's country..."
           />
         </div>
 
@@ -423,7 +488,7 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
 
         {/* ── Row 4 ─────────────────────────────────────────── */}
         <div className="space-y-1.5">
-          <Label>POL</Label>
+          <Label>POL / Origin Airport</Label>
           <Combobox
             value={form.pol}
             onChange={(v) => setField("pol", v)}
@@ -433,7 +498,7 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
         </div>
 
         <div className="space-y-1.5">
-          <Label>POD</Label>
+          <Label>POD / Dest. Airport</Label>
           <Combobox
             value={form.pod}
             onChange={(v) => setField("pod", v)}
@@ -455,10 +520,10 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
         </div>
 
         <div className="space-y-1.5">
-          <Label>Status</Label>
+          <Label>Enq Status</Label>
           <Select value={form.status} onValueChange={(v) => setField("status", v)}>
-            <SelectTrigger disabled={!editingId}>
-              <SelectValue placeholder={editingId ? "--Status--" : "PENDING"} />
+            <SelectTrigger>
+              <SelectValue placeholder="--Status--" />
             </SelectTrigger>
             <SelectContent>
               {STATUSES.map((s) => (
@@ -470,7 +535,7 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
 
         {/* ── Row 5 ─────────────────────────────────────────── */}
         <div className="space-y-1.5">
-          <Label htmlFor="email_subject_line">Email Subject Line</Label>
+          <Label htmlFor="email_subject_line">Shipment Awarded to Agent / Carrier</Label>
           <Input
             id="email_subject_line"
             value={form.email_subject_line}
@@ -506,6 +571,34 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
             className="flex w-full rounded-md border border-input bg-[hsl(var(--input-bg))] px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
           />
         </div>
+
+        {/* ── Row 6 ─────────────────────────────────────────── */}
+        <div className="space-y-1.5">
+          <Label htmlFor="mbl_awb_no">MBL / AWB No.</Label>
+          <Input
+            id="mbl_awb_no"
+            value={form.mbl_awb_no}
+            onChange={(e) => setField("mbl_awb_no", e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="job_invoice_no">Job / Invoice No.</Label>
+          <Input
+            id="job_invoice_no"
+            value={form.job_invoice_no}
+            onChange={(e) => setField("job_invoice_no", e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="gop">GOP</Label>
+          <Input
+            id="gop"
+            value={form.gop}
+            onChange={(e) => setField("gop", e.target.value)}
+          />
+        </div>
       </div>
 
       {/* Feedback */}
@@ -522,7 +615,7 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
 
       {/* Actions */}
       <div className="flex items-center justify-center gap-3 mt-6">
-        <Button type="submit" disabled={loading} className="gap-2">
+        <Button type="submit" disabled={loading} className="gap-2 cursor-pointer">
           <Send className="h-4 w-4" />
           {loading
             ? editingId
@@ -532,12 +625,12 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
               ? "Update"
               : "Submit"}
         </Button>
-        <Button type="button" variant="outline" onClick={handleReset} className="gap-2">
+        <Button type="button" variant="outline" onClick={handleReset} className="gap-2 cursor-pointer">
           <RotateCcw className="h-4 w-4" />
           Reset
         </Button>
         {editingId && (
-          <Button type="button" variant="outline" onClick={handleCancelEdit}>
+          <Button type="button" variant="outline" onClick={handleCancelEdit} className="cursor-pointer">
             Cancel Edit
           </Button>
         )}
