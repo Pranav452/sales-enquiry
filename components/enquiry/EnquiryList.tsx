@@ -28,6 +28,9 @@ export interface Enquiry {
   shipper: string | null
   consignee: string | null
   remarks: string | null
+  mbl_awb_no?: string | null
+  job_invoice_no?: string | null
+  gop?: string | null
 }
 
 function statusVariant(status: string | null) {
@@ -60,10 +63,16 @@ export function EnquiryList({ onSelectEnquiry, editingId }: EnquiryListProps) {
   const [search, setSearch] = useState("")
 
   const filteredRows = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return rows
     return rows.filter(
       (r) =>
-        !search ||
-        (r.enq_ref_no ?? "").toLowerCase().includes(search.trim().toLowerCase())
+        (r.enq_ref_no ?? "").toLowerCase().includes(q) ||
+        (r.status ?? "").toLowerCase().includes(q) ||
+        (r.sales_person ?? "").toLowerCase().includes(q) ||
+        (r.branch ?? "").toLowerCase().includes(q) ||
+        (r.shipper ?? "").toLowerCase().includes(q) ||
+        (r.consignee ?? "").toLowerCase().includes(q)
     )
   }, [rows, search])
 
@@ -80,7 +89,7 @@ export function EnquiryList({ onSelectEnquiry, editingId }: EnquiryListProps) {
 
       let query = supabase
         .from("enquiries")
-        .select("id,enq_ref_no,enq_receipt_date,enq_type,mode,exim,fn,sales_person,agent_name,country,branch,network,pol,pod,incoterms,container_type,status,email_subject_line,shipper,consignee,remarks")
+        .select("id,enq_ref_no,enq_receipt_date,enq_type,mode,exim,fn,sales_person,agent_name,country,branch,network,pol,pod,incoterms,container_type,status,email_subject_line,shipper,consignee,remarks,mbl_awb_no,job_invoice_no,gop")
         .order("created_at", { ascending: false })
         .limit(50)
 
@@ -117,11 +126,11 @@ export function EnquiryList({ onSelectEnquiry, editingId }: EnquiryListProps) {
       <div className="px-6 py-3 border-b border-border flex justify-end">
         <Input
           type="search"
-          placeholder="Search by Enquiry No"
+          placeholder="Search by Enq No, Status, Sales Person, Branch, Shipper, Consignee..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="max-w-xs"
-          aria-label="Search enquiries by enquiry number"
+          className="max-w-sm"
+          aria-label="Search enquiries"
         />
       </div>
       <div className="overflow-x-auto">
@@ -162,7 +171,7 @@ export function EnquiryList({ onSelectEnquiry, editingId }: EnquiryListProps) {
                       onSelectEnquiry(r)
                       window.scrollTo({ top: 0, behavior: "smooth" })
                     }}
-                    className="text-blue-600 hover:underline text-left"
+                    className="text-blue-600 hover:underline text-left cursor-pointer"
                     aria-label={`Edit enquiry ${r.enq_ref_no ?? r.id}`}
                   >
                     {r.enq_ref_no ?? "—"}
