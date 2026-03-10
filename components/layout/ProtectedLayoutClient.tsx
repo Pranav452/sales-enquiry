@@ -11,6 +11,7 @@ import {
   Anchor,
   ClipboardList,
   LayoutDashboard,
+  List,
   LogOut,
   User,
 } from "lucide-react"
@@ -35,6 +36,11 @@ export function ProtectedLayoutClient({ role, displayName, branch, children }: P
       label: "New Enquiry",
       href: "/enquiry",
       icon: <ClipboardList className="h-5 w-5 flex-shrink-0 text-muted-foreground" />,
+    },
+    {
+      label: "Recent Enquiries",
+      href: "/enquiries",
+      icon: <List className="h-5 w-5 flex-shrink-0 text-muted-foreground" />,
     },
     ...(role === "admin"
       ? [

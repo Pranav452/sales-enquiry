@@ -3,16 +3,16 @@
 // ============================================================
 
 export const SALES_PERSONS = [
-  "AMISH K - SALES",
-  "ARUN S - SALES",
-  "ASHOK CHENNAI - SALES",
-  "BHUP KUMAR - SALES",
-  "CHANDAR - SALES",
-  "DEEPAK BHURA - SALES",
+  "AMISH K",
+  "ARUN S",
+  "ASHOK CHENNAI",
+  "BHUP KUMAR",
+  "Chander",
+  "DEEPAK BHURA",
   "MANAGEMENT",
   "MP OFFICE",
-  "SAMIT BHATNAGAR - SALES",
-  "SAYALI K - SALES",
+  "SAMIT BHATNAGAR",
+  "SAYALI K",
 ]
 
 export const FN_OPTIONS = ["FREEHAND", "NOMINATION"]

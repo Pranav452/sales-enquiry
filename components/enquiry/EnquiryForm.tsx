@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Combobox } from "@/components/ui/combobox"
-import { RotateCcw, Send } from "lucide-react"
+import { Paperclip, RotateCcw, Send } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   SALES_PERSONS,
@@ -25,7 +25,6 @@ import {
   INCOTERMS,
   COUNTRIES,
   PORT_CITIES,
-  AGENTS,
 } from "@/lib/constants/dropdowns"
 
 interface FormData {
@@ -51,10 +50,15 @@ interface FormData {
   mbl_awb_no: string
   job_invoice_no: string
   gop: string
+  assigned_user: string
+  assigned_date: string
+  buy_rate_file: string
+  sell_rate_file: string
 }
 
 const REQUIRED_FIELDS: (keyof FormData)[] = [
   "mode", "enq_type", "exim", "fn", "sales_person", "branch",
+  "pol", "pod", "incoterms", "status", "container_type",
 ]
 
 function getDefaultForm(): FormData {
@@ -81,6 +85,10 @@ function getDefaultForm(): FormData {
     mbl_awb_no: "",
     job_invoice_no: "",
     gop: "",
+    assigned_user: "",
+    assigned_date: "",
+    buy_rate_file: "",
+    sell_rate_file: "",
   }
 }
 
@@ -109,12 +117,48 @@ export interface EnquiryFormEditing {
   mbl_awb_no?: string | null
   job_invoice_no?: string | null
   gop?: string | null
+  assigned_user?: string | null
+  assigned_date?: string | null
+  buy_rate_file?: string | null
+  sell_rate_file?: string | null
 }
 
 interface Props {
   onSuccess?: () => void
   editingEnquiry?: EnquiryFormEditing | null
   onEditComplete?: () => void
+}
+
+function populateFromEditing(e: EnquiryFormEditing): FormData {
+  return {
+    enq_receipt_date:
+      e.enq_receipt_date?.split("T")[0] ?? new Date().toISOString().split("T")[0],
+    mode: e.mode ?? "",
+    enq_type: e.enq_type ?? "",
+    exim: e.exim ?? "",
+    fn: e.fn ?? "",
+    sales_person: e.sales_person ?? "",
+    agent_name: e.agent_name ?? "",
+    country: e.country ?? "",
+    branch: e.branch ?? "",
+    network: e.network ?? "",
+    pol: e.pol ?? "",
+    pod: e.pod ?? "",
+    incoterms: e.incoterms ?? "",
+    container_type: e.container_type ?? "",
+    status: e.status ?? "PENDING",
+    email_subject_line: e.email_subject_line ?? "",
+    shipper: e.shipper ?? "",
+    consignee: e.consignee ?? "",
+    remarks: e.remarks ?? "",
+    mbl_awb_no: e.mbl_awb_no ?? "",
+    job_invoice_no: e.job_invoice_no ?? "",
+    gop: e.gop ?? "",
+    assigned_user: e.assigned_user ?? "",
+    assigned_date: e.assigned_date ? e.assigned_date.split("T")[0] : "",
+    buy_rate_file: e.buy_rate_file ?? "",
+    sell_rate_file: e.sell_rate_file ?? "",
+  }
 }
 
 export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props) {
@@ -125,36 +169,13 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, boolean>>>({})
+  const [buyRateFile, setBuyRateFile] = useState<File | null>(null)
+  const [sellRateFile, setSellRateFile] = useState<File | null>(null)
 
   useEffect(() => {
     if (editingEnquiry) {
       setEditingId(editingEnquiry.id)
-      setFormState({
-        enq_receipt_date:
-          editingEnquiry.enq_receipt_date?.split("T")[0] ??
-          new Date().toISOString().split("T")[0],
-        mode: editingEnquiry.mode ?? "",
-        enq_type: editingEnquiry.enq_type ?? "",
-        exim: editingEnquiry.exim ?? "",
-        fn: editingEnquiry.fn ?? "",
-        sales_person: editingEnquiry.sales_person ?? "",
-        agent_name: editingEnquiry.agent_name ?? "",
-        country: editingEnquiry.country ?? "",
-        branch: editingEnquiry.branch ?? "",
-        network: editingEnquiry.network ?? "",
-        pol: editingEnquiry.pol ?? "",
-        pod: editingEnquiry.pod ?? "",
-        incoterms: editingEnquiry.incoterms ?? "",
-        container_type: editingEnquiry.container_type ?? "",
-        status: editingEnquiry.status ?? "PENDING",
-        email_subject_line: editingEnquiry.email_subject_line ?? "",
-        shipper: editingEnquiry.shipper ?? "",
-        consignee: editingEnquiry.consignee ?? "",
-        remarks: editingEnquiry.remarks ?? "",
-        mbl_awb_no: editingEnquiry.mbl_awb_no ?? "",
-        job_invoice_no: editingEnquiry.job_invoice_no ?? "",
-        gop: editingEnquiry.gop ?? "",
-      })
+      setFormState(populateFromEditing(editingEnquiry))
       setErrors({})
     } else {
       setEditingId(null)
@@ -170,10 +191,18 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
     }
   }
 
+  async function uploadFile(file: File, userId: string): Promise<string> {
+    const path = `${userId}/${Date.now()}-${file.name}`
+    const { error: upErr } = await supabase.storage
+      .from("enquiry-files")
+      .upload(path, file, { upsert: true })
+    if (upErr) throw new Error(upErr.message)
+    return path
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
 
-    // Validate required fields
     const missing: Partial<Record<keyof FormData, boolean>> = {}
     for (const field of REQUIRED_FIELDS) {
       if (!form[field]) missing[field] = true
@@ -194,6 +223,18 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
     } = await supabase.auth.getUser()
     if (!user) {
       setError("Not authenticated")
+      setLoading(false)
+      return
+    }
+
+    let buyPath = form.buy_rate_file
+    let sellPath = form.sell_rate_file
+
+    try {
+      if (buyRateFile) buyPath = await uploadFile(buyRateFile, user.id)
+      if (sellRateFile) sellPath = await uploadFile(sellRateFile, user.id)
+    } catch (uploadErr: any) {
+      setError("File upload failed: " + uploadErr.message)
       setLoading(false)
       return
     }
@@ -221,6 +262,10 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
       mbl_awb_no: form.mbl_awb_no || null,
       job_invoice_no: form.job_invoice_no || null,
       gop: form.gop || null,
+      assigned_user: form.assigned_user || null,
+      assigned_date: form.assigned_date || null,
+      buy_rate_file: buyPath || null,
+      sell_rate_file: sellPath || null,
     }
 
     if (editingId) {
@@ -237,6 +282,8 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
         setSuccess(`Enquiry ${data?.enq_ref_no ?? ""} updated successfully.`)
         setFormState(getDefaultForm())
         setEditingId(null)
+        setBuyRateFile(null)
+        setSellRateFile(null)
         onEditComplete?.()
         onSuccess?.()
       }
@@ -252,6 +299,8 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
       } else {
         setSuccess(`Enquiry ${data?.enq_ref_no ?? ""} submitted successfully.`)
         setFormState(getDefaultForm())
+        setBuyRateFile(null)
+        setSellRateFile(null)
         onSuccess?.()
       }
     }
@@ -261,35 +310,12 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
 
   function handleReset() {
     if (editingEnquiry) {
-      setFormState({
-        enq_receipt_date:
-          editingEnquiry.enq_receipt_date?.split("T")[0] ??
-          new Date().toISOString().split("T")[0],
-        mode: editingEnquiry.mode ?? "",
-        enq_type: editingEnquiry.enq_type ?? "",
-        exim: editingEnquiry.exim ?? "",
-        fn: editingEnquiry.fn ?? "",
-        sales_person: editingEnquiry.sales_person ?? "",
-        agent_name: editingEnquiry.agent_name ?? "",
-        country: editingEnquiry.country ?? "",
-        branch: editingEnquiry.branch ?? "",
-        network: editingEnquiry.network ?? "",
-        pol: editingEnquiry.pol ?? "",
-        pod: editingEnquiry.pod ?? "",
-        incoterms: editingEnquiry.incoterms ?? "",
-        container_type: editingEnquiry.container_type ?? "",
-        status: editingEnquiry.status ?? "PENDING",
-        email_subject_line: editingEnquiry.email_subject_line ?? "",
-        shipper: editingEnquiry.shipper ?? "",
-        consignee: editingEnquiry.consignee ?? "",
-        remarks: editingEnquiry.remarks ?? "",
-        mbl_awb_no: editingEnquiry.mbl_awb_no ?? "",
-        job_invoice_no: editingEnquiry.job_invoice_no ?? "",
-        gop: editingEnquiry.gop ?? "",
-      })
+      setFormState(populateFromEditing(editingEnquiry))
     } else {
       setFormState(getDefaultForm())
     }
+    setBuyRateFile(null)
+    setSellRateFile(null)
     setError(null)
     setSuccess(null)
     setErrors({})
@@ -298,6 +324,8 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
   function handleCancelEdit() {
     setFormState(getDefaultForm())
     setEditingId(null)
+    setBuyRateFile(null)
+    setSellRateFile(null)
     setError(null)
     setSuccess(null)
     setErrors({})
@@ -306,6 +334,10 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
 
   const fieldErr = (f: keyof FormData) =>
     errors[f] ? "border-destructive focus-visible:ring-destructive" : ""
+
+  function fileName(path: string) {
+    return path.split("/").pop() ?? path
+  }
 
   return (
     <form
@@ -329,7 +361,7 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
       </div>
 
       {/* Grid — 4 columns */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-3">
 
         {/* ── Row 1 ─────────────────────────────────────────── */}
         <div className="space-y-1.5">
@@ -443,12 +475,12 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
 
         {/* ── Row 3 ─────────────────────────────────────────── */}
         <div className="space-y-1.5">
-          <Label>Enq Recvd from Agent</Label>
-          <Combobox
+          <Label htmlFor="agent_name">Enq Recvd from Agent</Label>
+          <Input
+            id="agent_name"
             value={form.agent_name}
-            onChange={(v) => setField("agent_name", v)}
-            options={AGENTS}
-            placeholder="Search agent..."
+            onChange={(e) => setField("agent_name", e.target.value)}
+            placeholder="Type agent name..."
           />
         </div>
 
@@ -475,54 +507,62 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
         </div>
 
         <div className="space-y-1.5">
-          <Label>Container Type</Label>
+          <Label>Container Type / Dimension <span className="text-destructive">*</span></Label>
           <Select value={form.container_type} onValueChange={(v) => setField("container_type", v)}>
-            <SelectTrigger><SelectValue placeholder="--Container Type--" /></SelectTrigger>
+            <SelectTrigger className={fieldErr("container_type")}>
+              <SelectValue placeholder="--Container Type--" />
+            </SelectTrigger>
             <SelectContent>
               {CONTAINER_TYPES.map((t) => (
                 <SelectItem key={t} value={t}>{t}</SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {errors.container_type && <p className="text-xs text-destructive">Required</p>}
         </div>
 
         {/* ── Row 4 ─────────────────────────────────────────── */}
         <div className="space-y-1.5">
-          <Label>POL / Origin Airport</Label>
+          <Label>POL / Origin Airport <span className="text-destructive">*</span></Label>
           <Combobox
             value={form.pol}
             onChange={(v) => setField("pol", v)}
             options={PORT_CITIES}
             placeholder="Search port..."
           />
+          {errors.pol && <p className="text-xs text-destructive">Required</p>}
         </div>
 
         <div className="space-y-1.5">
-          <Label>POD / Dest. Airport</Label>
+          <Label>POD / Dest. Airport <span className="text-destructive">*</span></Label>
           <Combobox
             value={form.pod}
             onChange={(v) => setField("pod", v)}
             options={PORT_CITIES}
             placeholder="Search port..."
           />
+          {errors.pod && <p className="text-xs text-destructive">Required</p>}
         </div>
 
         <div className="space-y-1.5">
-          <Label>Incoterms</Label>
+          <Label>Incoterms <span className="text-destructive">*</span></Label>
           <Select value={form.incoterms} onValueChange={(v) => setField("incoterms", v)}>
-            <SelectTrigger><SelectValue placeholder="--Incoterms--" /></SelectTrigger>
+            <SelectTrigger className={fieldErr("incoterms")}>
+              <SelectValue placeholder="--Incoterms--" />
+            </SelectTrigger>
             <SelectContent>
               {INCOTERMS.map((t) => (
                 <SelectItem key={t} value={t}>{t}</SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {errors.incoterms && <p className="text-xs text-destructive">Required</p>}
         </div>
 
         <div className="space-y-1.5">
-          <Label>Enq Status</Label>
+          <Label>Enq Status <span className="text-destructive">*</span></Label>
           <Select value={form.status} onValueChange={(v) => setField("status", v)}>
-            <SelectTrigger>
+            <SelectTrigger className={fieldErr("status")}>
               <SelectValue placeholder="--Status--" />
             </SelectTrigger>
             <SelectContent>
@@ -531,6 +571,7 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
               ))}
             </SelectContent>
           </Select>
+          {errors.status && <p className="text-xs text-destructive">Required</p>}
         </div>
 
         {/* ── Row 5 ─────────────────────────────────────────── */}
@@ -599,6 +640,59 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
             onChange={(e) => setField("gop", e.target.value)}
           />
         </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="assigned_user">Assigned To</Label>
+          <Input
+            id="assigned_user"
+            value={form.assigned_user}
+            onChange={(e) => setField("assigned_user", e.target.value)}
+            placeholder="Employee name..."
+          />
+        </div>
+
+        {/* ── Row 7 ─────────────────────────────────────────── */}
+        <div className="space-y-1.5">
+          <Label htmlFor="assigned_date">Assigned Date</Label>
+          <Input
+            id="assigned_date"
+            type="date"
+            value={form.assigned_date}
+            onChange={(e) => setField("assigned_date", e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Buy Rate Attachment</Label>
+          <Input
+            type="file"
+            accept=".pdf,.xlsx,.xls,.png,.jpg,.jpeg"
+            onChange={(e) => setBuyRateFile(e.target.files?.[0] ?? null)}
+            className="cursor-pointer"
+          />
+          {form.buy_rate_file && !buyRateFile && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <Paperclip className="h-3 w-3" />
+              {fileName(form.buy_rate_file)}
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Sell Rate Attachment</Label>
+          <Input
+            type="file"
+            accept=".pdf,.xlsx,.xls,.png,.jpg,.jpeg"
+            onChange={(e) => setSellRateFile(e.target.files?.[0] ?? null)}
+            className="cursor-pointer"
+          />
+          {form.sell_rate_file && !sellRateFile && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <Paperclip className="h-3 w-3" />
+              {fileName(form.sell_rate_file)}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Feedback */}
@@ -618,12 +712,8 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
         <Button type="submit" disabled={loading} className="gap-2 cursor-pointer">
           <Send className="h-4 w-4" />
           {loading
-            ? editingId
-              ? "Updating..."
-              : "Submitting..."
-            : editingId
-              ? "Update"
-              : "Submit"}
+            ? editingId ? "Updating..." : "Submitting..."
+            : editingId ? "Update" : "Submit"}
         </Button>
         <Button type="button" variant="outline" onClick={handleReset} className="gap-2 cursor-pointer">
           <RotateCcw className="h-4 w-4" />
