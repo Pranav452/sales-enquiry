@@ -40,9 +40,9 @@ export function Combobox({
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
-  const filtered = options
-    .filter((o) => o.toLowerCase().includes(query.toLowerCase()))
-    .slice(0, 60)
+  const filtered = options.filter((o) =>
+    o.toLowerCase().includes(query.toLowerCase())
+  )
 
   const showList = open && !disabled && filtered.length > 0
 
@@ -67,7 +67,7 @@ export function Combobox({
         )}
       />
       {showList && (
-        <ul className="absolute z-50 mt-1 max-h-48 w-full overflow-y-auto rounded-md border border-border bg-popover shadow-md">
+        <ul className="absolute z-50 mt-1 max-h-96 w-full overflow-y-auto rounded-md border border-border bg-popover shadow-md">
           {filtered.map((opt) => (
             <li
               key={opt}
