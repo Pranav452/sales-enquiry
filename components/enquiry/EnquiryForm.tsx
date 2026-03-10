@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Combobox } from "@/components/ui/combobox"
-import { Paperclip, RotateCcw, Send } from "lucide-react"
+import { Download, Paperclip, RotateCcw, Send } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   SALES_PERSONS,
@@ -289,6 +289,18 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
 
   const fileName = (path: string) => path.split("/").pop() ?? path
 
+  async function downloadFile(storagePath: string) {
+    const { data, error: dlErr } = await supabase.storage
+      .from("enquiry-files")
+      .createSignedUrl(storagePath, 60)
+    if (dlErr || !data?.signedUrl) return
+    const a = document.createElement("a")
+    a.href = data.signedUrl
+    a.download = fileName(storagePath)
+    a.target = "_blank"
+    a.click()
+  }
+
   // ─── Render ────────────────────────────────────────────────
 
   return (
@@ -555,12 +567,12 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="assigned_user">Assigned To</Label>
+          <Label htmlFor="assigned_user">Assigned User</Label>
           <Input id="assigned_user" value={form.assigned_user} onChange={(e) => setField("assigned_user", e.target.value)} placeholder="Employee name..." />
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="assigned_date">Assigned Date</Label>
+          <Label htmlFor="assigned_date">Quotation Given Date</Label>
           <Input id="assigned_date" type="date" value={form.assigned_date} onChange={(e) => setField("assigned_date", e.target.value)} />
         </div>
 
@@ -571,9 +583,20 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
           <Label>Buy Rate</Label>
           <Input type="file" accept=".pdf,.xlsx,.xls,.png,.jpg,.jpeg" onChange={(e) => setBuyRateFile(e.target.files?.[0] ?? null)} className="cursor-pointer" />
           {form.buy_rate_file && !buyRateFile && (
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <Paperclip className="h-3 w-3" />{fileName(form.buy_rate_file)}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-muted-foreground flex items-center gap-1 truncate">
+                <Paperclip className="h-3 w-3 shrink-0" />{fileName(form.buy_rate_file)}
+              </p>
+              <button
+                type="button"
+                onClick={() => downloadFile(form.buy_rate_file)}
+                className="shrink-0 inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                aria-label="Download buy rate file"
+              >
+                <Download className="h-3 w-3" />
+                Download
+              </button>
+            </div>
           )}
         </div>
 
@@ -581,9 +604,20 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
           <Label>Sell Rate</Label>
           <Input type="file" accept=".pdf,.xlsx,.xls,.png,.jpg,.jpeg" onChange={(e) => setSellRateFile(e.target.files?.[0] ?? null)} className="cursor-pointer" />
           {form.sell_rate_file && !sellRateFile && (
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <Paperclip className="h-3 w-3" />{fileName(form.sell_rate_file)}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-muted-foreground flex items-center gap-1 truncate">
+                <Paperclip className="h-3 w-3 shrink-0" />{fileName(form.sell_rate_file)}
+              </p>
+              <button
+                type="button"
+                onClick={() => downloadFile(form.sell_rate_file)}
+                className="shrink-0 inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                aria-label="Download sell rate file"
+              >
+                <Download className="h-3 w-3" />
+                Download
+              </button>
+            </div>
           )}
         </div>
 

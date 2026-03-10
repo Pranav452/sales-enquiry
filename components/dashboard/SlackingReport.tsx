@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { AlertTriangle, CheckCircle2 } from "lucide-react"
+import { AlertTriangle, CheckCircle2, Download } from "lucide-react"
 import { cn } from "@/lib/utils"
+import * as XLSX from "xlsx"
 
 interface OverdueItem {
   id: string
@@ -76,6 +77,27 @@ export function SlackingReport() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [threshold])
 
+  function exportToExcel() {
+    const rows = items.map((item) => ({
+      "Days Overdue": item.daysPending,
+      "Urgency": item.daysPending >= 8 ? "Critical" : item.daysPending >= 4 ? "Warning" : "New",
+      "Enquiry No": item.enq_ref_no ?? "",
+      "Assigned To": item.assigned_user ?? "",
+      "Sales Person": item.sales_person ?? "",
+      "POL": item.pol ?? "",
+      "POD": item.pod ?? "",
+      "Route": item.pol && item.pod ? `${item.pol} → ${item.pod}` : (item.pol ?? item.pod ?? ""),
+      "Status": item.status ?? "",
+      "Branch": item.branch ?? "",
+      "Assigned Date": item.assigned_date ?? "",
+    }))
+    const ws = XLSX.utils.json_to_sheet(rows)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "Overdue Follow-ups")
+    const date = new Date().toISOString().split("T")[0]
+    XLSX.writeFile(wb, `Overdue_Followups_${date}.xlsx`)
+  }
+
   const critical = items.filter((i) => i.daysPending >= 8).length
   const warning  = items.filter((i) => i.daysPending >= 4 && i.daysPending < 8).length
   const fresh    = items.length - critical - warning
@@ -110,19 +132,32 @@ export function SlackingReport() {
             </CardDescription>
           </div>
 
-          {/* Threshold filter */}
-          <div className="flex items-center gap-2 text-xs text-muted-foreground flex-shrink-0">
-            <span>Show overdue</span>
-            <select
-              value={threshold}
-              onChange={(e) => setThreshold(Number(e.target.value))}
-              className="h-7 rounded-md border border-input bg-[hsl(var(--input-bg))] px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
-            >
-              <option value={1}>1+ days</option>
-              <option value={3}>3+ days</option>
-              <option value={7}>7+ days</option>
-              <option value={14}>14+ days</option>
-            </select>
+          {/* Controls */}
+          <div className="flex items-center gap-3 flex-shrink-0 flex-wrap">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>Show overdue</span>
+              <select
+                value={threshold}
+                onChange={(e) => setThreshold(Number(e.target.value))}
+                className="h-7 rounded-md border border-input bg-[hsl(var(--input-bg))] px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value={1}>1+ days</option>
+                <option value={3}>3+ days</option>
+                <option value={7}>7+ days</option>
+                <option value={14}>14+ days</option>
+              </select>
+            </div>
+            {items.length > 0 && (
+              <button
+                type="button"
+                onClick={exportToExcel}
+                className="inline-flex items-center gap-1.5 h-7 px-3 rounded-md border border-input bg-[hsl(var(--input-bg))] text-xs font-medium text-foreground hover:bg-accent transition-colors"
+                aria-label="Export overdue follow-ups to Excel"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Export Excel
+              </button>
+            )}
           </div>
         </div>
 
