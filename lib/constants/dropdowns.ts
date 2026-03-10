@@ -12,7 +12,6 @@ export const SALES_PERSONS = [
   "MANAGEMENT",
   "MP OFFICE",
   "SAMIT BHATNAGAR",
-  "SAYALI K",
 ]
 
 export const FN_OPTIONS = ["FREEHAND", "NOMINATION"]

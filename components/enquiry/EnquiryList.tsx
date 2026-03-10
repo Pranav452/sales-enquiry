@@ -74,16 +74,10 @@ export function EnquiryList({ onSelectEnquiry, editingId, navigateOnEdit }: Enqu
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase()
     if (!q) return rows
-    return rows.filter(
-      (r) =>
-        (r.enq_ref_no ?? "").toLowerCase().includes(q) ||
-        (r.status ?? "").toLowerCase().includes(q) ||
-        (r.sales_person ?? "").toLowerCase().includes(q) ||
-        (r.branch ?? "").toLowerCase().includes(q) ||
-        (r.shipper ?? "").toLowerCase().includes(q) ||
-        (r.consignee ?? "").toLowerCase().includes(q) ||
-        (r.pol ?? "").toLowerCase().includes(q) ||
-        (r.pod ?? "").toLowerCase().includes(q)
+    return rows.filter((r) =>
+      Object.values(r).some(
+        (v) => v !== null && v !== undefined && String(v).toLowerCase().includes(q)
+      )
     )
   }, [rows, search])
 
@@ -161,7 +155,7 @@ export function EnquiryList({ onSelectEnquiry, editingId, navigateOnEdit }: Enqu
       <div className="px-6 py-3 border-b border-border flex justify-end">
         <Input
           type="search"
-          placeholder="Search by Enq No, Shipper, Consignee, Status, Branch, Sales Person, POL, POD..."
+          placeholder="Search across all fields — Enq No, Shipper, Consignee, Status, POL, POD, Mode, Country, Agent..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-sm"
