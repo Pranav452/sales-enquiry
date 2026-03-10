@@ -1,6 +1,6 @@
-# Links Cargo — Freight Enquiry System
+# Links Cargo — Feature Documentation
 
-A freight CRM application for capturing, managing, and analyzing freight enquiries. This document provides comprehensive, in-depth documentation of all features.
+Comprehensive documentation of all features in the Links Cargo Freight Enquiry System.
 
 ---
 
@@ -15,7 +15,6 @@ A freight CRM application for capturing, managing, and analyzing freight enquiri
 - [Setup & Installation](#setup--installation)
 - [Environment Variables](#environment-variables)
 - [Project Structure](#project-structure)
-- [Scripts](#scripts)
 
 ---
 
@@ -369,14 +368,3 @@ Session refresh and route protection are handled by `lib/supabase/middleware.ts`
 - `components/` — React components (enquiry, dashboard, layout, ui)
 - `lib/` — Supabase clients, constants, utilities
 - `proxy.ts` — Middleware entry point
-
----
-
-## Scripts
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start development server |
-| `npm run build` | Production build |
-| `npm run start` | Start production server |
-| `npm run lint` | Run ESLint |
