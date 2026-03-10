@@ -7,6 +7,8 @@ import { TypeBreakdown } from "./TypeBreakdown"
 import { EximBreakdown } from "./EximBreakdown"
 import { SalesPersonChart } from "./SalesPersonChart"
 import { DashboardFilters, type Filters } from "./DashboardFilters"
+import { SalesLeaderboard } from "./SalesLeaderboard"
+import { SlackingReport } from "./SlackingReport"
 
 const defaultFilters: Filters = {
   mode: "",
@@ -39,6 +41,20 @@ export function DashboardView() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <TypeBreakdown filters={filters} />
         <EximBreakdown filters={filters} />
+      </div>
+
+      {/* Team Performance */}
+      <div className="pt-2 border-t border-border">
+        <div className="mb-4">
+          <h2 className="text-base font-semibold text-foreground">Team Performance</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Individual win rates and assignment follow-up status
+          </p>
+        </div>
+        <div className="space-y-4">
+          <SalesLeaderboard filters={filters} />
+          <SlackingReport />
+        </div>
       </div>
     </div>
   )

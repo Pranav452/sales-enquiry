@@ -1,8 +1,10 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 
@@ -31,36 +33,43 @@ export interface Enquiry {
   mbl_awb_no?: string | null
   job_invoice_no?: string | null
   gop?: string | null
+  assigned_user?: string | null
+  assigned_date?: string | null
+  buy_rate_file?: string | null
+  sell_rate_file?: string | null
 }
+
+const PAGE_SIZE = 20
 
 function statusVariant(status: string | null) {
   const s = (status ?? "").toUpperCase()
   switch (s) {
-    case "WIN":
-      return "success"
-    case "LOSE":
-      return "danger"
-    case "FOLLOW UP":
-      return "warning"
+    case "WIN":        return "success"
+    case "LOSE":       return "danger"
+    case "FOLLOW UP":  return "warning"
     case "QUOTED":
     case "PENDING":
-    case "NO FEEDBACK":
-      return "info"
-    default:
-      return "secondary"
+    case "NO FEEDBACK": return "info"
+    default:           return "secondary"
   }
 }
 
 interface EnquiryListProps {
   onSelectEnquiry?: (row: Enquiry) => void
   editingId?: string | null
+  navigateOnEdit?: boolean
 }
 
-export function EnquiryList({ onSelectEnquiry, editingId }: EnquiryListProps) {
+const SELECT_COLS =
+  "id,enq_ref_no,enq_receipt_date,enq_type,mode,exim,fn,sales_person,agent_name,country,branch,network,pol,pod,incoterms,container_type,status,email_subject_line,shipper,consignee,remarks,mbl_awb_no,job_invoice_no,gop,assigned_user,assigned_date,buy_rate_file,sell_rate_file"
+
+export function EnquiryList({ onSelectEnquiry, editingId, navigateOnEdit }: EnquiryListProps) {
   const supabase = createClient()
+  const router = useRouter()
   const [rows, setRows] = useState<Enquiry[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
+  const [page, setPage] = useState(1)
 
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -72,13 +81,30 @@ export function EnquiryList({ onSelectEnquiry, editingId }: EnquiryListProps) {
         (r.sales_person ?? "").toLowerCase().includes(q) ||
         (r.branch ?? "").toLowerCase().includes(q) ||
         (r.shipper ?? "").toLowerCase().includes(q) ||
-        (r.consignee ?? "").toLowerCase().includes(q)
+        (r.consignee ?? "").toLowerCase().includes(q) ||
+        (r.pol ?? "").toLowerCase().includes(q) ||
+        (r.pod ?? "").toLowerCase().includes(q)
     )
   }, [rows, search])
 
   useEffect(() => {
+    setPage(1)
+  }, [search])
+
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE))
+  const paginatedRows = filteredRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+  const pageNumbers = useMemo(() => {
+    if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i + 1)
+    const start = Math.max(1, Math.min(page - 2, totalPages - 4))
+    return Array.from({ length: 5 }, (_, i) => start + i)
+  }, [page, totalPages])
+
+  useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       if (!user) return
 
       const { data: profile } = await supabase
@@ -89,11 +115,9 @@ export function EnquiryList({ onSelectEnquiry, editingId }: EnquiryListProps) {
 
       let query = supabase
         .from("enquiries")
-        .select("id,enq_ref_no,enq_receipt_date,enq_type,mode,exim,fn,sales_person,agent_name,country,branch,network,pol,pod,incoterms,container_type,status,email_subject_line,shipper,consignee,remarks,mbl_awb_no,job_invoice_no,gop")
+        .select(SELECT_COLS)
         .order("created_at", { ascending: false })
-        .limit(50)
 
-      // Sales users only see their own
       if (!profile || profile.role !== "admin") {
         query = query.eq("created_by", user.id)
       }
@@ -104,6 +128,15 @@ export function EnquiryList({ onSelectEnquiry, editingId }: EnquiryListProps) {
     }
     load()
   }, [])
+
+  function handleRowClick(r: Enquiry) {
+    if (navigateOnEdit) {
+      router.push(`/enquiry?edit=${r.id}`)
+    } else {
+      onSelectEnquiry?.(r)
+      window.scrollTo({ top: 0, behavior: "smooth" })
+    }
+  }
 
   if (loading) {
     return (
@@ -116,93 +149,141 @@ export function EnquiryList({ onSelectEnquiry, editingId }: EnquiryListProps) {
   if (rows.length === 0) {
     return (
       <div className="px-6 py-8 text-sm text-muted-foreground text-center">
-        No enquiries yet. Submit the first one above.
+        No enquiries found.
       </div>
     )
   }
+
+  const COLS = ["Enq No", "Date", "Shipper", "Consignee", "Sales Person", "Branch", "Remarks", "Status"]
 
   return (
     <div>
       <div className="px-6 py-3 border-b border-border flex justify-end">
         <Input
           type="search"
-          placeholder="Search by Enq No, Status, Sales Person, Branch, Shipper, Consignee..."
+          placeholder="Search by Enq No, Shipper, Consignee, Status, Branch, Sales Person, POL, POD..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-sm"
           aria-label="Search enquiries"
         />
       </div>
+
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
-        <thead>
-          <tr className="border-b border-border">
-            {["Enq No", "Date", "Type", "Mode", "EXIM", "Shipper", "Consignee", "Sales Person", "Branch", "Status"].map((h) => (
-              <th
-                key={h}
-                className="px-4 py-3 text-left font-semibold text-muted-foreground whitespace-nowrap"
-              >
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {filteredRows.length === 0 ? (
-            <tr>
-              <td colSpan={10} className="px-6 py-8 text-sm text-muted-foreground text-center">
-                No enquiries match your search.
-              </td>
+          <thead>
+            <tr className="border-b border-border">
+              {COLS.map((h) => (
+                <th
+                  key={h}
+                  className="px-4 py-3 text-left font-semibold text-muted-foreground whitespace-nowrap"
+                >
+                  {h}
+                </th>
+              ))}
             </tr>
-          ) : (
-          filteredRows.map((r) => (
-            <tr
-              key={r.id}
-              className={cn(
-                "border-b border-border/50 hover:bg-accent transition-colors",
-                editingId === r.id && "bg-primary/10 dark:bg-primary/20"
-              )}
-            >
-              <td className="px-4 py-3 font-mono font-medium whitespace-nowrap">
-                {onSelectEnquiry ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onSelectEnquiry(r)
-                      window.scrollTo({ top: 0, behavior: "smooth" })
-                    }}
-                    className="text-blue-600 hover:underline text-left cursor-pointer"
-                    aria-label={`Edit enquiry ${r.enq_ref_no ?? r.id}`}
-                  >
-                    {r.enq_ref_no ?? "—"}
-                  </button>
-                ) : (
-                  <span className="text-blue-600">{r.enq_ref_no ?? "—"}</span>
-                )}
-              </td>
-              <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
-                {r.enq_receipt_date
-                  ? new Date(r.enq_receipt_date).toLocaleDateString("en-GB")
-                  : "—"}
-              </td>
-              <td className="px-4 py-3 whitespace-nowrap">{r.enq_type ?? "—"}</td>
-              <td className="px-4 py-3 whitespace-nowrap">{r.mode ?? "—"}</td>
-              <td className="px-4 py-3 whitespace-nowrap">{r.exim ?? "—"}</td>
-              <td className="px-4 py-3 max-w-[140px] truncate">{r.shipper || "—"}</td>
-              <td className="px-4 py-3 max-w-[140px] truncate">{r.consignee || "—"}</td>
-              <td className="px-4 py-3 whitespace-nowrap">{r.sales_person ?? "—"}</td>
-              <td className="px-4 py-3 whitespace-nowrap">{r.branch ?? "—"}</td>
-              <td className="px-4 py-3 whitespace-nowrap">
-                <Badge variant={statusVariant(r.status) as "success" | "danger" | "warning" | "info" | "secondary"}>
-                  {r.status ?? "—"}
-                </Badge>
-              </td>
-            </tr>
-          ))
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {paginatedRows.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="px-6 py-8 text-sm text-muted-foreground text-center">
+                  No enquiries match your search.
+                </td>
+              </tr>
+            ) : (
+              paginatedRows.map((r) => (
+                <tr
+                  key={r.id}
+                  className={cn(
+                    "border-b border-border/50 hover:bg-accent transition-colors",
+                    editingId === r.id && "bg-primary/10 dark:bg-primary/20"
+                  )}
+                >
+                  <td className="px-4 py-3 font-mono font-medium whitespace-nowrap">
+                    <button
+                      type="button"
+                      onClick={() => handleRowClick(r)}
+                      className="text-blue-600 hover:underline text-left cursor-pointer"
+                      aria-label={`Edit enquiry ${r.enq_ref_no ?? r.id}`}
+                    >
+                      {r.enq_ref_no ?? "—"}
+                    </button>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
+                    {r.enq_receipt_date
+                      ? new Date(r.enq_receipt_date).toLocaleDateString("en-GB")
+                      : "—"}
+                  </td>
+                  <td className="px-4 py-3 max-w-[160px] truncate">{r.shipper || "—"}</td>
+                  <td className="px-4 py-3 max-w-[160px] truncate">{r.consignee || "—"}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{r.sales_person ?? "—"}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{r.branch ?? "—"}</td>
+                  <td className="px-4 py-3 max-w-[220px] whitespace-normal break-words text-muted-foreground">
+                    {r.remarks || "—"}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <Badge
+                      variant={
+                        statusVariant(r.status) as
+                          | "success"
+                          | "danger"
+                          | "warning"
+                          | "info"
+                          | "secondary"
+                      }
+                    >
+                      {r.status ?? "—"}
+                    </Badge>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="px-6 py-3 border-t border-border flex items-center justify-between gap-2 text-xs text-muted-foreground">
+          <span>
+            {filteredRows.length} result{filteredRows.length !== 1 ? "s" : ""}
+          </span>
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              ← Prev
+            </Button>
+            {pageNumbers.map((p) => (
+              <Button
+                key={p}
+                type="button"
+                variant={p === page ? "default" : "outline"}
+                size="sm"
+                className="h-7 w-7 p-0 text-xs"
+                onClick={() => setPage(p)}
+              >
+                {p}
+              </Button>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+            >
+              Next →
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -22,6 +22,7 @@
   --input-bg: 0 0% 100%;
   --ring: 217 91% 60%;
   --radius: 0.5rem;
+  --topbar: 217 85% 36%;
   --chart-1: 217 91% 60%;
   --chart-2: 160 60% 45%;
   --chart-3: 30 80% 55%;
@@ -30,26 +31,27 @@
 }
 
 .dark {
-  --background: 0 0% 0%;
-  --foreground: 0 0% 95%;
-  --card: 0 0% 7%;
-  --card-foreground: 0 0% 95%;
-  --popover: 0 0% 8%;
-  --popover-foreground: 0 0% 95%;
+  --background: 222 15% 8%;
+  --foreground: 210 20% 94%;
+  --card: 222 15% 11%;
+  --card-foreground: 210 20% 94%;
+  --popover: 222 15% 12%;
+  --popover-foreground: 210 20% 94%;
   --primary: 217 91% 60%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 0 0% 12%;
-  --secondary-foreground: 0 0% 95%;
-  --muted: 0 0% 14%;
-  --muted-foreground: 0 0% 72%;
-  --accent: 0 0% 16%;
-  --accent-foreground: 0 0% 95%;
+  --secondary: 222 15% 16%;
+  --secondary-foreground: 210 20% 94%;
+  --muted: 222 15% 16%;
+  --muted-foreground: 215 15% 58%;
+  --accent: 222 15% 18%;
+  --accent-foreground: 210 20% 94%;
   --destructive: 0 63% 45%;
   --destructive-foreground: 0 0% 98%;
-  --border: 0 0% 20%;
-  --input: 0 0% 20%;
-  --input-bg: 0 0% 10%;
+  --border: 222 15% 22%;
+  --input: 222 15% 26%;
+  --input-bg: 222 15% 14%;
   --ring: 217 91% 60%;
+  --topbar: 217 85% 30%;
   --chart-1: 217 91% 60%;
   --chart-2: 160 60% 45%;
   --chart-3: 30 80% 55%;
@@ -78,6 +80,7 @@
   --color-input: hsl(var(--input));
   --color-input-bg: hsl(var(--input-bg));
   --color-ring: hsl(var(--ring));
+  --color-topbar: hsl(var(--topbar));
   --color-chart-1: hsl(var(--chart-1));
   --color-chart-2: hsl(var(--chart-2));
   --color-chart-3: hsl(var(--chart-3));
