@@ -3,10 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { EnquiryForm, type EnquiryFormEditing } from "@/components/enquiry/EnquiryForm"
-import { DashboardView } from "@/components/dashboard/DashboardView"
-import { ClipboardList, LayoutDashboard } from "lucide-react"
 
 const SELECT_COLS =
   "id,enq_ref_no,enq_receipt_date,enq_type,mode,exim,fn,sales_person,agent_name,country,branch,network,pol,pod,incoterms,container_type,status,email_subject_line,shipper,consignee,remarks,mbl_awb_no,job_invoice_no,gop,assigned_user,assigned_date,buy_rate_file,sell_rate_file"
@@ -38,37 +35,24 @@ function EnquiryPageContent() {
   }, [])
 
   return (
-    <div className="p-4 max-w-screen-xl mx-auto">
-      <div className="mb-3 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-foreground">Enquiry Management</h1>
-        <img src="/LINKS.bmp" alt="Links Cargo" className="h-10 object-contain" />
+    <div className="p-6 max-w-screen-xl mx-auto">
+      <div className="mb-5">
+        <h1 className="text-lg font-semibold text-foreground">
+          {editingEnquiry
+            ? `Editing — ${editingEnquiry.enq_ref_no ?? "Enquiry"}`
+            : "New Enquiry"}
+        </h1>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          {editingEnquiry
+            ? "Update the fields below and click Update to save changes"
+            : "Fill in the details below — required fields marked with *"}
+        </p>
       </div>
 
-      <Tabs defaultValue="input">
-        <TabsList className="mb-4">
-          <TabsTrigger value="input" className="gap-2 text-xs">
-            <ClipboardList className="h-3.5 w-3.5" />
-            New Enquiry
-          </TabsTrigger>
-          <TabsTrigger value="dashboard" className="gap-2 text-xs">
-            <LayoutDashboard className="h-3.5 w-3.5" />
-            Dashboard
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="input">
-          <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
-            <EnquiryForm
-              editingEnquiry={editingEnquiry}
-              onEditComplete={handleEditComplete}
-            />
-          </div>
-        </TabsContent>
-
-        <TabsContent value="dashboard">
-          <DashboardView />
-        </TabsContent>
-      </Tabs>
+      <EnquiryForm
+        editingEnquiry={editingEnquiry}
+        onEditComplete={handleEditComplete}
+      />
     </div>
   )
 }

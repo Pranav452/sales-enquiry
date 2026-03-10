@@ -1,21 +1,19 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import {
-  Sidebar,
-  SidebarBody,
-  SidebarLink,
-} from "@/components/ui/sidebar"
+import Link from "next/link"
+import { usePathname, useRouter } from "next/navigation"
+import { useTheme } from "next-themes"
+import { useEffect, useState } from "react"
 import {
   Anchor,
   ClipboardList,
   LayoutDashboard,
   List,
   LogOut,
+  Moon,
+  Sun,
   User,
 } from "lucide-react"
-import { motion } from "framer-motion"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 
@@ -27,31 +25,13 @@ interface Props {
 }
 
 export function ProtectedLayoutClient({ role, displayName, branch, children }: Props) {
-  const [open, setOpen] = useState(false)
+  const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+  const { resolvedTheme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
 
-  const links = [
-    {
-      label: "New Enquiry",
-      href: "/enquiry",
-      icon: <ClipboardList className="h-5 w-5 flex-shrink-0 text-muted-foreground" />,
-    },
-    {
-      label: "Recent Enquiries",
-      href: "/enquiries",
-      icon: <List className="h-5 w-5 flex-shrink-0 text-muted-foreground" />,
-    },
-    ...(role === "admin"
-      ? [
-          {
-            label: "Dashboard",
-            href: "/dashboard",
-            icon: <LayoutDashboard className="h-5 w-5 flex-shrink-0 text-muted-foreground" />,
-          },
-        ]
-      : []),
-  ]
+  useEffect(() => { setMounted(true) }, [])
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -59,80 +39,143 @@ export function ProtectedLayoutClient({ role, displayName, branch, children }: P
     router.refresh()
   }
 
+  const isDark = mounted && resolvedTheme === "dark"
+
+  const navLinks = [
+    { label: "New Enquiry",      href: "/enquiry",    icon: ClipboardList },
+    { label: "Recent Enquiries", href: "/enquiries",  icon: List },
+    ...(role === "admin"
+      ? [{ label: "Dashboard", href: "/dashboard", icon: LayoutDashboard }]
+      : []),
+  ]
+
   return (
-    <div className={cn("flex h-screen overflow-hidden bg-background")}>
-      <Sidebar open={open} setOpen={setOpen}>
-        <SidebarBody className="justify-between gap-10">
-          <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
-            {/* Logo */}
-            {open ? (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex items-center gap-2 py-2 px-2"
+    <div className="flex flex-col h-screen overflow-hidden bg-background">
+
+      {/* ── Top Header ─────────────────────────────────────────── */}
+      <header
+        className="h-14 flex-shrink-0 flex items-center px-4 gap-4 z-50 border-b border-white/10"
+        style={{ background: "hsl(var(--topbar))" }}
+      >
+        {/* Brand */}
+        <div className="flex items-center gap-2.5 flex-shrink-0">
+          <div className="h-8 w-8 rounded-lg bg-white/15 flex items-center justify-center flex-shrink-0">
+            <Anchor className="h-4 w-4 text-white" />
+          </div>
+          <div className="hidden sm:block">
+            <p className="text-white font-semibold text-sm leading-tight tracking-tight">
+              Links Cargo
+            </p>
+            <p className="text-white/50 text-[10px] leading-tight tracking-widest uppercase">
+              Freight CRM
+            </p>
+          </div>
+        </div>
+
+        <div className="flex-1" />
+
+        {/* User info + Logout */}
+        <div className="flex items-center gap-2.5 flex-shrink-0">
+          <div className="h-7 w-7 rounded-full bg-white/15 flex items-center justify-center flex-shrink-0">
+            <User className="h-3.5 w-3.5 text-white" />
+          </div>
+
+          <div className="text-right hidden md:block min-w-0 max-w-[160px] overflow-hidden">
+            <p className="text-white text-xs font-medium leading-tight truncate">{displayName}</p>
+            {branch && (
+              <p className="text-white/50 text-[10px] leading-tight truncate">{branch}</p>
+            )}
+          </div>
+
+          <div className="w-px h-5 bg-white/20 flex-shrink-0 hidden md:block" />
+
+          <button
+            onClick={handleLogout}
+            className="flex-shrink-0 flex items-center gap-1.5 text-white/70 hover:text-white
+                       text-xs px-2.5 py-1.5 rounded-md hover:bg-white/10 transition-colors"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Logout</span>
+          </button>
+        </div>
+      </header>
+
+      {/* ── Body: Hover-Expand Sidebar + Main Content ──────────── */}
+      <div className="flex flex-1 overflow-hidden">
+
+        {/* Sidebar */}
+        <nav
+          className={cn(
+            "group/nav w-14 hover:w-52 transition-[width] duration-200 ease-in-out",
+            "bg-card border-r border-border flex flex-col py-3 gap-0.5 flex-shrink-0 overflow-hidden"
+          )}
+        >
+          {/* Nav links */}
+          {navLinks.map(({ label, href, icon: Icon }) => {
+            const isActive =
+              href === "/enquiry"
+                ? pathname === "/enquiry" || pathname.startsWith("/enquiry?")
+                : pathname.startsWith(href)
+
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  "flex items-center h-10 mx-1.5 px-2.5 gap-3 rounded-lg transition-colors",
+                  isActive
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                )}
               >
-                <div className="h-7 w-7 rounded-md bg-primary flex items-center justify-center flex-shrink-0">
-                  <Anchor className="h-4 w-4 text-primary-foreground" />
-                </div>
-                <span className="font-semibold text-sm text-foreground whitespace-pre">
-                  Links Cargo
+                <Icon className="h-5 w-5 shrink-0" />
+                <span
+                  className={cn(
+                    "whitespace-nowrap text-sm font-medium",
+                    "opacity-0 group-hover/nav:opacity-100",
+                    "transition-opacity duration-150 delay-75"
+                  )}
+                >
+                  {label}
                 </span>
-              </motion.div>
+              </Link>
+            )
+          })}
+
+          {/* Spacer pushes toggle to bottom */}
+          <div className="flex-1" />
+
+          {/* Theme toggle */}
+          <button
+            onClick={() => setTheme(isDark ? "light" : "dark")}
+            className="flex items-center h-10 mx-1.5 px-2.5 gap-3 rounded-lg transition-colors
+                       text-muted-foreground hover:bg-accent hover:text-foreground"
+          >
+            {mounted ? (
+              isDark
+                ? <Sun className="h-5 w-5 shrink-0" />
+                : <Moon className="h-5 w-5 shrink-0" />
             ) : (
-              <div className="flex items-center gap-2 py-2 px-2">
-                <div className="h-7 w-7 rounded-md bg-primary flex items-center justify-center flex-shrink-0">
-                  <Anchor className="h-4 w-4 text-primary-foreground" />
-                </div>
-              </div>
+              <Moon className="h-5 w-5 shrink-0 opacity-0" />
             )}
-
-            {/* Nav links */}
-            <div className="mt-6 flex flex-col gap-1">
-              {links.map((link) => (
-                <SidebarLink key={link.href} link={link} />
-              ))}
-            </div>
-          </div>
-
-          {/* Bottom: user info + logout */}
-          <div className="flex flex-col gap-1">
-            <SidebarLink
-              link={{
-                label: displayName,
-                href: "#",
-                icon: (
-                  <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <User className="h-4 w-4 text-primary" />
-                  </div>
-                ),
-              }}
-            />
-            {open && branch && (
-              <p className="text-xs text-muted-foreground px-2 pb-1">{branch}</p>
-            )}
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 py-2 px-2 rounded-md hover:bg-accent transition-colors w-full text-left"
+            <span
+              className={cn(
+                "whitespace-nowrap text-sm font-medium",
+                "opacity-0 group-hover/nav:opacity-100",
+                "transition-opacity duration-150 delay-75"
+              )}
             >
-              <LogOut className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
-              <motion.span
-                animate={{
-                  display: open ? "inline-block" : "none",
-                  opacity: open ? 1 : 0,
-                }}
-                className="text-sm text-foreground whitespace-pre inline-block !p-0 !m-0"
-              >
-                Logout
-              </motion.span>
-            </button>
-          </div>
-        </SidebarBody>
-      </Sidebar>
+              {isDark ? "Light mode" : "Dark mode"}
+            </span>
+          </button>
+        </nav>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-y-auto">
-        {children}
-      </main>
+        {/* Main content */}
+        <main className="flex-1 overflow-y-auto">
+          {children}
+        </main>
+
+      </div>
     </div>
   )
 }
