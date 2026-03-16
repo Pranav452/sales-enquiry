@@ -21,10 +21,17 @@ interface Props {
   role: string
   displayName: string
   branch: string
+  company: string
+  userId: string
   children: React.ReactNode
 }
 
-export function ProtectedLayoutClient({ role, displayName, branch, children }: Props) {
+const COMPANY_LABELS: Record<string, string> = {
+  manilal: "Manilal & Sons",
+  links: "Links Cargo",
+}
+
+export function ProtectedLayoutClient({ role, displayName, branch, company, userId, children }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
@@ -39,7 +46,16 @@ export function ProtectedLayoutClient({ role, displayName, branch, children }: P
     router.refresh()
   }
 
+  async function handleCompanySwitch(newCompany: string) {
+    await supabase
+      .from("user_profiles")
+      .update({ company: newCompany })
+      .eq("id", userId)
+    router.refresh()
+  }
+
   const isDark = mounted && resolvedTheme === "dark"
+  const brandName = COMPANY_LABELS[company] || "Freight CRM"
 
   const navLinks = [
     { label: "New Enquiry",      href: "/enquiry",    icon: ClipboardList },
@@ -64,7 +80,7 @@ export function ProtectedLayoutClient({ role, displayName, branch, children }: P
           </div>
           <div className="hidden sm:block">
             <p className="text-white font-semibold text-sm leading-tight tracking-tight">
-              Links Cargo
+              {brandName}
             </p>
             <p className="text-white/50 text-[10px] leading-tight tracking-widest uppercase">
               Freight CRM
@@ -73,6 +89,27 @@ export function ProtectedLayoutClient({ role, displayName, branch, children }: P
         </div>
 
         <div className="flex-1" />
+
+        {/* Company switcher — admin only */}
+        {role === "admin" && (
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {Object.entries(COMPANY_LABELS).map(([val, label]) => (
+              <button
+                key={val}
+                type="button"
+                onClick={() => handleCompanySwitch(val)}
+                className={cn(
+                  "px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                  company === val
+                    ? "bg-white/20 text-white"
+                    : "text-white/60 hover:text-white hover:bg-white/10"
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* User info + Logout */}
         <div className="flex items-center gap-2.5 flex-shrink-0">

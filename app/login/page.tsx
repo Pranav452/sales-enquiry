@@ -7,6 +7,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Anchor } from "lucide-react"
+import { cn } from "@/lib/utils"
+
+const COMPANIES = [
+  { value: "manilal", label: "Manilal & Sons" },
+  { value: "links",   label: "Links Cargo" },
+]
 
 export default function LoginPage() {
   const router = useRouter()
@@ -16,6 +22,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [fullName, setFullName] = useState("")
+  const [company, setCompany] = useState("manilal")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -30,7 +37,7 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { full_name: fullName } },
+        options: { data: { full_name: fullName, company } },
       })
       if (error) {
         setError(error.message)
@@ -39,10 +46,27 @@ export default function LoginPage() {
         setIsSignUp(false)
       }
     } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) {
         setError(error.message)
-      } else {
+      } else if (data.user) {
+        // If company is not set in user_profiles, recover from user metadata
+        const { data: profile } = await supabase
+          .from("user_profiles")
+          .select("company")
+          .eq("id", data.user.id)
+          .single()
+
+        if (!profile?.company) {
+          const metaCompany = data.user.user_metadata?.company
+          if (metaCompany) {
+            await supabase
+              .from("user_profiles")
+              .update({ company: metaCompany })
+              .eq("id", data.user.id)
+          }
+        }
+
         router.push("/enquiry")
         router.refresh()
       }
@@ -59,7 +83,7 @@ export default function LoginPage() {
           <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center">
             <Anchor className="h-4 w-4 text-primary-foreground" />
           </div>
-          <span className="text-xl font-semibold text-foreground">Links Cargo</span>
+          <span className="text-xl font-semibold text-foreground">Freight CRM</span>
         </div>
 
         <div className="bg-card border border-border rounded-xl shadow-sm p-8">
@@ -91,7 +115,7 @@ export default function LoginPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="you@linkscargo.com"
+                placeholder="you@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -110,6 +134,30 @@ export default function LoginPage() {
                 minLength={6}
               />
             </div>
+
+            {/* Company selector — sign-up only */}
+            {isSignUp && (
+              <div className="space-y-1.5">
+                <Label>Company</Label>
+                <div className="flex gap-2">
+                  {COMPANIES.map((c) => (
+                    <button
+                      key={c.value}
+                      type="button"
+                      onClick={() => setCompany(c.value)}
+                      className={cn(
+                        "flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors",
+                        company === c.value
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-background text-foreground hover:bg-accent"
+                      )}
+                    >
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {error && (
               <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">

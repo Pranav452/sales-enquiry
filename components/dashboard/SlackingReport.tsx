@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { AlertTriangle, CheckCircle2, Download } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -41,7 +40,6 @@ function urgency(days: number) {
 }
 
 export function SlackingReport() {
-  const supabase = createClient()
   const [items, setItems] = useState<OverdueItem[]>([])
   const [loading, setLoading] = useState(true)
   const [threshold, setThreshold] = useState(3)
@@ -49,15 +47,12 @@ export function SlackingReport() {
   useEffect(() => {
     async function load() {
       setLoading(true)
-      const { data } = await supabase
-        .from("enquiries")
-        .select("id,enq_ref_no,assigned_user,assigned_date,status,branch,pol,pod,sales_person")
-        .not("assigned_user", "is", null)
-        .not("assigned_date", "is", null)
-        .order("assigned_date", { ascending: true })
 
-      if (!data) { setLoading(false); return }
+      const params = new URLSearchParams({ type: "slacking", threshold: String(threshold) })
+      const res = await fetch(`/api/dashboard?${params}`)
+      if (!res.ok) { setLoading(false); return }
 
+      const data: Omit<OverdueItem, "daysPending">[] = await res.json()
       const now = new Date()
       const result: OverdueItem[] = data
         .filter((r) => !["WIN", "LOSE"].includes((r.status ?? "").toUpperCase()))
@@ -74,7 +69,6 @@ export function SlackingReport() {
       setLoading(false)
     }
     load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [threshold])
 
   function exportToExcel() {
@@ -102,7 +96,6 @@ export function SlackingReport() {
   const warning  = items.filter((i) => i.daysPending >= 4 && i.daysPending < 8).length
   const fresh    = items.length - critical - warning
 
-  // Assignee summary
   const byAssignee = items.reduce<Record<string, number>>((acc, item) => {
     const name = item.assigned_user ?? "Unknown"
     acc[name] = (acc[name] ?? 0) + 1
@@ -132,7 +125,6 @@ export function SlackingReport() {
             </CardDescription>
           </div>
 
-          {/* Controls */}
           <div className="flex items-center gap-3 flex-shrink-0 flex-wrap">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span>Show overdue</span>
@@ -161,7 +153,6 @@ export function SlackingReport() {
           </div>
         </div>
 
-        {/* Assignee chip summary */}
         {Object.keys(byAssignee).length > 0 && (
           <div className="flex flex-wrap gap-2 mt-2">
             {Object.entries(byAssignee)

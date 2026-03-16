@@ -241,26 +241,32 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
     }
 
     if (editingId) {
-      const { data, error: updateError } = await supabase
-        .from("enquiries").update(payload).eq("id", editingId)
-        .select("enq_ref_no").single()
-      if (updateError) {
-        setError(updateError.message)
+      const res = await fetch(`/api/enquiries/${editingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error ?? "Update failed")
       } else {
-        setSuccess(`Enquiry ${data?.enq_ref_no ?? ""} updated successfully.`)
+        setSuccess(`Enquiry ${data.enq_ref_no ?? ""} updated successfully.`)
         setFormState(getDefaultForm())
         setEditingId(null)
         setBuyRateFile(null); setSellRateFile(null)
         onEditComplete?.(); onSuccess?.()
       }
     } else {
-      const { data, error: insertError } = await supabase
-        .from("enquiries").insert({ ...payload, created_by: user.id })
-        .select("enq_ref_no").single()
-      if (insertError) {
-        setError(insertError.message)
+      const res = await fetch("/api/enquiries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error ?? "Submit failed")
       } else {
-        setSuccess(`Enquiry ${data?.enq_ref_no ?? ""} submitted successfully.`)
+        setSuccess(`Enquiry ${data.enq_ref_no ?? ""} submitted successfully.`)
         setFormState(getDefaultForm())
         setBuyRateFile(null); setSellRateFile(null)
         onSuccess?.()

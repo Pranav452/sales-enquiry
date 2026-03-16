@@ -14,7 +14,7 @@ export const SALES_PERSONS = [
   "SAMIT BHATNAGAR",
 ]
 
-export const FN_OPTIONS = ["FREEHAND", "NOMINATION"]
+export const FN_OPTIONS = ["FREEHAND", "NOMINATION"]  
 
 export const BRANCHES = [
   "MUMBAI",
