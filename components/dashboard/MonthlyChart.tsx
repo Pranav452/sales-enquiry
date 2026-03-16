@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { createClient } from "@/lib/supabase/client"
 import {
   BarChart,
   Bar,
@@ -23,7 +22,6 @@ interface Row {
 }
 
 export function MonthlyChart({ filters }: { filters: Filters }) {
-  const supabase = createClient()
   const [data, setData] = useState<Row[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -32,20 +30,14 @@ export function MonthlyChart({ filters }: { filters: Filters }) {
       setLoading(true)
       const range = getPeriodRange(filters.period)
 
-      let query = supabase
-        .from("enquiries")
-        .select("enq_receipt_date, mode")
-        .order("enq_receipt_date", { ascending: true })
+      const params = new URLSearchParams({ type: "monthly", period: filters.period })
+      if (filters.branch)   params.set("branch", filters.branch)
+      if (filters.enq_type) params.set("enq_type", filters.enq_type)
+      if (filters.mode)     params.set("mode", filters.mode)
 
-      if (filters.branch) query = query.eq("branch", filters.branch)
-      if (filters.enq_type) query = query.eq("enq_type", filters.enq_type)
-      if (filters.mode) query = query.eq("mode", filters.mode)
-      if (range) {
-        query = query.gte("enq_receipt_date", range.from).lte("enq_receipt_date", range.to)
-      }
-
-      const { data: rows } = await query
-      if (!rows) { setLoading(false); return }
+      const res = await fetch(`/api/dashboard?${params}`)
+      if (!res.ok) { setLoading(false); return }
+      const rows: { enq_receipt_date: string | null; mode: string | null }[] = await res.json()
 
       const map: Record<string, Row> = {}
       for (const r of rows) {
@@ -58,13 +50,11 @@ export function MonthlyChart({ filters }: { filters: Filters }) {
         else if (r.mode === "Sea") map[key].Sea++
       }
 
-      // If no period filter, show last 12 months; otherwise show all in range
       const result = Object.values(map)
       setData(range ? result : result.slice(-12))
       setLoading(false)
     }
     load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters])
 
   return (

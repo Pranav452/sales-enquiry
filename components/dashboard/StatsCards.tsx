@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent } from "@/components/ui/card"
 import { TrendingUp, TrendingDown, Clock, FileText } from "lucide-react"
 import { type Filters, getPeriodRange } from "./DashboardFilters"
@@ -17,32 +16,32 @@ function emptyStats(): Stats {
   return { total: 0, win: 0, lose: 0, inProgress: 0 }
 }
 
-async function fetchStats(
-  supabase: ReturnType<typeof import("@/lib/supabase/client").createClient>,
-  filters: Filters,
-  from?: string,
-  to?: string
-): Promise<Stats> {
-  let query = supabase.from("enquiries").select("status")
-
-  if (filters.mode) query = query.eq("mode", filters.mode)
-  if (filters.branch) query = query.eq("branch", filters.branch)
-  if (filters.enq_type) query = query.eq("enq_type", filters.enq_type)
-  if (from) query = query.gte("enq_receipt_date", from)
-  if (to) query = query.lte("enq_receipt_date", to)
-
-  const { data } = await query
-  if (!data) return emptyStats()
-
+function rowsToStats(rows: { status: string | null }[]): Stats {
   const s = emptyStats()
-  s.total = data.length
-  for (const row of data) {
+  s.total = rows.length
+  for (const row of rows) {
     const st = (row.status ?? "").toUpperCase()
     if (st === "WIN") s.win++
     else if (st === "LOSE") s.lose++
     else s.inProgress++
   }
   return s
+}
+
+async function fetchStats(filters: Filters, from?: string, to?: string): Promise<Stats> {
+  const params = new URLSearchParams({ type: "stats" })
+  if (filters.mode)     params.set("mode", filters.mode)
+  if (filters.branch)   params.set("branch", filters.branch)
+  if (filters.enq_type) params.set("enq_type", filters.enq_type)
+  if (from) params.set("from_date", from)
+  if (to)   params.set("to_date", to)
+  // Pass period so server can compute range itself too
+  if (filters.period)   params.set("period", filters.period)
+
+  const res = await fetch(`/api/dashboard?${params}`)
+  if (!res.ok) return emptyStats()
+  const rows: { status: string | null }[] = await res.json()
+  return rowsToStats(rows)
 }
 
 function delta(curr: number, prev: number): { value: number; positive: boolean } | null {
@@ -76,7 +75,6 @@ function DeltaBadge({ curr, prev }: DeltaBadgeProps) {
 }
 
 export function StatsCards({ filters }: { filters: Filters }) {
-  const supabase = createClient()
   const [curr, setCurr] = useState<Stats>(emptyStats())
   const [prev, setPrev] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
@@ -87,9 +85,9 @@ export function StatsCards({ filters }: { filters: Filters }) {
       const range = getPeriodRange(filters.period)
 
       const [currStats, prevStats] = await Promise.all([
-        fetchStats(supabase, filters, range?.from, range?.to),
+        fetchStats(filters, range?.from, range?.to),
         range
-          ? fetchStats(supabase, filters, range.prevFrom, range.prevTo)
+          ? fetchStats(filters, range.prevFrom, range.prevTo)
           : Promise.resolve(null),
       ])
 
@@ -98,7 +96,6 @@ export function StatsCards({ filters }: { filters: Filters }) {
       setLoading(false)
     }
     load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters])
 
   const pct = (n: number) =>

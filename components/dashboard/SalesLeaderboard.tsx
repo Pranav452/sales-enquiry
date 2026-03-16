@@ -1,9 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { type Filters, getPeriodRange } from "./DashboardFilters"
+import { type Filters } from "./DashboardFilters"
 import { cn } from "@/lib/utils"
 
 interface PersonStats {
@@ -16,23 +15,21 @@ interface PersonStats {
 }
 
 export function SalesLeaderboard({ filters }: { filters: Filters }) {
-  const supabase = createClient()
   const [stats, setStats] = useState<PersonStats[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function load() {
       setLoading(true)
-      const range = getPeriodRange(filters.period)
 
-      let query = supabase.from("enquiries").select("sales_person,status")
-      if (filters.mode)     query = query.eq("mode", filters.mode)
-      if (filters.branch)   query = query.eq("branch", filters.branch)
-      if (filters.enq_type) query = query.eq("enq_type", filters.enq_type)
-      if (range) query = query.gte("enq_receipt_date", range.from).lte("enq_receipt_date", range.to)
+      const params = new URLSearchParams({ type: "leaderboard", period: filters.period })
+      if (filters.mode)     params.set("mode", filters.mode)
+      if (filters.branch)   params.set("branch", filters.branch)
+      if (filters.enq_type) params.set("enq_type", filters.enq_type)
 
-      const { data } = await query
-      if (!data) { setLoading(false); return }
+      const res = await fetch(`/api/dashboard?${params}`)
+      if (!res.ok) { setLoading(false); return }
+      const data: { sales_person: string | null; status: string | null }[] = await res.json()
 
       const map: Record<string, PersonStats> = {}
       data.forEach(({ sales_person, status }) => {
@@ -58,7 +55,6 @@ export function SalesLeaderboard({ filters }: { filters: Filters }) {
       setLoading(false)
     }
     load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters])
 
   function rankBadge(i: number) {

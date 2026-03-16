@@ -5,7 +5,10 @@
       "Bash(pip install openpyxl --quiet)",
       "Bash(npm install @supabase/supabase-js @supabase/ssr framer-motion lucide-react recharts clsx tailwind-merge class-variance-authority)",
       "Bash(npm install @radix-ui/react-slot @radix-ui/react-select @radix-ui/react-tabs @radix-ui/react-label)",
-      "Bash(npm run build)"
+      "Bash(npm run build)",
+      "Bash(cd C:/development-manilal/sales && npm install mssql && npm install --save-dev @types/mssql 2>&1 | tail -5)",
+      "Bash(cd C:/development-manilal/sales && npx tsc --noEmit 2>&1 | head -60)",
+      "Bash(cd C:/development-manilal/sales && npm install --save-dev dotenv tsx 2>&1 | tail -5)"
     ]
   }
 }

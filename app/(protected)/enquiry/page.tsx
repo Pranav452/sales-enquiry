@@ -2,18 +2,13 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
 import { EnquiryForm, type EnquiryFormEditing } from "@/components/enquiry/EnquiryForm"
 import { RecentEnquiries } from "@/components/enquiry/RecentEnquiries"
-
-const SELECT_COLS =
-  "id,enq_ref_no,enq_receipt_date,enq_type,mode,exim,fn,sales_person,agent_name,country,branch,network,pol,pod,incoterms,container_type,status,email_subject_line,shipper,consignee,remarks,mbl_awb_no,job_invoice_no,gop,assigned_user,assigned_date,buy_rate_file,sell_rate_file"
 
 function EnquiryPageContent() {
   const [editingEnquiry, setEditingEnquiry] = useState<EnquiryFormEditing | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
   const searchParams = useSearchParams()
-  const supabase = createClient()
 
   useEffect(() => {
     const editId = searchParams.get("edit")
@@ -21,14 +16,9 @@ function EnquiryPageContent() {
       setEditingEnquiry(null)
       return
     }
-    supabase
-      .from("enquiries")
-      .select(SELECT_COLS)
-      .eq("id", editId)
-      .single()
-      .then(({ data }) => {
-        if (data) setEditingEnquiry(data as EnquiryFormEditing)
-      })
+    fetch(`/api/enquiries/${editId}`)
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => { if (data) setEditingEnquiry(data as EnquiryFormEditing) })
   }, [searchParams])
 
   const handleEditComplete = useCallback(() => {

@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { createClient } from "@/lib/supabase/client"
 import {
   BarChart,
   Bar,
@@ -16,7 +15,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { type Filters, getPeriodRange } from "./DashboardFilters"
 
 export function TypeBreakdown({ filters }: { filters: Filters }) {
-  const supabase = createClient()
   const [data, setData] = useState<{ month: string; Local: number; Overseas: number }[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -25,19 +23,13 @@ export function TypeBreakdown({ filters }: { filters: Filters }) {
       setLoading(true)
       const range = getPeriodRange(filters.period)
 
-      let query = supabase
-        .from("enquiries")
-        .select("enq_receipt_date, enq_type")
-        .order("enq_receipt_date", { ascending: true })
+      const params = new URLSearchParams({ type: "type", period: filters.period })
+      if (filters.mode)   params.set("mode", filters.mode)
+      if (filters.branch) params.set("branch", filters.branch)
 
-      if (filters.mode) query = query.eq("mode", filters.mode)
-      if (filters.branch) query = query.eq("branch", filters.branch)
-      if (range) {
-        query = query.gte("enq_receipt_date", range.from).lte("enq_receipt_date", range.to)
-      }
-
-      const { data: rows } = await query
-      if (!rows) { setLoading(false); return }
+      const res = await fetch(`/api/dashboard?${params}`)
+      if (!res.ok) { setLoading(false); return }
+      const rows: { enq_receipt_date: string | null; enq_type: string | null }[] = await res.json()
 
       const map: Record<string, { month: string; Local: number; Overseas: number }> = {}
       for (const r of rows) {
@@ -54,7 +46,6 @@ export function TypeBreakdown({ filters }: { filters: Filters }) {
       setLoading(false)
     }
     load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters])
 
   return (

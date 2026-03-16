@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -60,11 +59,7 @@ interface EnquiryListProps {
   navigateOnEdit?: boolean
 }
 
-const SELECT_COLS =
-  "id,enq_ref_no,enq_receipt_date,enq_type,mode,exim,fn,sales_person,agent_name,country,branch,network,pol,pod,incoterms,container_type,status,email_subject_line,shipper,consignee,remarks,mbl_awb_no,job_invoice_no,gop,assigned_user,assigned_date,buy_rate_file,sell_rate_file"
-
 export function EnquiryList({ onSelectEnquiry, editingId, navigateOnEdit }: EnquiryListProps) {
-  const supabase = createClient()
   const router = useRouter()
   const [rows, setRows] = useState<Enquiry[]>([])
   const [loading, setLoading] = useState(true)
@@ -96,28 +91,11 @@ export function EnquiryList({ onSelectEnquiry, editingId, navigateOnEdit }: Enqu
 
   useEffect(() => {
     async function load() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) return
-
-      const { data: profile } = await supabase
-        .from("user_profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single()
-
-      let query = supabase
-        .from("enquiries")
-        .select(SELECT_COLS)
-        .order("created_at", { ascending: false })
-
-      if (!profile || profile.role !== "admin") {
-        query = query.eq("created_by", user.id)
+      const res = await fetch("/api/enquiries")
+      if (res.ok) {
+        const data: Enquiry[] = await res.json()
+        setRows(data)
       }
-
-      const { data } = await query
-      setRows(data ?? [])
       setLoading(false)
     }
     load()
