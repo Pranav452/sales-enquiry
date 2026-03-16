@@ -51,9 +51,15 @@ export async function GET(_req: NextRequest) {
 
     const mine = _req.nextUrl.searchParams.get("mine") === "true"
     let where = ""
-    if (auth.role !== "admin" || mine) {
+    if (mine) {
+      // Recent tab — only rows this user created in the new system
       req.input("created_by", sql.VarChar(100), auth.userId)
       where = "WHERE CREATED_BY = @created_by"
+    } else if (auth.role !== "admin") {
+      // Full list — own new rows (CREATED_BY) + old rows matched by SALESPERSON name
+      req.input("created_by", sql.VarChar(100), auth.userId)
+      req.input("salesperson", sql.VarChar(100), auth.salesperson ?? "")
+      where = "WHERE (CREATED_BY = @created_by OR SALESPERSON = @salesperson)"
     }
 
     const result = await req.query(`

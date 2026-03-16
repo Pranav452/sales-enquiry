@@ -5,6 +5,7 @@ export interface AuthContext {
   role: string
   company: string
   email: string
+  salesperson: string | null
 }
 
 /**
@@ -18,7 +19,7 @@ export async function getAuthContext(): Promise<AuthContext | null> {
 
   const { data: profile } = await supabase
     .from("user_profiles")
-    .select("role, company")
+    .select("role, company, salesperson")
     .eq("id", user.id)
     .single()
 
@@ -27,5 +28,6 @@ export async function getAuthContext(): Promise<AuthContext | null> {
     role: profile?.role ?? "sales",
     company: profile?.company ?? "manilal",
     email: user.email ?? "",
+    salesperson: profile?.salesperson ?? null,
   }
 }
