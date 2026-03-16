@@ -49,8 +49,9 @@ export async function GET(_req: NextRequest) {
     const pool = await getPool(auth.company)
     const req = pool.request()
 
+    const mine = _req.nextUrl.searchParams.get("mine") === "true"
     let where = ""
-    if (auth.role !== "admin") {
+    if (auth.role !== "admin" || mine) {
       req.input("created_by", sql.VarChar(100), auth.userId)
       where = "WHERE CREATED_BY = @created_by"
     }

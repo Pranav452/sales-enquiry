@@ -2,17 +2,57 @@
 // All dropdown constants for the enquiry form
 // ============================================================
 
-export const SALES_PERSONS = [
+export const LINKS_SALES_PERSONS = [
   "AMISH K",
   "ARUN S",
   "ASHOK CHENNAI",
   "BHUP KUMAR",
-  "Chander",
+  "CHANDAR",
   "DEEPAK BHURA",
   "MANAGEMENT",
   "MP OFFICE",
   "SAMIT BHATNAGAR",
+  "SAYALI K",
 ]
+
+export const MANILAL_SALES_PERSONS = [
+  "BEENA DAS",
+  "GAUTAMI",
+  "GURUSAMY",
+  "JAI SINGH RAWAT",
+  "P.BABU",
+  "SANDEEP",
+  "SANDHYA",
+  "SARTHAK",
+  "SHRADDHA",
+  "VAISHNAVI",
+]
+
+// Maps legacy MSSQL codes → display names for dashboard charts
+export const SALESPERSON_CODE_MAP: Record<string, string> = {
+  S101141: "AMISH K",
+  S100633: "ARUN S",
+  S100632: "ASHOK CHENNAI",
+  S101142: "BHUP KUMAR",
+  S101143: "CHANDAR",
+  S100629: "DEEPAK BHURA",
+  S101144: "MANAGEMENT",
+  S101145: "MP OFFICE",
+  S100627: "SAMIT BHATNAGAR",
+  S101146: "SAYALI K",
+  S104675: "GAUTAMI",
+  S104305: "BEENA DAS",
+  S104307: "GURUSAMY",
+  S104344: "JAI SINGH RAWAT",
+  S104298: "P.BABU",
+  S104706: "SANDEEP",
+  S104678: "SANDHYA",
+  S104677: "SARTHAK",
+  S104674: "SHRADDHA",
+  S104676: "VAISHNAVI",
+}
+
+export const SALES_PERSONS = LINKS_SALES_PERSONS
 
 export const FN_OPTIONS = ["FREEHAND", "NOMINATION"]  
 

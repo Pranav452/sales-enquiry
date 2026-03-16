@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
@@ -38,9 +37,6 @@ interface RecentEnquiry {
   sell_rate_file: string | null
 }
 
-const SELECT_COLS =
-  "id,enq_ref_no,enq_receipt_date,enq_type,mode,exim,fn,sales_person,agent_name,country,branch,network,pol,pod,incoterms,container_type,status,email_subject_line,shipper,consignee,remarks,mbl_awb_no,job_invoice_no,gop,assigned_user,assigned_date,buy_rate_file,sell_rate_file"
-
 function statusVariant(status: string | null) {
   const s = (status ?? "").toUpperCase()
   switch (s) {
@@ -61,7 +57,6 @@ interface RecentEnquiriesProps {
 const COLS = ["Enq No", "Date", "Shipper", "Consignee", "Sales Person", "Branch", "Remarks", "Status"]
 
 export function RecentEnquiries({ refreshKey }: RecentEnquiriesProps) {
-  const supabase = createClient()
   const router = useRouter()
   const [rows, setRows] = useState<RecentEnquiry[]>([])
   const [loading, setLoading] = useState(true)
@@ -70,21 +65,13 @@ export function RecentEnquiries({ refreshKey }: RecentEnquiriesProps) {
   useEffect(() => {
     async function load() {
       setLoading(true)
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { setLoading(false); return }
-
-      const { data } = await supabase
-        .from("enquiries")
-        .select(SELECT_COLS)
-        .eq("created_by", user.id)
-        .order("created_at", { ascending: false })
-        .limit(5)
-
-      setRows(data ?? [])
+      const res = await fetch("/api/enquiries?mine=true")
+      if (!res.ok) { setLoading(false); return }
+      const json = await res.json()
+      setRows((json as RecentEnquiry[]).slice(0, 5))
       setLoading(false)
     }
     load()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshKey])
 
   const filteredRows = useMemo(() => {

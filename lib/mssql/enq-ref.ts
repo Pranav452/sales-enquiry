@@ -36,8 +36,8 @@ export async function generateEnqRefNo(
   // Atomic upsert — MERGE is supported in MSSQL 2008 R2
   const result = await pool
     .request()
-    .input("branch_code", sql.VarChar(5), branchCode)
-    .input("date_str", sql.VarChar(10), dateStr)
+    .input("branch_code", sql.VarChar, branchCode)
+    .input("date_str", sql.VarChar, dateStr)
     .query<{ LAST_SEQ: number }>(`
       MERGE [dbo].[ENQ_REF_SEQUENCES] WITH (HOLDLOCK) AS target
       USING (VALUES (@branch_code, @date_str)) AS src (BRANCH_CODE, DATE_STR)

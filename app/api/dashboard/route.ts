@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getAuthContext } from "@/lib/api-auth"
 import { getPool, sql } from "@/lib/mssql/client"
+import { SALESPERSON_CODE_MAP } from "@/lib/constants/dropdowns"
+
+function resolveSalesPerson(value: string | null): string | null {
+  if (!value) return null
+  return SALESPERSON_CODE_MAP[value] ?? value
+}
 
 /**
  * GET /api/dashboard?type=<type>&mode=&branch=&enq_type=&period=
@@ -67,7 +73,7 @@ export async function GET(req: NextRequest) {
           `SELECT SALESPERSON AS sales_person, STATUS AS status
            FROM [dbo].[TBL_ADMIN_SALESENQUIRY] ${where}`
         )
-        rows = res.recordset
+        rows = res.recordset.map((row) => ({ ...row, sales_person: resolveSalesPerson(row.sales_person) }))
         break
       }
 
@@ -96,7 +102,7 @@ export async function GET(req: NextRequest) {
           `SELECT SALESPERSON AS sales_person, STATUS AS status
            FROM [dbo].[TBL_ADMIN_SALESENQUIRY] ${where}`
         )
-        rows = res.recordset
+        rows = res.recordset.map((row) => ({ ...row, sales_person: resolveSalesPerson(row.sales_person) }))
         break
       }
 
@@ -118,7 +124,7 @@ export async function GET(req: NextRequest) {
             AND ASSIGNED_DATE IS NOT NULL
           ORDER BY ASSIGNED_DATE ASC
         `)
-        rows = res.recordset
+        rows = res.recordset.map((row) => ({ ...row, sales_person: resolveSalesPerson(row.sales_person) }))
         break
       }
 

@@ -16,7 +16,8 @@ import { Combobox } from "@/components/ui/combobox"
 import { Download, Paperclip, RotateCcw, Send } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
-  SALES_PERSONS,
+  LINKS_SALES_PERSONS,
+  MANILAL_SALES_PERSONS,
   FN_OPTIONS,
   BRANCHES,
   NETWORKS,
@@ -161,6 +162,19 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, boolean>>>({})
   const [buyRateFile, setBuyRateFile] = useState<File | null>(null)
   const [sellRateFile, setSellRateFile] = useState<File | null>(null)
+  const [company, setCompany] = useState<string>("links")
+
+  // Load user's company to show the right sales person list
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      supabase.from("user_profiles").select("company").eq("id", user.id).single()
+        .then(({ data }) => { if (data?.company) setCompany(data.company) })
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const salesPersonList = company === "manilal" ? MANILAL_SALES_PERSONS : LINKS_SALES_PERSONS
 
   useEffect(() => {
     if (editingEnquiry) {
@@ -413,7 +427,7 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
               <SelectValue placeholder="Select person" />
             </SelectTrigger>
             <SelectContent>
-              {SALES_PERSONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+              {salesPersonList.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
             </SelectContent>
           </Select>
           {errors.sales_person && <p className="text-xs text-destructive">Required</p>}
