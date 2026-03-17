@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getAuthContext } from "@/lib/api-auth"
 import { getPool, sql } from "@/lib/mssql/client"
 import { generateEnqRefNo } from "@/lib/mssql/enq-ref"
+import { SALESPERSON_CODE_MAP } from "@/lib/constants/dropdowns"
 
 // ─── Column map (app field → MSSQL column) ───────────────────
 // ENQRECPTDT is varchar(10) — store as 'YYYY-MM-DD' string
@@ -56,10 +57,21 @@ export async function GET(_req: NextRequest) {
       req.input("created_by", sql.VarChar(100), auth.userId)
       where = "WHERE CREATED_BY = @created_by"
     } else if (auth.role !== "admin") {
-      // Full list — own new rows (CREATED_BY) + old rows matched by SALESPERSON name
       req.input("created_by", sql.VarChar(100), auth.userId)
       req.input("salesperson", sql.VarChar(100), auth.salesperson ?? "")
-      where = "WHERE (CREATED_BY = @created_by OR SALESPERSON = @salesperson)"
+
+      // Reverse-lookup legacy codes that map to this salesperson's name
+      const oldCodes = Object.entries(SALESPERSON_CODE_MAP)
+        .filter(([, name]) => name === auth.salesperson)
+        .map(([code]) => code)
+
+      if (oldCodes.length > 0) {
+        oldCodes.forEach((code, i) => req.input(`sp_code${i}`, sql.VarChar(20), code))
+        const placeholders = oldCodes.map((_, i) => `@sp_code${i}`).join(", ")
+        where = `WHERE (CREATED_BY = @created_by OR SALESPERSON = @salesperson OR SALESPERSON IN (${placeholders}))`
+      } else {
+        where = "WHERE (CREATED_BY = @created_by OR SALESPERSON = @salesperson)"
+      }
     }
 
     const result = await req.query(`
