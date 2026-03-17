@@ -27,8 +27,8 @@ interface Props {
 }
 
 const COMPANY_LABELS: Record<string, string> = {
-  manilal: "Manilal & Sons",
-  links: "Links Cargo",
+  manilal: "Sales bridge - MP",
+  links: "Sales bridge - Links",
 }
 
 export function ProtectedLayoutClient({ role, displayName, branch, company, userId, children }: Props) {

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import { SALESPERSON_CODE_MAP } from "@/lib/constants/dropdowns"
 
 export interface Enquiry {
   id: string
@@ -53,6 +54,11 @@ function statusVariant(status: string | null) {
   }
 }
 
+function resolveSalesPerson(value: string | null) {
+  if (!value) return value
+  return SALESPERSON_CODE_MAP[value] ?? value
+}
+
 interface EnquiryListProps {
   onSelectEnquiry?: (row: Enquiry) => void
   editingId?: string | null
@@ -94,7 +100,7 @@ export function EnquiryList({ onSelectEnquiry, editingId, navigateOnEdit }: Enqu
       const res = await fetch("/api/enquiries")
       if (res.ok) {
         const data: Enquiry[] = await res.json()
-        setRows(data)
+        setRows(data.map((r) => ({ ...r, sales_person: resolveSalesPerson(r.sales_person) })))
       }
       setLoading(false)
     }

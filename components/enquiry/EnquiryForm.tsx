@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils"
 import {
   LINKS_SALES_PERSONS,
   MANILAL_SALES_PERSONS,
+  SALESPERSON_CODE_MAP,
   FN_OPTIONS,
   BRANCHES,
   NETWORKS,
@@ -118,16 +119,88 @@ interface Props {
 
 // ─── Helpers ─────────────────────────────────────────────────
 
+function normalizeDateForInput(raw: string | null | undefined): string {
+  if (!raw) return new Date().toISOString().split("T")[0]
+  const s = String(raw).trim()
+  // Already ISO-ish
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+  // MSSQL/legacy: DD/MM/YYYY
+  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+  if (m) return `${m[3]}-${m[2]}-${m[1]}`
+  // Fallback: try Date parse; if invalid, use today's date
+  const d = new Date(s)
+  return isNaN(d.getTime()) ? new Date().toISOString().split("T")[0] : d.toISOString().split("T")[0]
+}
+
+function matchOption(value: string | null | undefined, options: string[]): string {
+  const raw = (value ?? "").trim()
+  if (!raw) return ""
+  const exact = options.find((o) => o === raw)
+  if (exact) return exact
+  const folded = raw.toLowerCase()
+  const ci = options.find((o) => o.toLowerCase() === folded)
+  if (ci) return ci
+  return raw
+}
+
+function matchOptionByPrefix(value: string | null | undefined, options: string[]): string {
+  const raw = (value ?? "").trim()
+  if (!raw) return ""
+  const exact = options.find((o) => o === raw)
+  if (exact) return exact
+  const folded = raw.toLowerCase()
+  const matches = options.filter((o) => o.toLowerCase().startsWith(folded))
+  return matches.length === 1 ? matches[0] : raw
+}
+
+function normalizeBranch(value: string | null | undefined): string {
+  const raw = (value ?? "").trim()
+  if (!raw) return ""
+  const upper = raw.toUpperCase()
+  const BRANCH_CODE_MAP: Record<string, string> = {
+    MUM: "MUMBAI",
+    BOM: "MUMBAI",
+    DEL: "NEW DELHI",
+    DLI: "NEW DELHI",
+    BLR: "BANGALORE",
+    BAN: "BANGALORE",
+    MAA: "MADRAS",
+    CHE: "MADRAS",
+    COK: "COCHIN",
+    AMD: "AHMEDABAD",
+    AHD: "AHMEDABAD",
+    BRC: "VADODARA",
+    NSK: "NASIK",
+  }
+  const mapped = BRANCH_CODE_MAP[upper] ?? raw
+  return matchOption(mapped, BRANCHES)
+}
+
+function normalizeSalesPerson(value: string | null | undefined, salesPersonOptions: string[]): string {
+  const raw = (value ?? "").trim()
+  if (!raw) return ""
+  const mapped = SALESPERSON_CODE_MAP[raw] ?? raw
+  return matchOption(mapped, salesPersonOptions)
+}
+
 function populateFromEditing(e: EnquiryFormEditing): FormData {
   return {
-    enq_receipt_date: e.enq_receipt_date?.split("T")[0] ?? new Date().toISOString().split("T")[0],
-    mode: e.mode ?? "", enq_type: e.enq_type ?? "",
-    exim: e.exim ?? "", fn: e.fn ?? "",
-    sales_person: e.sales_person ?? "", agent_name: e.agent_name ?? "",
-    country: e.country ?? "", branch: e.branch ?? "",
-    network: e.network ?? "", pol: e.pol ?? "",
-    pod: e.pod ?? "", incoterms: e.incoterms ?? "",
-    container_type: e.container_type ?? "", status: e.status ?? "PENDING",
+    enq_receipt_date: normalizeDateForInput(e.enq_receipt_date),
+    mode: matchOption(e.mode, ["Air", "Sea"]),
+    enq_type: matchOption(e.enq_type, ["Local", "Overseas"]),
+    exim: matchOption(e.exim, ["Export", "Import", "Cross Trade"]),
+    fn: matchOption(e.fn, FN_OPTIONS),
+    // sales_person and branch depend on dropdown option sets; normalized later in component
+    sales_person: e.sales_person ?? "",
+    agent_name: e.agent_name ?? "",
+    country: e.country ?? "",
+    branch: e.branch ?? "",
+    network: matchOption(e.network, NETWORKS),
+    pol: e.pol ?? "",
+    pod: e.pod ?? "",
+    incoterms: matchOptionByPrefix(e.incoterms, INCOTERMS),
+    container_type: matchOption(e.container_type, CONTAINER_TYPES),
+    status: matchOption(e.status ?? "PENDING", STATUSES) || "PENDING",
     email_subject_line: e.email_subject_line ?? "",
     shipper: e.shipper ?? "", consignee: e.consignee ?? "",
     remarks: e.remarks ?? "", mbl_awb_no: e.mbl_awb_no ?? "",
@@ -136,6 +209,18 @@ function populateFromEditing(e: EnquiryFormEditing): FormData {
     assigned_date: e.assigned_date ? e.assigned_date.split("T")[0] : "",
     buy_rate_file: e.buy_rate_file ?? "",
     sell_rate_file: e.sell_rate_file ?? "",
+  }
+}
+
+function populateFromEditingWithOptions(
+  e: EnquiryFormEditing,
+  salesPersonOptions: string[]
+): FormData {
+  const base = populateFromEditing(e)
+  return {
+    ...base,
+    sales_person: normalizeSalesPerson(e.sales_person, salesPersonOptions),
+    branch: normalizeBranch(e.branch),
   }
 }
 
@@ -179,14 +264,14 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
   useEffect(() => {
     if (editingEnquiry) {
       setEditingId(editingEnquiry.id)
-      setFormState(populateFromEditing(editingEnquiry))
+      setFormState(populateFromEditingWithOptions(editingEnquiry, salesPersonList))
       setErrors({})
     } else {
       setEditingId(null)
       setFormState(getDefaultForm())
       setErrors({})
     }
-  }, [editingEnquiry])
+  }, [editingEnquiry, salesPersonList])
 
   function setField(field: keyof FormData, value: string) {
     setFormState((prev) => ({ ...prev, [field]: value }))
@@ -207,7 +292,10 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
 
     const missing: Partial<Record<keyof FormData, boolean>> = {}
     for (const field of REQUIRED_FIELDS) {
-      if (!form[field]) missing[field] = true
+      const effectiveValue =
+        form[field] ||
+        (editingEnquiry ? (populateFromEditingWithOptions(editingEnquiry, salesPersonList)[field] as string) : "")
+      if (!effectiveValue) missing[field] = true
     }
     if (Object.keys(missing).length > 0) {
       setErrors(missing)
@@ -291,7 +379,7 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
   }
 
   function handleReset() {
-    setFormState(editingEnquiry ? populateFromEditing(editingEnquiry) : getDefaultForm())
+    setFormState(editingEnquiry ? populateFromEditingWithOptions(editingEnquiry, salesPersonList) : getDefaultForm())
     setBuyRateFile(null); setSellRateFile(null)
     setError(null); setSuccess(null); setErrors({})
   }

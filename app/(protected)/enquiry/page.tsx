@@ -8,21 +8,36 @@ import { RecentEnquiries } from "@/components/enquiry/RecentEnquiries"
 function EnquiryPageContent() {
   const [editingEnquiry, setEditingEnquiry] = useState<EnquiryFormEditing | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [editLoadError, setEditLoadError] = useState<string | null>(null)
   const searchParams = useSearchParams()
 
   useEffect(() => {
     const editId = searchParams.get("edit")
     if (!editId) {
       setEditingEnquiry(null)
+      setEditLoadError(null)
       return
     }
+    setEditLoadError(null)
     fetch(`/api/enquiries/${editId}`)
-      .then((res) => res.ok ? res.json() : null)
-      .then((data) => { if (data) setEditingEnquiry(data as EnquiryFormEditing) })
+      .then(async (res) => {
+        if (!res.ok) {
+          const data = await res.json().catch(() => null as any)
+          throw new Error(data?.error ?? `Failed to load enquiry (${res.status})`)
+        }
+        return res.json()
+      })
+      .then((data) => { setEditingEnquiry(data as EnquiryFormEditing) })
+      .catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : "Failed to load enquiry"
+        setEditingEnquiry(null)
+        setEditLoadError(msg)
+      })
   }, [searchParams])
 
   const handleEditComplete = useCallback(() => {
     setEditingEnquiry(null)
+    setEditLoadError(null)
     window.history.replaceState({}, "", "/enquiry")
   }, [])
 
@@ -44,6 +59,12 @@ function EnquiryPageContent() {
             : "Fill in the details below — required fields marked with *"}
         </p>
       </div>
+
+      {editLoadError && (
+        <p className="mb-5 text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md border border-destructive/20">
+          {editLoadError}
+        </p>
+      )}
 
       <EnquiryForm
         editingEnquiry={editingEnquiry}

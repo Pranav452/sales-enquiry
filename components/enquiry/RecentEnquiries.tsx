@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import { SALESPERSON_CODE_MAP } from "@/lib/constants/dropdowns"
 
 interface RecentEnquiry {
   id: string
@@ -35,6 +36,11 @@ interface RecentEnquiry {
   assigned_date: string | null
   buy_rate_file: string | null
   sell_rate_file: string | null
+}
+
+function resolveSalesPerson(value: string | null) {
+  if (!value) return value
+  return SALESPERSON_CODE_MAP[value] ?? value
 }
 
 function statusVariant(status: string | null) {
@@ -68,7 +74,11 @@ export function RecentEnquiries({ refreshKey }: RecentEnquiriesProps) {
       const res = await fetch("/api/enquiries?mine=true")
       if (!res.ok) { setLoading(false); return }
       const json = await res.json()
-      setRows((json as RecentEnquiry[]).slice(0, 5))
+      setRows(
+        (json as RecentEnquiry[])
+          .slice(0, 5)
+          .map((r) => ({ ...r, sales_person: resolveSalesPerson(r.sales_person) }))
+      )
       setLoading(false)
     }
     load()

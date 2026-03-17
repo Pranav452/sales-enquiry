@@ -10,8 +10,8 @@ import { Anchor } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const COMPANIES = [
-  { value: "manilal", label: "Manilal & Sons" },
-  { value: "links",   label: "Links Cargo" },
+  { value: "manilal", label: "Sales bridge - MP" },
+  { value: "links",   label: "Sales bridge - Links" },
 ]
 
 export default function LoginPage() {
