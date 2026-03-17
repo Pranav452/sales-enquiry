@@ -70,6 +70,7 @@ export const BRANCHES = [
 export const NETWORKS = ["3F", "ALNA", "COOP", "CROSS TRADE", "NON NETWORK", "UOL"]
 
 export const CONTAINER_TYPES = [
+  "20GP/40HC",
   "20GP",
   "40HC",
   "ISO TANK",
