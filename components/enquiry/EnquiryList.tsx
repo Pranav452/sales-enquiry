@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
-import { SALESPERSON_CODE_MAP } from "@/lib/constants/dropdowns"
+import { SALESPERSON_CODE_MAP, expandPortCity } from "@/lib/constants/dropdowns"
 
 export interface Enquiry {
   id: string
@@ -132,7 +132,7 @@ export function EnquiryList({ onSelectEnquiry, editingId, navigateOnEdit }: Enqu
     )
   }
 
-  const COLS = ["Enq No", "Date", "Shipper", "Consignee", "Sales Person", "Branch", "Remarks", "Status"]
+  const COLS = ["Enq No", "Date", "Shipper", "POL", "POD", "Sales Person", "Branch", "Remarks", "Status"]
 
   return (
     <div>
@@ -164,7 +164,7 @@ export function EnquiryList({ onSelectEnquiry, editingId, navigateOnEdit }: Enqu
           <tbody>
             {paginatedRows.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-6 py-8 text-sm text-muted-foreground text-center">
+                <td colSpan={9} className="px-6 py-8 text-sm text-muted-foreground text-center">
                   No enquiries match your search.
                 </td>
               </tr>
@@ -192,11 +192,22 @@ export function EnquiryList({ onSelectEnquiry, editingId, navigateOnEdit }: Enqu
                       ? new Date(r.enq_receipt_date).toLocaleDateString("en-GB")
                       : "—"}
                   </td>
-                  <td className="px-4 py-3 max-w-[160px] truncate">{r.shipper || "—"}</td>
-                  <td className="px-4 py-3 max-w-[160px] truncate">{r.consignee || "—"}</td>
+                  <td className="px-4 py-3 max-w-[110px] truncate">{r.shipper || "—"}</td>
+                  <td
+                    className="px-3 py-3 font-mono whitespace-nowrap"
+                    title={expandPortCity(r.pol) || undefined}
+                  >
+                    {r.pol || "—"}
+                  </td>
+                  <td
+                    className="px-3 py-3 font-mono whitespace-nowrap"
+                    title={expandPortCity(r.pod) || undefined}
+                  >
+                    {r.pod || "—"}
+                  </td>
                   <td className="px-4 py-3 whitespace-nowrap">{r.sales_person ?? "—"}</td>
                   <td className="px-4 py-3 whitespace-nowrap">{r.branch ?? "—"}</td>
-                  <td className="px-4 py-3 max-w-[220px] whitespace-normal break-words text-muted-foreground">
+                  <td className="px-4 py-3 max-w-[160px] whitespace-normal break-words text-muted-foreground">
                     {r.remarks || "—"}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">

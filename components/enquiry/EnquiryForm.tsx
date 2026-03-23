@@ -27,6 +27,7 @@ import {
   INCOTERMS,
   COUNTRIES,
   PORT_CITIES,
+  expandPortCity,
 } from "@/lib/constants/dropdowns"
 
 // ─── Types ───────────────────────────────────────────────────
@@ -196,8 +197,8 @@ function populateFromEditing(e: EnquiryFormEditing): FormData {
     country: e.country ?? "",
     branch: e.branch ?? "",
     network: matchOption(e.network, NETWORKS),
-    pol: e.pol ?? "",
-    pod: e.pod ?? "",
+    pol: expandPortCity(e.pol),
+    pod: expandPortCity(e.pod),
     incoterms: matchOptionByPrefix(e.incoterms, INCOTERMS),
     container_type: matchOption(e.container_type, CONTAINER_TYPES),
     status: matchOption(e.status ?? "PENDING", STATUSES) || "PENDING",

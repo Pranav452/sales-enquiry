@@ -344,6 +344,20 @@ export const PORT_CITIES: string[] = [
   "SYDNEY", "MELBOURNE", "BRISBANE", "PERTH", "ADELAIDE", "AUCKLAND", "WELLINGTON",
 ]
 
+/**
+ * Reverse-lookup a stored POL/POD value back to its full port name.
+ * The DB truncates port names to 3 characters (VarChar(3)), so "MUMBAI"
+ * is stored as "MUM". This function finds the matching PORT_CITIES entry
+ * by prefix, falling back to the raw stored value if no match is found.
+ */
+export function expandPortCity(code: string | null | undefined): string {
+  if (!code) return ""
+  const upper = code.trim().toUpperCase()
+  if (PORT_CITIES.includes(upper)) return upper
+  const found = PORT_CITIES.find((c) => c.substring(0, upper.length) === upper)
+  return found ?? code
+}
+
 // Full agent list for searchable combobox
 export const AGENTS: string[] = [
   "A ONE FREIGHT (INDIA) PVT LTD",
