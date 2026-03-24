@@ -59,6 +59,35 @@
   --chart-5: 340 75% 55%;
 }
 
+.pink {
+  --background: 327 100% 97%;
+  --foreground: 327 73% 33%;
+  --card: 327 100% 95%;
+  --card-foreground: 327 73% 33%;
+  --popover: 327 100% 95%;
+  --popover-foreground: 327 73% 33%;
+  --primary: 327 73% 58%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 327 73% 92%;
+  --secondary-foreground: 327 73% 33%;
+  --muted: 327 73% 90%;
+  --muted-foreground: 327 30% 55%;
+  --accent: 327 73% 88%;
+  --accent-foreground: 327 73% 33%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 327 73% 85%;
+  --input: 327 73% 90%;
+  --input-bg: 327 100% 97%;
+  --ring: 327 73% 58%;
+  --topbar: 327 73% 65%;
+  --chart-1: 327 73% 58%;
+  --chart-2: 160 60% 45%;
+  --chart-3: 30 80% 55%;
+  --chart-4: 280 65% 60%;
+  --chart-5: 340 75% 55%;
+}
+
 @theme inline {
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));

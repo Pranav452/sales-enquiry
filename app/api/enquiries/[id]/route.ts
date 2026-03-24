@@ -99,6 +99,20 @@ export async function PATCH(
 
   try {
     const pool = await getPool(auth.company)
+
+    // Step 1: Fetch current (old) values for audit log
+    const oldResult = await pool
+      .request()
+      .input("pk_id", sql.Int, pkId)
+      .query(`SELECT ${SELECT_COLS} FROM [dbo].[TBL_ADMIN_SALESENQUIRY] WHERE PK_ID = @pk_id`)
+
+    if (!oldResult.recordset.length) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 })
+    }
+
+    const oldValues = oldResult.recordset[0]
+
+    // Step 2: Perform the update
     const result = await pool
       .request()
       .input("pk_id",         sql.Int,          pkId)
@@ -112,8 +126,8 @@ export async function PATCH(
       .input("country_code",  sql.VarChar(15),  truncate(body.country, 15))
       .input("branch",        sql.VarChar(10),  truncate(body.branch, 10))
       .input("network",       sql.VarChar(25),  truncate(body.network, 25))
-      .input("pol",           sql.VarChar(3),   truncate(body.pol, 3))
-      .input("pod",           sql.VarChar(3),   truncate(body.pod, 3))
+      .input("pol",           sql.VarChar(100), truncate(body.pol, 100))
+      .input("pod",           sql.VarChar(100), truncate(body.pod, 100))
       .input("incoterm",      sql.VarChar(10),  truncate(body.incoterms, 10))
       .input("dimension",     sql.VarChar(20),  truncate(body.container_type, 20))
       .input("status",        sql.VarChar(25),  truncate(body.status, 25))
@@ -165,6 +179,55 @@ export async function PATCH(
 
     if (!result.recordset.length) {
       return NextResponse.json({ error: "Not found" }, { status: 404 })
+    }
+
+    // Step 3: Create audit log entries for changed fields
+    const fieldMappings: Record<string, { apiKey: string; dbCol: string }> = {
+      enq_receipt_date: { apiKey: "enq_receipt_date", dbCol: "ENQRECPTDT" },
+      mode: { apiKey: "mode", dbCol: "MODE" },
+      enq_type: { apiKey: "enq_type", dbCol: "ENQTYPE" },
+      exim: { apiKey: "exim", dbCol: "EXIM" },
+      fn: { apiKey: "fn", dbCol: "FN" },
+      sales_person: { apiKey: "sales_person", dbCol: "SALESPERSON" },
+      agent_name: { apiKey: "agent_name", dbCol: "AGENT_NAME" },
+      country: { apiKey: "country", dbCol: "COUNTRY_CODE" },
+      branch: { apiKey: "branch", dbCol: "BRANCH" },
+      network: { apiKey: "network", dbCol: "NETWORK" },
+      pol: { apiKey: "pol", dbCol: "POL" },
+      pod: { apiKey: "pod", dbCol: "POD" },
+      incoterms: { apiKey: "incoterms", dbCol: "INCOTERM" },
+      container_type: { apiKey: "container_type", dbCol: "DIMENSION" },
+      status: { apiKey: "status", dbCol: "STATUS" },
+      email_subject_line: { apiKey: "email_subject_line", dbCol: "EMAIL_SUBJECT" },
+      shipper: { apiKey: "shipper", dbCol: "SHIPPER" },
+      consignee: { apiKey: "consignee", dbCol: "CONSIGNEE" },
+      remarks: { apiKey: "remarks", dbCol: "REMARK" },
+      mbl_awb_no: { apiKey: "mbl_awb_no", dbCol: "MBL_AWB_NO" },
+      job_invoice_no: { apiKey: "job_invoice_no", dbCol: "JOB_INVOICE_NO" },
+      gop: { apiKey: "gop", dbCol: "GOP" },
+      assigned_user: { apiKey: "assigned_user", dbCol: "ASSIGNED_USER" },
+      assigned_date: { apiKey: "assigned_date", dbCol: "ASSIGNED_DATE" },
+      buy_rate_file: { apiKey: "buy_rate_file", dbCol: "BUY_RATE_FILE" },
+      sell_rate_file: { apiKey: "sell_rate_file", dbCol: "SELL_RATE_FILE" },
+    }
+
+    for (const [fieldKey, { apiKey, dbCol }] of Object.entries(fieldMappings)) {
+      const newVal = String(body[apiKey] ?? "")
+      const oldVal = String(oldValues[apiKey] ?? "")
+
+      if (newVal !== oldVal) {
+        await pool
+          .request()
+          .input("enquiry_id", sql.Int, pkId)
+          .input("field_name", sql.VarChar(50), dbCol)
+          .input("old_value", sql.VarChar(sql.MAX), oldVal || null)
+          .input("new_value", sql.VarChar(sql.MAX), newVal || null)
+          .input("changed_by", sql.VarChar(100), auth.userId)
+          .query(`
+            INSERT INTO [dbo].[ENQUIRY_AUDIT_LOG] (ENQUIRY_ID, FIELD_NAME, OLD_VALUE, NEW_VALUE, CHANGED_BY)
+            VALUES (@enquiry_id, @field_name, @old_value, @new_value, @changed_by)
+          `)
+      }
     }
 
     return NextResponse.json({ enq_ref_no: result.recordset[0].ENQREFNO })

@@ -20,7 +20,34 @@ ALTER TABLE [dbo].[TBL_ADMIN_SALESENQUIRY] ADD
   [UPDATED_AT]     datetime      NULL
 GO
 
--- STEP 2: Create ENQ_REF_SEQUENCES table for atomic ref no generation
+-- STEP 2: Expand POL/POD columns to store full port city names (was varchar(3))
+ALTER TABLE [dbo].[TBL_ADMIN_SALESENQUIRY]
+  ALTER COLUMN [POL] varchar(100) NULL;
+ALTER TABLE [dbo].[TBL_ADMIN_SALESENQUIRY]
+  ALTER COLUMN [POD] varchar(100) NULL;
+GO
+
+-- STEP 3: Create ENQUIRY_AUDIT_LOG table for tracking all changes
+IF NOT EXISTS (
+  SELECT 1 FROM INFORMATION_SCHEMA.TABLES
+  WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'ENQUIRY_AUDIT_LOG'
+)
+BEGIN
+  CREATE TABLE [dbo].[ENQUIRY_AUDIT_LOG] (
+    [PK_ID]         int           IDENTITY(1,1) PRIMARY KEY,
+    [ENQUIRY_ID]    int           NOT NULL,
+    [FIELD_NAME]    varchar(50)   NOT NULL,
+    [OLD_VALUE]     varchar(max)  NULL,
+    [NEW_VALUE]     varchar(max)  NULL,
+    [CHANGED_BY]    varchar(100)  NOT NULL,
+    [CHANGED_AT]    datetime      NOT NULL DEFAULT GETUTCDATE(),
+    FOREIGN KEY ([ENQUIRY_ID]) REFERENCES [dbo].[TBL_ADMIN_SALESENQUIRY]([PK_ID]) ON DELETE CASCADE
+  )
+  CREATE INDEX IX_ENQUIRY_AUDIT_LOG_ENQUIRY_ID ON [dbo].[ENQUIRY_AUDIT_LOG]([ENQUIRY_ID] DESC, [CHANGED_AT] DESC)
+END
+GO
+
+-- STEP 4: Create ENQ_REF_SEQUENCES table for atomic ref no generation
 
 IF NOT EXISTS (
   SELECT 1 FROM INFORMATION_SCHEMA.TABLES

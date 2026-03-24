@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Combobox } from "@/components/ui/combobox"
-import { Download, Paperclip, RotateCcw, Send } from "lucide-react"
+import { RotateCcw, Send } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   LINKS_SALES_PERSONS,
@@ -246,8 +246,6 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, boolean>>>({})
-  const [buyRateFile, setBuyRateFile] = useState<File | null>(null)
-  const [sellRateFile, setSellRateFile] = useState<File | null>(null)
   const [company, setCompany] = useState<string>("links")
 
   // Load user's company to show the right sales person list
@@ -279,14 +277,6 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: false }))
   }
 
-  async function uploadFile(file: File, userId: string): Promise<string> {
-    const path = `${userId}/${Date.now()}-${file.name}`
-    const { error: upErr } = await supabase.storage
-      .from("enquiry-files")
-      .upload(path, file, { upsert: true })
-    if (upErr) throw new Error(upErr.message)
-    return path
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -309,20 +299,6 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
     setSuccess(null)
     setErrors({})
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setError("Not authenticated"); setLoading(false); return }
-
-    let buyPath = form.buy_rate_file
-    let sellPath = form.sell_rate_file
-    try {
-      if (buyRateFile) buyPath = await uploadFile(buyRateFile, user.id)
-      if (sellRateFile) sellPath = await uploadFile(sellRateFile, user.id)
-    } catch (upErr: any) {
-      setError("File upload failed: " + upErr.message)
-      setLoading(false)
-      return
-    }
-
     const payload = {
       enq_receipt_date: form.enq_receipt_date,
       mode: form.mode || null, enq_type: form.enq_type || null,
@@ -339,8 +315,8 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
       job_invoice_no: form.job_invoice_no || null, gop: form.gop || null,
       assigned_user: form.assigned_user || null,
       assigned_date: form.assigned_date || null,
-      buy_rate_file: buyPath || null,
-      sell_rate_file: sellPath || null,
+      buy_rate_file: form.buy_rate_file || null,
+      sell_rate_file: form.sell_rate_file || null,
     }
 
     if (editingId) {
@@ -356,7 +332,6 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
         setSuccess(`Enquiry ${data.enq_ref_no ?? ""} updated successfully.`)
         setFormState(getDefaultForm())
         setEditingId(null)
-        setBuyRateFile(null); setSellRateFile(null)
         onEditComplete?.(); onSuccess?.()
       }
     } else {
@@ -371,7 +346,6 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
       } else {
         setSuccess(`Enquiry ${data.enq_ref_no ?? ""} submitted successfully.`)
         setFormState(getDefaultForm())
-        setBuyRateFile(null); setSellRateFile(null)
         onSuccess?.()
       }
     }
@@ -381,34 +355,18 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
 
   function handleReset() {
     setFormState(editingEnquiry ? populateFromEditingWithOptions(editingEnquiry, salesPersonList) : getDefaultForm())
-    setBuyRateFile(null); setSellRateFile(null)
     setError(null); setSuccess(null); setErrors({})
   }
 
   function handleCancelEdit() {
     setFormState(getDefaultForm())
     setEditingId(null)
-    setBuyRateFile(null); setSellRateFile(null)
     setError(null); setSuccess(null); setErrors({})
     onEditComplete?.()
   }
 
   const fe = (f: keyof FormData) =>
     errors[f] ? "border-destructive focus-visible:ring-destructive" : ""
-
-  const fileName = (path: string) => path.split("/").pop() ?? path
-
-  async function downloadFile(storagePath: string) {
-    const { data, error: dlErr } = await supabase.storage
-      .from("enquiry-files")
-      .createSignedUrl(storagePath, 60)
-    if (dlErr || !data?.signedUrl) return
-    const a = document.createElement("a")
-    a.href = data.signedUrl
-    a.download = fileName(storagePath)
-    a.target = "_blank"
-    a.click()
-  }
 
   // ─── Render ────────────────────────────────────────────────
 
@@ -685,49 +643,31 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
           <Input id="assigned_date" type="date" value={form.assigned_date} onChange={(e) => setField("assigned_date", e.target.value)} />
         </div>
 
-        {/* SECTION: Attachments */}
-        <SectionDivider label="Rate Attachments" />
+        {/* SECTION: Rate Notes */}
+        <SectionDivider label="Rate Notes" />
 
         <div className="space-y-1.5 col-span-full sm:col-span-1 lg:col-span-2">
-          <Label>Buy Rate</Label>
-          <Input type="file" accept=".pdf,.xlsx,.xls,.png,.jpg,.jpeg" onChange={(e) => setBuyRateFile(e.target.files?.[0] ?? null)} className="cursor-pointer" />
-          {form.buy_rate_file && !buyRateFile && (
-            <div className="flex items-center gap-2">
-              <p className="text-xs text-muted-foreground flex items-center gap-1 truncate">
-                <Paperclip className="h-3 w-3 shrink-0" />{fileName(form.buy_rate_file)}
-              </p>
-              <button
-                type="button"
-                onClick={() => downloadFile(form.buy_rate_file)}
-                className="shrink-0 inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:underline"
-                aria-label="Download buy rate file"
-              >
-                <Download className="h-3 w-3" />
-                Download
-              </button>
-            </div>
-          )}
+          <Label htmlFor="buy_rate_file">Buy Rate Notes</Label>
+          <textarea
+            id="buy_rate_file"
+            rows={2}
+            value={form.buy_rate_file}
+            onChange={(e) => setField("buy_rate_file", e.target.value)}
+            placeholder="Buy rate details, carrier quotes, margins..."
+            className="flex w-full rounded-md border border-input bg-[hsl(var(--input-bg))] px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+          />
         </div>
 
         <div className="space-y-1.5 col-span-full sm:col-span-1 lg:col-span-2">
-          <Label>Sell Rate</Label>
-          <Input type="file" accept=".pdf,.xlsx,.xls,.png,.jpg,.jpeg" onChange={(e) => setSellRateFile(e.target.files?.[0] ?? null)} className="cursor-pointer" />
-          {form.sell_rate_file && !sellRateFile && (
-            <div className="flex items-center gap-2">
-              <p className="text-xs text-muted-foreground flex items-center gap-1 truncate">
-                <Paperclip className="h-3 w-3 shrink-0" />{fileName(form.sell_rate_file)}
-              </p>
-              <button
-                type="button"
-                onClick={() => downloadFile(form.sell_rate_file)}
-                className="shrink-0 inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:underline"
-                aria-label="Download sell rate file"
-              >
-                <Download className="h-3 w-3" />
-                Download
-              </button>
-            </div>
-          )}
+          <Label htmlFor="sell_rate_file">Sell Rate Notes</Label>
+          <textarea
+            id="sell_rate_file"
+            rows={2}
+            value={form.sell_rate_file}
+            onChange={(e) => setField("sell_rate_file", e.target.value)}
+            placeholder="Sell rate details, client quotes, margins..."
+            className="flex w-full rounded-md border border-input bg-[hsl(var(--input-bg))] px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+          />
         </div>
 
       </div>
