@@ -163,7 +163,7 @@ export default function AuditPage() {
                 <span className="font-mono text-xs font-semibold text-primary">
                   {row.enq_ref_no ?? `#${row.enquiry_id}`}
                 </span>
-                <Badge variant={statusVariant(row.status) as any} className="text-[10px] px-1.5 py-0">
+                <Badge variant={statusVariant(row.status) as "success" | "danger" | "warning" | "info" | "secondary"} className="text-[10px] px-1.5 py-0">
                   {row.status ?? "—"}
                 </Badge>
               </div>
@@ -194,7 +194,7 @@ export default function AuditPage() {
                 <h2 className="text-base font-semibold text-foreground">
                   {selected.enq_ref_no ?? `Enquiry #${selected.enquiry_id}`}
                 </h2>
-                <Badge variant={statusVariant(selected.status) as any}>
+                <Badge variant={statusVariant(selected.status) as "success" | "danger" | "warning" | "info" | "secondary"}>
                   {selected.status ?? "—"}
                 </Badge>
               </div>
