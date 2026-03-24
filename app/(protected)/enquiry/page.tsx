@@ -4,7 +4,6 @@ import { Suspense, useCallback, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { EnquiryForm, type EnquiryFormEditing } from "@/components/enquiry/EnquiryForm"
 import { RecentEnquiries } from "@/components/enquiry/RecentEnquiries"
-import { EnquiryAuditLog } from "@/components/enquiry/EnquiryAuditLog"
 
 function EnquiryPageContent() {
   const [editingEnquiry, setEditingEnquiry] = useState<EnquiryFormEditing | null>(null)
@@ -72,10 +71,6 @@ function EnquiryPageContent() {
         onEditComplete={handleEditComplete}
         onSuccess={handleSuccess}
       />
-
-      {editingEnquiry?.id && (
-        <EnquiryAuditLog enquiryId={editingEnquiry.id} />
-      )}
 
       <RecentEnquiries refreshKey={refreshKey} />
     </div>

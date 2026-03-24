@@ -12,7 +12,9 @@ import {
   LogOut,
   Moon,
   Sun,
+  Heart,
   User,
+  ScrollText,
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
@@ -35,7 +37,7 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
-  const { resolvedTheme, setTheme } = useTheme()
+  const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => { setMounted(true) }, [])
@@ -54,14 +56,26 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
     router.refresh()
   }
 
-  const isDark = mounted && resolvedTheme === "dark"
+  const currentTheme = mounted ? (theme ?? "light") : "light"
   const brandName = COMPANY_LABELS[company] || "Freight CRM"
+
+  const THEMES = [
+    { key: "light", icon: Sun,   label: "Light mode" },
+    { key: "dark",  icon: Moon,  label: "Dark mode"  },
+    { key: "pink",  icon: Heart, label: "Pink mode"  },
+  ]
+  const currentThemeIndex = THEMES.findIndex((t) => t.key === currentTheme)
+  const nextTheme = THEMES[(currentThemeIndex + 1) % THEMES.length]
+  const CurrentThemeIcon = THEMES[currentThemeIndex]?.icon ?? Sun
 
   const navLinks = [
     { label: "New Enquiry",      href: "/enquiry",    icon: ClipboardList },
     { label: "Recent Enquiries", href: "/enquiries",  icon: List },
     ...(role === "admin"
-      ? [{ label: "Dashboard", href: "/dashboard", icon: LayoutDashboard }]
+      ? [
+          { label: "Dashboard",  href: "/dashboard",  icon: LayoutDashboard },
+          { label: "Audit Log",  href: "/audit",      icon: ScrollText },
+        ]
       : []),
   ]
 
@@ -182,19 +196,17 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
           {/* Spacer pushes toggle to bottom */}
           <div className="flex-1" />
 
-          {/* Theme toggle */}
+          {/* Theme toggle — cycles light → dark → pink */}
           <button
-            onClick={() => setTheme(isDark ? "light" : "dark")}
+            onClick={() => setTheme(nextTheme.key)}
+            title={`Switch to ${nextTheme.label}`}
             className="flex items-center h-10 mx-1.5 px-2.5 gap-3 rounded-lg transition-colors
                        text-muted-foreground hover:bg-accent hover:text-foreground"
           >
-            {mounted ? (
-              isDark
-                ? <Sun className="h-5 w-5 shrink-0" />
-                : <Moon className="h-5 w-5 shrink-0" />
-            ) : (
-              <Moon className="h-5 w-5 shrink-0 opacity-0" />
-            )}
+            {mounted
+              ? <CurrentThemeIcon className="h-5 w-5 shrink-0" />
+              : <Moon className="h-5 w-5 shrink-0 opacity-0" />
+            }
             <span
               className={cn(
                 "whitespace-nowrap text-sm font-medium",
@@ -202,7 +214,7 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
                 "transition-opacity duration-150 delay-75"
               )}
             >
-              {isDark ? "Light mode" : "Dark mode"}
+              {nextTheme.label}
             </span>
           </button>
         </nav>
