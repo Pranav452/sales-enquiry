@@ -3,67 +3,32 @@
 import { useTheme } from "next-themes"
 import { Moon, Sun, Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { useEffect, useState } from "react"
 
+const THEMES = ["light", "dark", "pink"] as const
+
 export function ThemeToggle() {
-  const { setTheme, resolvedTheme } = useTheme()
+  const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  useEffect(() => { setMounted(true) }, [])
 
   if (!mounted) {
     return (
-      <Button
-        variant="ghost"
-        size="icon"
-        className="fixed top-4 right-4 z-50 size-9"
-        aria-label="Toggle theme"
-      >
+      <Button variant="ghost" size="icon" className="fixed top-4 right-4 z-50 size-9" aria-label="Toggle theme">
         <Sun className="h-4 w-4" />
       </Button>
     )
   }
 
-  const themeIcons = {
-    light: <Sun className="h-4 w-4" />,
-    dark: <Moon className="h-4 w-4" />,
-    pink: <Heart className="h-4 w-4" />,
-  }
+  const idx = THEMES.indexOf((theme ?? "light") as typeof THEMES[number])
+  const next = THEMES[(idx + 1) % THEMES.length]
+  const Icon = theme === "dark" ? Moon : theme === "pink" ? Heart : Sun
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="fixed top-4 right-4 z-50 size-9"
-          aria-label="Toggle theme"
-        >
-          {themeIcons[resolvedTheme as keyof typeof themeIcons] || <Sun className="h-4 w-4" />}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setTheme("light")}>
-          <Sun className="h-4 w-4 mr-2" />
-          Light
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")}>
-          <Moon className="h-4 w-4 mr-2" />
-          Dark
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("pink")}>
-          <Heart className="h-4 w-4 mr-2" />
-          Pink
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <Button variant="ghost" size="icon" className="fixed top-4 right-4 z-50 size-9"
+      onClick={() => setTheme(next)} aria-label="Toggle theme">
+      <Icon className="h-4 w-4" />
+    </Button>
   )
 }
