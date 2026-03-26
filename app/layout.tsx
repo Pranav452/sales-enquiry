@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Links Cargo — Enquiry System",
-  description: "Freight enquiry capture and analytics dashboard",
+  title: "Sales Bridge — Enquiry System",
+  description: "Sales enquiry capture and analytics dashboard",
 };
 
 export default function RootLayout({
