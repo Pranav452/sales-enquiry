@@ -63,6 +63,40 @@ BEGIN
 END
 GO
 
+-- STEP 5: Create FREIGHT_RATES table for Rate Explorer
+-- Run on [manilal] database only — rates are shared across companies.
+
+IF NOT EXISTS (
+  SELECT 1 FROM INFORMATION_SCHEMA.TABLES
+  WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'FREIGHT_RATES'
+)
+BEGIN
+  CREATE TABLE [dbo].[FREIGHT_RATES] (
+    [PK_ID]           int           IDENTITY(1,1) PRIMARY KEY,
+    [SHIPPING_LINE]   varchar(50)   NOT NULL,
+    [ORIGIN_COUNTRY]  varchar(100)  NOT NULL,
+    [DEST_COUNTRY]    varchar(100)  NOT NULL,
+    [ORIGIN_PORT]     varchar(100)  NULL,
+    [DEST_PORT]       varchar(100)  NULL,
+    [CURRENCY]        varchar(5)    NOT NULL DEFAULT 'USD',
+    [RATE_20]         decimal(10,2) NULL,
+    [RATE_40]         decimal(10,2) NULL,
+    [VALID_FROM]      varchar(10)   NULL,
+    [VALID_TO]        varchar(10)   NULL,
+    [TRANSIT_DAYS]    int           NULL,
+    [VIA_PORT]        varchar(200)  NULL,
+    [SURCHARGES]      varchar(500)  NULL,
+    [NOTES]           varchar(500)  NULL,
+    [IS_ACTIVE]       bit           NOT NULL DEFAULT 1,
+    [CREATED_BY]      varchar(100)  NULL,
+    [CREATED_AT]      datetime      NOT NULL DEFAULT GETUTCDATE(),
+    [UPDATED_AT]      datetime      NOT NULL DEFAULT GETUTCDATE()
+  )
+  CREATE INDEX IX_FREIGHT_RATES_ROUTE ON [dbo].[FREIGHT_RATES] ([ORIGIN_COUNTRY],[DEST_COUNTRY],[IS_ACTIVE])
+  CREATE INDEX IX_FREIGHT_RATES_LINE  ON [dbo].[FREIGHT_RATES] ([SHIPPING_LINE],[IS_ACTIVE])
+END
+GO
+
 -- STEP 3: Pre-populate ENQ_REF_SEQUENCES from existing data
 -- Run AFTER migrating data so the counters start from the right number.
 -- This prevents duplicate ref nos if new enquiries are created after migration.
