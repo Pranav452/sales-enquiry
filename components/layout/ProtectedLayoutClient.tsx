@@ -15,6 +15,8 @@ import {
   Heart,
   User,
   ScrollText,
+  TrendingUp,
+  Settings2,
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
@@ -69,12 +71,14 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
   const CurrentThemeIcon = THEMES[currentThemeIndex]?.icon ?? Sun
 
   const navLinks = [
-    { label: "New Enquiry",      href: "/enquiry",    icon: ClipboardList },
-    { label: "Recent Enquiries", href: "/enquiries",  icon: List },
+    { label: "New Enquiry",      href: "/enquiry",        icon: ClipboardList },
+    { label: "Recent Enquiries", href: "/enquiries",      icon: List },
+    { label: "Rate Explorer",    href: "/rates",          icon: TrendingUp },
     ...(role === "admin"
       ? [
-          { label: "Dashboard",  href: "/dashboard",  icon: LayoutDashboard },
-          { label: "Audit Log",  href: "/audit",      icon: ScrollText },
+          { label: "Dashboard",    href: "/dashboard",    icon: LayoutDashboard },
+          { label: "Audit Log",    href: "/audit",        icon: ScrollText },
+          { label: "Manage Rates", href: "/rates/manage", icon: Settings2 },
         ]
       : []),
   ]
@@ -166,7 +170,9 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
             const isActive =
               href === "/enquiry"
                 ? pathname === "/enquiry" || pathname.startsWith("/enquiry?")
-                : pathname.startsWith(href)
+                : href === "/rates"
+                  ? pathname === "/rates"
+                  : pathname.startsWith(href)
 
             return (
               <Link
