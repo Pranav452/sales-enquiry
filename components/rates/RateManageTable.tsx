@@ -5,14 +5,16 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ValidityBadge } from "./ValidityBadge"
 import { RateFormModal } from "./RateFormModal"
+import { RateImportModal } from "./RateImportModal"
 import type { FreightRate } from "@/lib/types/rates"
-import { Plus, Pencil, Trash2 } from "lucide-react"
+import { Plus, Pencil, Trash2, FileUp } from "lucide-react"
 
 export function RateManageTable() {
   const [rates, setRates]               = useState<FreightRate[]>([])
   const [loading, setLoading]           = useState(true)
   const [error, setError]               = useState<string | null>(null)
   const [modalOpen, setModalOpen]       = useState(false)
+  const [importOpen, setImportOpen]     = useState(false)
   const [editing, setEditing]           = useState<FreightRate | null>(null)
   const [deletingId, setDeletingId]     = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
@@ -63,10 +65,16 @@ export function RateManageTable() {
           <h1 className="text-xl font-semibold">Manage Rates</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Add and update freight rates by shipping line and route.</p>
         </div>
-        <Button onClick={openAdd} size="sm" className="gap-1.5">
-          <Plus className="h-4 w-4" />
-          Add Rate
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setImportOpen(true)}>
+            <FileUp className="h-4 w-4" />
+            Import PDF
+          </Button>
+          <Button onClick={openAdd} size="sm" className="gap-1.5">
+            <Plus className="h-4 w-4" />
+            Add Rate
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -179,6 +187,16 @@ export function RateManageTable() {
         onClose={() => setModalOpen(false)}
         onSaved={loadRates}
       />
+
+      {importOpen && (
+        <RateImportModal
+          onClose={() => setImportOpen(false)}
+          onImported={() => {
+            setImportOpen(false)
+            loadRates()
+          }}
+        />
+      )}
     </div>
   )
 }
