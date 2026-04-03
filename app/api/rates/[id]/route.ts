@@ -19,6 +19,8 @@ const SELECT_COLS = `
   VIA_PORT                    AS via_port,
   SURCHARGES                  AS surcharges,
   NOTES                       AS notes,
+  PDF_URL                     AS pdf_url,
+  CLAUSES                     AS clauses,
   IS_ACTIVE                   AS is_active,
   CREATED_BY                  AS created_by,
   CONVERT(varchar(20), CREATED_AT, 120) AS created_at,
@@ -93,10 +95,12 @@ export async function PATCH(
       .input("valid_to",       sql.VarChar(10),    body.valid_to ?? null)
       .input("transit_days",   sql.Int,            body.transit_days ?? null)
       .input("via_port",       sql.VarChar(200),   body.via_port?.trim() ?? null)
-      .input("surcharges",     sql.VarChar(500),   body.surcharges?.trim() ?? null)
-      .input("notes",          sql.VarChar(500),   body.notes?.trim() ?? null)
-      .input("is_active",      sql.Bit,            body.is_active ?? null)
-      .input("updated_at",     sql.DateTime,       now)
+      .input("surcharges",     sql.VarChar(500),        body.surcharges?.trim() ?? null)
+      .input("notes",          sql.VarChar(500),        body.notes?.trim() ?? null)
+      .input("pdf_url",        sql.VarChar(500),        body.pdf_url?.trim() ?? null)
+      .input("clauses",        sql.VarChar(sql.MAX),    body.clauses?.trim() ?? null)
+      .input("is_active",      sql.Bit,                 body.is_active ?? null)
+      .input("updated_at",     sql.DateTime,            now)
       .query(`
         UPDATE [dbo].[FREIGHT_RATES] SET
           SHIPPING_LINE  = COALESCE(@shipping_line,  SHIPPING_LINE),
@@ -113,6 +117,8 @@ export async function PATCH(
           VIA_PORT       = @via_port,
           SURCHARGES     = @surcharges,
           NOTES          = @notes,
+          PDF_URL        = @pdf_url,
+          CLAUSES        = @clauses,
           IS_ACTIVE      = COALESCE(@is_active, IS_ACTIVE),
           UPDATED_AT     = @updated_at
         WHERE PK_ID = @pk_id

@@ -38,6 +38,8 @@ export function RateFormModal({ open, rate, onClose, onSaved }: Props) {
     via_port: "",
     surcharges: null,
     notes: "",
+    pdf_url: "",
+    clauses: "",
   })
 
   const [surchargeRows, setSurchargeRows] = useState<ParsedSurcharge[]>([{ name: "", value: "" }])
@@ -63,6 +65,8 @@ export function RateFormModal({ open, rate, onClose, onSaved }: Props) {
         via_port:        rate.via_port ?? "",
         surcharges:      rate.surcharges,
         notes:           rate.notes ?? "",
+        pdf_url:         rate.pdf_url ?? "",
+        clauses:         rate.clauses ?? "",
       })
       const parsed = parseSurcharges(rate.surcharges)
       setSurchargeRows(parsed.length > 0 ? parsed : [{ name: "", value: "" }])
@@ -82,6 +86,8 @@ export function RateFormModal({ open, rate, onClose, onSaved }: Props) {
         via_port: "",
         surcharges: null,
         notes: "",
+        pdf_url: "",
+        clauses: "",
       })
       setSurchargeRows([{ name: "", value: "" }])
     }
@@ -117,6 +123,8 @@ export function RateFormModal({ open, rate, onClose, onSaved }: Props) {
       notes:       form.notes       || null,
       valid_from:  form.valid_from  || null,
       valid_to:    form.valid_to    || null,
+      pdf_url:     form.pdf_url     || null,
+      clauses:     form.clauses     || null,
     }
 
     setSaving(true)
@@ -316,6 +324,34 @@ export function RateFormModal({ open, rate, onClose, onSaved }: Props) {
               onChange={(e) => set("notes", e.target.value)}
               placeholder="e.g. Subject to THC both sides"
             />
+          </div>
+
+          {/* PDF URL */}
+          <div>
+            <Label className="mb-1.5 block text-sm">Source PDF URL</Label>
+            <Input
+              value={form.pdf_url ?? ""}
+              onChange={(e) => set("pdf_url", e.target.value)}
+              placeholder="/ratesheets/Line/RateSheet.pdf"
+            />
+            <p className="text-xs text-muted-foreground mt-1">Path to the PDF in /public/ratesheets — users can click to verify.</p>
+          </div>
+
+          {/* Clauses */}
+          <div>
+            <Label className="mb-1.5 block text-sm">Terms &amp; Clauses</Label>
+            <textarea
+              value={form.clauses ?? ""}
+              onChange={(e) => set("clauses", e.target.value)}
+              rows={4}
+              placeholder={"Clause 1 text|Clause 2 text|Clause 3 text"}
+              className={cn(
+                "w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm",
+                "placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring",
+                "resize-none"
+              )}
+            />
+            <p className="text-xs text-muted-foreground mt-1">Separate clauses with <code className="text-xs bg-muted px-1 rounded">|</code> (pipe). Each becomes a bullet point.</p>
           </div>
 
           {error && (

@@ -97,6 +97,14 @@ BEGIN
 END
 GO
 
+-- STEP 5b: Add PDF_URL and CLAUSES columns to FREIGHT_RATES (run if table already exists)
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.FREIGHT_RATES') AND name = 'PDF_URL')
+  ALTER TABLE [dbo].[FREIGHT_RATES] ADD [PDF_URL] varchar(500) NULL
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.FREIGHT_RATES') AND name = 'CLAUSES')
+  ALTER TABLE [dbo].[FREIGHT_RATES] ADD [CLAUSES] varchar(max) NULL
+GO
+
 -- STEP 3: Pre-populate ENQ_REF_SEQUENCES from existing data
 -- Run AFTER migrating data so the counters start from the right number.
 -- This prevents duplicate ref nos if new enquiries are created after migration.

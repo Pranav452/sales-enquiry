@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import type { FreightRate } from "@/lib/types/rates"
 import { RateCard } from "./RateCard"
+import { ClausesPanel } from "./ClausesPanel"
 
 interface Props {
   origin: string
@@ -72,6 +73,20 @@ export function RateResultsGrid({ origin, dest }: Props) {
     grouped.set(r.shipping_line, [...existing, r])
   }
 
+  // Build clauses panel data: one entry per line, use the first rate that has clauses
+  const clauseItems = Array.from(grouped.entries())
+    .map(([line, lineRates]) => {
+      const withClauses = lineRates.find((r) => r.clauses)
+      if (!withClauses?.clauses) return null
+      const withPdf = lineRates.find((r) => r.pdf_url)
+      return {
+        line,
+        clauses: withClauses.clauses,
+        pdf_url: withPdf?.pdf_url ?? null,
+      }
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null)
+
   return (
     <div className="mt-6">
       <p className="text-sm text-muted-foreground mb-4">
@@ -84,6 +99,8 @@ export function RateResultsGrid({ origin, dest }: Props) {
           <RateCard key={line} line={line} rates={lineRates} />
         ))}
       </div>
+
+      <ClausesPanel items={clauseItems} />
     </div>
   )
 }

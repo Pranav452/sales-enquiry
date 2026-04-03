@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge"
 import { ValidityBadge } from "./ValidityBadge"
 import { SurchargeList } from "./SurchargeList"
 import type { FreightRate } from "@/lib/types/rates"
+import { ExternalLink } from "lucide-react"
 
 interface Props {
   line: string
@@ -25,7 +26,21 @@ export function RateCard({ line, rates }: Props) {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <h3 className="font-semibold text-base">{line}</h3>
-          <ValidityBadge valid_from={primary.valid_from} valid_to={primary.valid_to} />
+          <div className="flex items-center gap-2">
+            {primary.pdf_url && (
+              <a
+                href={encodeURI(primary.pdf_url)}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="View source PDF"
+                className="flex items-center gap-1 text-xs text-primary hover:underline"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                PDF
+              </a>
+            )}
+            <ValidityBadge valid_from={primary.valid_from} valid_to={primary.valid_to} />
+          </div>
         </div>
         {primary.dest_port && (
           <p className="text-sm text-muted-foreground">
@@ -78,6 +93,17 @@ export function RateCard({ line, rates }: Props) {
                     <Badge variant="outline" className="font-normal text-xs">40': {r.currency} {r.rate_40.toLocaleString()}</Badge>
                   )}
                   <ValidityBadge valid_from={r.valid_from} valid_to={r.valid_to} />
+                  {r.pdf_url && (
+                    <a
+                      href={encodeURI(r.pdf_url)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="View source PDF"
+                      className="text-xs text-primary hover:underline"
+                    >
+                      <ExternalLink className="h-3 w-3 inline" />
+                    </a>
+                  )}
                 </div>
               </div>
             ))}

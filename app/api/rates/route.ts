@@ -19,6 +19,8 @@ const SELECT_COLS = `
   VIA_PORT                    AS via_port,
   SURCHARGES                  AS surcharges,
   NOTES                       AS notes,
+  PDF_URL                     AS pdf_url,
+  CLAUSES                     AS clauses,
   IS_ACTIVE                   AS is_active,
   CREATED_BY                  AS created_by,
   CONVERT(varchar(20), CREATED_AT, 120) AS created_at,
@@ -107,6 +109,8 @@ export async function POST(req: NextRequest) {
       .input("via_port",        sql.VarChar(200),   body.via_port?.trim() ?? null)
       .input("surcharges",      sql.VarChar(500),   body.surcharges?.trim() ?? null)
       .input("notes",           sql.VarChar(500),   body.notes?.trim() ?? null)
+      .input("pdf_url",         sql.VarChar(500),   body.pdf_url?.trim() ?? null)
+      .input("clauses",         sql.VarChar(sql.MAX), body.clauses?.trim() ?? null)
       .input("created_by",      sql.VarChar(100),   auth.userId)
       .input("created_at",      sql.DateTime,       now)
       .input("updated_at",      sql.DateTime,       now)
@@ -116,6 +120,7 @@ export async function POST(req: NextRequest) {
           ORIGIN_PORT, DEST_PORT, CURRENCY,
           RATE_20, RATE_40, VALID_FROM, VALID_TO,
           TRANSIT_DAYS, VIA_PORT, SURCHARGES, NOTES,
+          PDF_URL, CLAUSES,
           CREATED_BY, CREATED_AT, UPDATED_AT
         )
         OUTPUT inserted.PK_ID
@@ -124,6 +129,7 @@ export async function POST(req: NextRequest) {
           @origin_port, @dest_port, @currency,
           @rate_20, @rate_40, @valid_from, @valid_to,
           @transit_days, @via_port, @surcharges, @notes,
+          @pdf_url, @clauses,
           @created_by, @created_at, @updated_at
         )
       `)

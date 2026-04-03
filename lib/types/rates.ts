@@ -14,6 +14,8 @@ export interface FreightRate {
   via_port: string | null
   surcharges: string | null
   notes: string | null
+  pdf_url: string | null
+  clauses: string | null
   is_active: boolean
   created_by: string | null
   created_at: string
@@ -40,5 +42,7 @@ export interface RatePayload {
   via_port?: string | null
   surcharges?: string | null
   notes?: string | null
+  pdf_url?: string | null
+  clauses?: string | null
   is_active?: boolean
 }
