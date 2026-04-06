@@ -12,13 +12,23 @@ export async function extractPdfText(
 ): Promise<{ text: string; method: "pdfplumber-service" | "pdf-parse" }> {
   // Try external Python service first (if configured)
   if (PDF_SERVICE_URL && PDF_SERVICE_URL.trim()) {
+    console.log(`[pdf-extract] Attempting service extraction from ${PDF_SERVICE_URL}`)
     try {
-      return await extractViaService(filePath)
+      const result = await extractViaService(filePath)
+      console.log(`[pdf-extract] Service extraction successful`)
+      return result
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Service error"
-      console.warn(`[pdf-extract] Service failed, falling back to pdf-parse: ${message}`)
-      // Fall through to pdf-parse
+      console.error(`[pdf-extract] Service failed: ${message}`)
+      // On Vercel, don't fallback to pdf-parse (it will error anyway)
+      // Instead, throw to let the API route handle it
+      if (process.env.VERCEL || process.env.NODE_ENV === "production") {
+        throw new Error(`PDF extraction service failed: ${message}`)
+      }
+      console.warn(`[pdf-extract] Falling back to local pdf-parse`)
     }
+  } else {
+    console.log(`[pdf-extract] PDF_SERVICE_URL not configured, using local pdf-parse`)
   }
 
   // Fallback to local pdf-parse (pure JS, works on Vercel)
@@ -30,7 +40,10 @@ async function extractViaService(
 ): Promise<{ text: string; method: "pdfplumber-service" }> {
   if (!PDF_SERVICE_URL) throw new Error("PDF_SERVICE_URL not configured")
 
+  console.log(`[service-extract] Reading file: ${filePath}`)
   const buffer = fs.readFileSync(filePath)
+  console.log(`[service-extract] File size: ${buffer.length} bytes`)
+
   const formData = new FormData()
   formData.append("file", new Blob([buffer], { type: "application/pdf" }), "document.pdf")
 
@@ -38,11 +51,14 @@ async function extractViaService(
   const timeoutId = setTimeout(() => controller.abort(), 60000)
 
   try {
+    console.log(`[service-extract] Calling ${PDF_SERVICE_URL}/extract`)
     const response = await fetch(`${PDF_SERVICE_URL}/extract`, {
       method: "POST",
       body: formData,
       signal: controller.signal,
     })
+
+    console.log(`[service-extract] Response status: ${response.status}`)
 
     if (!response.ok) {
       const error = await response.text()
@@ -54,6 +70,7 @@ async function extractViaService(
       throw new Error(result.detail || "Service extraction failed")
     }
 
+    console.log(`[service-extract] Extracted ${result.text.length} characters`)
     return { text: result.text, method: "pdfplumber-service" }
   } finally {
     clearTimeout(timeoutId)

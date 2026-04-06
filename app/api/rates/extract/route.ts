@@ -51,6 +51,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
+    console.log("[extract] Starting PDF extraction")
+    console.log("[extract] PDF_SERVICE_URL:", process.env.PDF_SERVICE_URL ? "SET" : "NOT SET")
+
     const formData = await req.formData()
     const file = formData.get("file") as File | null
     if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 })
@@ -71,7 +74,7 @@ export async function POST(req: NextRequest) {
       const result = await extractPdfText(tempFilePath)
       pdfText = result.text
       extractMethod = result.method
-      console.log(`[extract] Using ${extractMethod} for text extraction`)
+      console.log(`[extract] Successfully used ${extractMethod} for text extraction`)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "PDF extraction failed"
       console.error("[extract] PDF text extraction error:", message)
