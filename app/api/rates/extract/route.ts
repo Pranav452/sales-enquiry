@@ -59,37 +59,37 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Only PDF files are supported" }, { status: 400 })
     }
 
-    // ── Write temp file for Python subprocess ────────────────
+    // ── Write temp file for extraction ────────────────────────
     tempFilePath = join(tmpdir(), `rate-extract-${randomUUID()}.pdf`)
     const buffer = Buffer.from(await file.arrayBuffer())
     await writeFile(tempFilePath, buffer)
 
-    // ── Extract text using pdfplumber ───────────────────────
+    // ── Extract text (pdfplumber > pdf-parse fallback) ───────
     let pdfText: string
+    let extractMethod: string
     try {
-      pdfText = await extractPdfText(tempFilePath)
+      const result = await extractPdfText(tempFilePath)
+      pdfText = result.text
+      extractMethod = result.method
+      console.log(`[extract] Using ${extractMethod} for text extraction`)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "PDF extraction failed"
-      console.error("[extract] PDF text extraction failed:", message)
+      console.error("[extract] PDF text extraction error:", message)
 
-      if (message.includes("Python") || message.includes("pdfplumber")) {
-        return NextResponse.json(
-          {
-            error:
-              "PDF extraction requires Python 3 with pdfplumber. Install: python -m pip install pdfplumber",
-          },
-          { status: 503 }
-        )
-      }
       return NextResponse.json(
-        { error: `Failed to read PDF: ${message}` },
+        {
+          error: `Failed to read PDF: ${message}. Please ensure the PDF is not password-protected or a scanned image.`,
+        },
         { status: 422 }
       )
     }
 
     if (!pdfText || pdfText.length < 50) {
       return NextResponse.json(
-        { error: "PDF contains no extractable text. Please use a text-based PDF." },
+        {
+          error:
+            "PDF contains no extractable text. Please use a text-based PDF (not a scanned image).",
+        },
         { status: 422 }
       )
     }
@@ -98,17 +98,35 @@ export async function POST(req: NextRequest) {
     const truncated =
       pdfText.length > 80000 ? pdfText.slice(0, 80000) + "\n[...truncated]" : pdfText
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      max_tokens: 16384,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        {
-          role: "user",
-          content: `Extract all freight rates from this rate sheet:\n\n--- PDF TEXT START ---\n${truncated}\n--- PDF TEXT END ---`,
-        },
-      ],
-    })
+    let completion
+    try {
+      completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        max_tokens: 16384,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          {
+            role: "user",
+            content: `Extract all freight rates from this rate sheet:\n\n--- PDF TEXT START ---\n${truncated}\n--- PDF TEXT END ---`,
+          },
+        ],
+      })
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "API error"
+      console.error("[extract] OpenAI API error:", message)
+
+      if (message.includes("API key") || message.includes("auth")) {
+        return NextResponse.json(
+          { error: "OpenAI API key not configured. Set OPENAI_API_KEY in env." },
+          { status: 503 }
+        )
+      }
+
+      return NextResponse.json(
+        { error: `AI extraction failed: ${message}` },
+        { status: 500 }
+      )
+    }
 
     const rawText = completion.choices[0]?.message?.content ?? ""
 
@@ -121,17 +139,23 @@ export async function POST(req: NextRequest) {
         text = text.replace(/^```[a-z]*\n?/, "").replace(/\n?```$/, "").trim()
       }
       rates = JSON.parse(text)
-      if (!Array.isArray(rates)) throw new Error("Not an array")
-    } catch {
+      if (!Array.isArray(rates)) throw new Error("Response is not an array")
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Parse error"
+      console.error("[extract] JSON parse error:", message)
+
       return NextResponse.json(
-        { error: "GPT-4o returned malformed data — could not parse rate list. Try again." },
+        {
+          error: `GPT-4o returned malformed data: ${message}. Try again with a clearer PDF.`,
+        },
         { status: 500 }
       )
     }
 
+    console.log(`[extract] Successfully extracted ${rates.length} rates using ${extractMethod}`)
     return NextResponse.json({ rates, count: rates.length })
   } catch (err: unknown) {
-    console.error("Extract error:", err)
+    console.error("[extract] Unexpected error:", err)
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Extraction failed" },
       { status: 500 }

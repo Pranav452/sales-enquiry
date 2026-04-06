@@ -1,65 +1,73 @@
-import { execFile } from "child_process"
-import { promisify } from "util"
-import path from "path"
+/**
+ * PDF extraction that uses external Python service when available.
+ * Calls microservice (Railway/Render) for pdfplumber extraction.
+ * Falls back to local pdf-parse if service unavailable.
+ */
 import fs from "fs"
 
-const execFileAsync = promisify(execFile)
+const PDF_SERVICE_URL = process.env.PDF_SERVICE_URL || ""
 
-/**
- * Extract text and tables from a PDF using pdfplumber via Python subprocess.
- * Handles rate sheets with complex table layouts.
- */
-export async function extractPdfText(filePath: string): Promise<string> {
-  // Verify file exists
-  if (!fs.existsSync(filePath)) {
-    throw new Error(`PDF file not found: ${filePath}`)
-  }
-
-  const pythonScript = path.join(process.cwd(), "lib", "pdf-extract.py")
-
-  // Try python3 first, fall back to python on Windows
-  let lastError: Error | null = null
-
-  for (const cmd of ["python3", "python"]) {
+export async function extractPdfText(
+  filePath: string
+): Promise<{ text: string; method: "pdfplumber-service" | "pdf-parse" }> {
+  // Try external Python service first (if configured)
+  if (PDF_SERVICE_URL && PDF_SERVICE_URL.trim()) {
     try {
-      const { stdout, stderr } = await execFileAsync(cmd, [pythonScript, filePath], {
-        timeout: 60000,
-        maxBuffer: 10 * 1024 * 1024, // 10MB buffer for large PDFs
-      })
-
-      if (stderr && stderr.trim()) {
-        console.warn(`[${cmd}] stderr:`, stderr)
-      }
-
-      const result = JSON.parse(stdout)
-      if (!result.success) {
-        throw new Error(result.error || "PDF extraction failed")
-      }
-
-      return result.text
+      return await extractViaService(filePath)
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Unknown error"
-      lastError = err instanceof Error ? err : new Error(String(err))
-
-      // If it's a "command not found" error, try the next one
-      if (message.includes("ENOENT") || message.includes("not found")) {
-        console.log(`[pdf-extract] ${cmd} not found, trying next...`)
-        continue
-      }
-
-      // Otherwise it's a real error, don't try other commands
-      console.error(`[pdf-extract] ${cmd} failed:`, message)
-      break
+      const message = err instanceof Error ? err.message : "Service error"
+      console.warn(`[pdf-extract] Service failed, falling back to pdf-parse: ${message}`)
+      // Fall through to pdf-parse
     }
   }
 
-  // If we get here, neither python nor python3 worked
-  const message = lastError?.message ?? "Unknown error"
-  if (message.includes("ENOENT") || message.includes("not found")) {
-    throw new Error(
-      "Python with pdfplumber not found. Install: python -m pip install pdfplumber"
-    )
-  }
+  // Fallback to local pdf-parse (pure JS, works on Vercel)
+  return await extractViaPdfParse(filePath)
+}
 
-  throw new Error(`PDF extraction error: ${message}`)
+async function extractViaService(
+  filePath: string
+): Promise<{ text: string; method: "pdfplumber-service" }> {
+  if (!PDF_SERVICE_URL) throw new Error("PDF_SERVICE_URL not configured")
+
+  const buffer = fs.readFileSync(filePath)
+  const formData = new FormData()
+  formData.append("file", new Blob([buffer], { type: "application/pdf" }), "document.pdf")
+
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 60000)
+
+  try {
+    const response = await fetch(`${PDF_SERVICE_URL}/extract`, {
+      method: "POST",
+      body: formData,
+      signal: controller.signal,
+    })
+
+    if (!response.ok) {
+      const error = await response.text()
+      throw new Error(`Service error (${response.status}): ${error}`)
+    }
+
+    const result = (await response.json()) as { success: boolean; text: string; detail?: string }
+    if (!result.success) {
+      throw new Error(result.detail || "Service extraction failed")
+    }
+
+    return { text: result.text, method: "pdfplumber-service" }
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
+
+async function extractViaPdfParse(
+  filePath: string
+): Promise<{ text: string; method: "pdf-parse" }> {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const pdfParse = require("pdf-parse")
+
+  const buffer = fs.readFileSync(filePath)
+  const data = await pdfParse(buffer)
+
+  return { text: (data.text ?? "").trim(), method: "pdf-parse" }
 }
