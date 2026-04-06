@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { RateSearchForm } from "@/components/rates/RateSearchForm"
 import { RateResultsGrid } from "@/components/rates/RateResultsGrid"
+import { RateChatWidget } from "@/components/rates/RateChatWidget"
 
 export default function RatesPage() {
   const [search, setSearch] = useState<{ origin: string; dest: string } | null>(null)
@@ -27,6 +28,9 @@ export default function RatesPage() {
       {search && (
         <RateResultsGrid origin={search.origin} dest={search.dest} />
       )}
+
+      {/* Floating Rate Analyst Chat */}
+      <RateChatWidget origin={search?.origin} dest={search?.dest} />
     </div>
   )
 }

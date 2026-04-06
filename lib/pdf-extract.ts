@@ -31,11 +31,37 @@ export async function extractPdfText(
   return await extractViaPdfParse(filePath)
 }
 
+async function pingService(): Promise<boolean> {
+  try {
+    const res = await fetch(`${PDF_SERVICE_URL}/health`, { method: "GET" })
+    return res.ok
+  } catch {
+    return false
+  }
+}
+
 async function extractViaService(
   filePath: string
 ): Promise<{ text: string; method: "pdfplumber-service" }> {
   if (!PDF_SERVICE_URL) throw new Error("PDF_SERVICE_URL not configured")
 
+  // ── Wake up Render free tier if sleeping ─────────────────
+  console.log(`[service-extract] Pinging service to wake up...`)
+  const awake = await pingService()
+  if (!awake) {
+    // Service is cold-starting — wait up to 30s for it to boot
+    console.log(`[service-extract] Service cold-starting, waiting 15s...`)
+    await new Promise((r) => setTimeout(r, 15000))
+    const awake2 = await pingService()
+    if (!awake2) {
+      await new Promise((r) => setTimeout(r, 15000))
+      const awake3 = await pingService()
+      if (!awake3) throw new Error("PDF service is unavailable (cold start timeout)")
+    }
+  }
+  console.log(`[service-extract] Service is up`)
+
+  // ── Read file and send to service ────────────────────────
   console.log(`[service-extract] Reading file: ${filePath}`)
   const buffer = fs.readFileSync(filePath)
   console.log(`[service-extract] File size: ${buffer.length} bytes`)
@@ -44,7 +70,7 @@ async function extractViaService(
   formData.append("file", new Blob([buffer], { type: "application/pdf" }), "document.pdf")
 
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 60000)
+  const timeoutId = setTimeout(() => controller.abort(), 90000)
 
   try {
     console.log(`[service-extract] Calling ${PDF_SERVICE_URL}/extract`)
@@ -55,13 +81,20 @@ async function extractViaService(
     })
 
     console.log(`[service-extract] Response status: ${response.status}`)
+    const rawBody = await response.text()
+    console.log(`[service-extract] Raw response (first 300 chars): ${rawBody.slice(0, 300)}`)
 
     if (!response.ok) {
-      const error = await response.text()
-      throw new Error(`Service error (${response.status}): ${error}`)
+      throw new Error(`Service error (${response.status}): ${rawBody.slice(0, 300)}`)
     }
 
-    const result = (await response.json()) as { success: boolean; text: string; detail?: string }
+    let result: { success: boolean; text: string; detail?: string }
+    try {
+      result = JSON.parse(rawBody)
+    } catch {
+      throw new Error(`Service returned non-JSON: ${rawBody.slice(0, 200)}`)
+    }
+
     if (!result.success) {
       throw new Error(result.detail || "Service extraction failed")
     }
