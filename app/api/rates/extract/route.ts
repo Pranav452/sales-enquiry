@@ -12,18 +12,22 @@ import { randomUUID } from "crypto"
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
+// Max chars per GPT chunk — keeps output well within 16k token limit
+const CHUNK_SIZE = 18000
+
 const SYSTEM_PROMPT = `You are a freight rate extraction engine. Your ONLY job is to extract every single freight rate row from the PDF text provided and return them as a JSON array.
 
 CRITICAL RULES — NEVER BREAK THESE:
-1. Extract EVERY SINGLE RATE ROW. Count them as you go. Do NOT skip any row for any reason.
+1. Extract EVERY SINGLE RATE ROW. Do NOT skip any row for any reason.
 2. Do NOT summarize, group, or combine rows. One destination port = one array element.
 3. Do NOT stop early. Process the ENTIRE text from start to finish.
 4. Do NOT add commentary, explanations, or markdown. Return ONLY the raw JSON array.
 5. If a field is missing, use null. Never invent data.
+6. If there are no rates in this chunk, return an empty array: []
 
 FIELD SCHEMA (every object must have all these keys):
 {
-  "shipping_line": string — e.g. "MSC", "PIL", "COSCO", "ESL", "ONE". Use the override value if provided.
+  "shipping_line": string — e.g. "MSC", "PIL", "COSCO", "ESL", "ONE". Use override if provided.
   "origin_country": string — usually "INDIA"
   "origin_port": string — e.g. "NHAVA SHEVA", "MUNDRA"
   "dest_country": string
@@ -45,6 +49,114 @@ DATE CONVERSION: "01 Apr 2026 – 14 Apr 2026" → valid_from "2026-04-01", vali
 SURCHARGES: Extract abbreviation and value only. "EFS USD 55/TEU" → "EFS:55"
 OUTPUT: Raw JSON array only. No markdown fences. No text before or after the array.`
 
+// ── Split text into chunks at page boundaries ──────────────────
+function splitIntoChunks(text: string, maxChunkSize: number): string[] {
+  const pages = text.split(/\n--- PAGE \d+ ---\n/).filter(Boolean)
+
+  const chunks: string[] = []
+  let current = ""
+
+  for (const page of pages) {
+    if (current.length + page.length > maxChunkSize && current.length > 0) {
+      chunks.push(current.trim())
+      current = page
+    } else {
+      current += "\n" + page
+    }
+  }
+
+  if (current.trim()) chunks.push(current.trim())
+
+  // If no page markers, fall back to plain character chunking
+  if (chunks.length === 0) {
+    for (let i = 0; i < text.length; i += maxChunkSize) {
+      chunks.push(text.slice(i, i + maxChunkSize))
+    }
+  }
+
+  return chunks
+}
+
+// ── Call GPT-4o on a single chunk ─────────────────────────────
+async function extractChunk(
+  chunk: string,
+  chunkIndex: number,
+  totalChunks: number,
+  shippingLineOverride: string | null,
+  documentClauses: string
+): Promise<unknown[]> {
+  const linePrefix = shippingLineOverride
+    ? `SHIPPING LINE OVERRIDE: Every rate belongs to "${shippingLineOverride}". Set shipping_line = "${shippingLineOverride}" on ALL rows.\n\n`
+    : ""
+
+  const clauseNote = documentClauses
+    ? `DOCUMENT CLAUSES (apply to all rows): ${documentClauses}\n\n`
+    : ""
+
+  const prompt = `${linePrefix}${clauseNote}Extract every freight rate from this section (chunk ${chunkIndex + 1} of ${totalChunks}):\n\n--- TEXT START ---\n${chunk}\n--- TEXT END ---`
+
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o",
+    max_tokens: 16384,
+    temperature: 0,
+    seed: 42,
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user",   content: prompt },
+    ],
+  })
+
+  const finishReason = completion.choices[0]?.finish_reason
+  const rawText = completion.choices[0]?.message?.content ?? "[]"
+
+  if (finishReason === "length") {
+    console.warn(`[extract] Chunk ${chunkIndex + 1} hit token limit — response may be truncated`)
+  }
+
+  let text = rawText.trim()
+  if (text.startsWith("```")) {
+    text = text.replace(/^```[a-z]*\n?/, "").replace(/\n?```$/, "").trim()
+  }
+
+  // If truncated JSON, attempt to salvage complete objects
+  if (finishReason === "length" && !text.endsWith("]")) {
+    const lastComplete = text.lastIndexOf("},")
+    if (lastComplete > 0) {
+      text = text.slice(0, lastComplete + 1) + "]"
+      console.warn(`[extract] Salvaged truncated JSON up to position ${lastComplete}`)
+    } else {
+      return []
+    }
+  }
+
+  const parsed = JSON.parse(text)
+  return Array.isArray(parsed) ? parsed : []
+}
+
+// ── Extract document-level clauses from full text ──────────────
+async function extractClauses(text: string): Promise<string> {
+  // Only extract clauses if text has meaningful content beyond rates
+  if (text.length < 200) return ""
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      max_tokens: 1024,
+      temperature: 0,
+      messages: [
+        {
+          role: "system",
+          content: "Extract ALL document-level terms, conditions, footnotes, surcharge explanations, and disclaimers from this freight rate sheet. Return them as a single string with each clause separated by a | character. Return only the clauses string, nothing else. If none found, return empty string.",
+        },
+        { role: "user", content: text.slice(0, 8000) },
+      ],
+    })
+    return completion.choices[0]?.message?.content?.trim() ?? ""
+  } catch {
+    return ""
+  }
+}
+
 export async function POST(req: NextRequest) {
   let tempFilePath: string | null = null
 
@@ -65,110 +177,84 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Only PDF files are supported" }, { status: 400 })
     }
 
-    // Optional shipping line override (for PDFs where line name is an image)
-    const shippingLineOverride = (formData.get("shipping_line") as string | null)?.trim().toUpperCase() || null
+    const shippingLineOverride =
+      (formData.get("shipping_line") as string | null)?.trim().toUpperCase() || null
     if (shippingLineOverride) {
       console.log(`[extract] Shipping line override: ${shippingLineOverride}`)
     }
 
-    // ── Write temp file for extraction ────────────────────────
+    // ── Write temp file ────────────────────────────────────────
     tempFilePath = join(tmpdir(), `rate-extract-${randomUUID()}.pdf`)
     const buffer = Buffer.from(await file.arrayBuffer())
     await writeFile(tempFilePath, buffer)
 
-    // ── Extract text (pdfplumber > pdf-parse fallback) ───────
+    // ── Extract text via pdfplumber / pdf-parse ───────────────
     let pdfText: string
     let extractMethod: string
     try {
       const result = await extractPdfText(tempFilePath)
       pdfText = result.text
       extractMethod = result.method
-      console.log(`[extract] Successfully used ${extractMethod} for text extraction`)
+      console.log(`[extract] ${extractMethod} extracted ${pdfText.length} chars`)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "PDF extraction failed"
-      console.error("[extract] PDF text extraction error:", message)
-
+      console.error("[extract] Text extraction error:", message)
       return NextResponse.json(
-        {
-          error: `Failed to read PDF: ${message}. Please ensure the PDF is not password-protected or a scanned image.`,
-        },
+        { error: `Failed to read PDF: ${message}` },
         { status: 422 }
       )
     }
 
     if (!pdfText || pdfText.length < 50) {
       return NextResponse.json(
-        {
-          error:
-            "PDF contains no extractable text. Please use a text-based PDF (not a scanned image).",
-        },
+        { error: "PDF contains no extractable text. Please use a text-based PDF." },
         { status: 422 }
       )
     }
 
-    // ── Send to GPT-4o for structured extraction ─────────────
-    const truncated =
-      pdfText.length > 80000 ? pdfText.slice(0, 80000) + "\n[...truncated]" : pdfText
+    // ── Extract document-level clauses first (fast, cheap) ────
+    console.log("[extract] Extracting document clauses...")
+    const documentClauses = await extractClauses(pdfText)
+    if (documentClauses) {
+      console.log(`[extract] Clauses extracted (${documentClauses.length} chars)`)
+    }
 
-    const userPrompt = shippingLineOverride
-      ? `SHIPPING LINE OVERRIDE: Every rate in this document belongs to "${shippingLineOverride}". Set shipping_line = "${shippingLineOverride}" on ALL rows.\n\nExtract every freight rate from this rate sheet:\n\n--- PDF TEXT START ---\n${truncated}\n--- PDF TEXT END ---`
-      : `Extract every freight rate from this rate sheet:\n\n--- PDF TEXT START ---\n${truncated}\n--- PDF TEXT END ---`
+    // ── Split into chunks and process each ────────────────────
+    const chunks = splitIntoChunks(pdfText, CHUNK_SIZE)
+    console.log(`[extract] Split into ${chunks.length} chunk(s), processing...`)
 
-    let completion
-    try {
-      completion = await openai.chat.completions.create({
-        model: "gpt-4o",
-        max_tokens: 16384,
-        temperature: 0,         // deterministic — same input always gives same output
-        seed: 42,               // extra determinism where supported
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user",   content: userPrompt },
-        ],
-      })
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "API error"
-      console.error("[extract] OpenAI API error:", message)
+    const allRates: unknown[] = []
 
-      if (message.includes("API key") || message.includes("auth")) {
-        return NextResponse.json(
-          { error: "OpenAI API key not configured. Set OPENAI_API_KEY in env." },
-          { status: 503 }
+    for (let i = 0; i < chunks.length; i++) {
+      console.log(`[extract] Processing chunk ${i + 1}/${chunks.length} (${chunks[i].length} chars)`)
+      try {
+        const chunkRates = await extractChunk(
+          chunks[i],
+          i,
+          chunks.length,
+          shippingLineOverride,
+          documentClauses
         )
+        console.log(`[extract] Chunk ${i + 1} → ${chunkRates.length} rates`)
+        allRates.push(...chunkRates)
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Chunk error"
+        console.error(`[extract] Chunk ${i + 1} failed: ${message}`)
+        // Continue with other chunks rather than failing entirely
       }
-
-      return NextResponse.json(
-        { error: `AI extraction failed: ${message}` },
-        { status: 500 }
-      )
     }
 
-    const rawText = completion.choices[0]?.message?.content ?? ""
-
-    // ── Parse GPT-4o response ────────────────────────────────
-    let rates: unknown[]
-    try {
-      let text = rawText.trim()
-      // Strip markdown fences if GPT-4o wraps anyway
-      if (text.startsWith("```")) {
-        text = text.replace(/^```[a-z]*\n?/, "").replace(/\n?```$/, "").trim()
+    // ── Backfill clauses onto all rates that have none ────────
+    if (documentClauses) {
+      for (const rate of allRates) {
+        const r = rate as Record<string, unknown>
+        if (!r.clauses) r.clauses = documentClauses
       }
-      rates = JSON.parse(text)
-      if (!Array.isArray(rates)) throw new Error("Response is not an array")
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Parse error"
-      console.error("[extract] JSON parse error:", message)
-
-      return NextResponse.json(
-        {
-          error: `GPT-4o-mini returned malformed data: ${message}. Try again with a clearer PDF.`,
-        },
-        { status: 500 }
-      )
     }
 
-    console.log(`[extract] Successfully extracted ${rates.length} rates using ${extractMethod}`)
-    return NextResponse.json({ rates, count: rates.length })
+    console.log(`[extract] Total: ${allRates.length} rates from ${chunks.length} chunk(s) using ${extractMethod}`)
+    return NextResponse.json({ rates: allRates, count: allRates.length })
+
   } catch (err: unknown) {
     console.error("[extract] Unexpected error:", err)
     return NextResponse.json(
@@ -176,13 +262,8 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     )
   } finally {
-    // ── Cleanup temp file ────────────────────────────────────
     if (tempFilePath) {
-      try {
-        await unlink(tempFilePath)
-      } catch {
-        // ignore cleanup errors
-      }
+      try { await unlink(tempFilePath) } catch { /* ignore */ }
     }
   }
 }
