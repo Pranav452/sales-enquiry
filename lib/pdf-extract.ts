@@ -20,18 +20,14 @@ export async function extractPdfText(
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Service error"
       console.error(`[pdf-extract] Service failed: ${message}`)
-      // On Vercel, don't fallback to pdf-parse (it will error anyway)
-      // Instead, throw to let the API route handle it
-      if (process.env.VERCEL || process.env.NODE_ENV === "production") {
-        throw new Error(`PDF extraction service failed: ${message}`)
-      }
-      console.warn(`[pdf-extract] Falling back to local pdf-parse`)
+      // If PDF_SERVICE_URL is configured, always throw — do NOT fall back to pdf-parse
+      // (pdf-parse fails on Vercel trying to load a test file)
+      throw new Error(`PDF extraction service error: ${message}`)
     }
-  } else {
-    console.log(`[pdf-extract] PDF_SERVICE_URL not configured, using local pdf-parse`)
   }
 
-  // Fallback to local pdf-parse (pure JS, works on Vercel)
+  // No service configured — only reach here in local dev without PDF_SERVICE_URL
+  console.log(`[pdf-extract] No PDF_SERVICE_URL set, using local pdf-parse`)
   return await extractViaPdfParse(filePath)
 }
 
