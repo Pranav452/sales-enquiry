@@ -9,6 +9,7 @@ from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
 import pdfplumber
 import logging
+import io
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -24,12 +25,12 @@ async def extract_pdf(file: UploadFile = File(...)):
         if not file.filename.lower().endswith(".pdf"):
             raise HTTPException(status_code=400, detail="Only PDF files allowed")
 
-        # Read uploaded file
+        # Read uploaded file into memory
         contents = await file.read()
 
-        # Extract using pdfplumber
+        # Extract using pdfplumber — wrap bytes in BytesIO so pdfplumber can seek
         full_text = ""
-        with pdfplumber.open(contents) as pdf:
+        with pdfplumber.open(io.BytesIO(contents)) as pdf:
             for i, page in enumerate(pdf.pages):
                 full_text += f"\n--- PAGE {i + 1} ---\n"
 
