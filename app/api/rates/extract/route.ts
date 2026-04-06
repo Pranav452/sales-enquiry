@@ -12,35 +12,38 @@ import { randomUUID } from "crypto"
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
-const SYSTEM_PROMPT = `You are a freight rate extraction assistant for a shipping/logistics company.
+const SYSTEM_PROMPT = `You are a freight rate extraction engine. Your ONLY job is to extract every single freight rate row from the PDF text provided and return them as a JSON array.
 
-You will receive the raw text extracted from a shipping line rate sheet PDF. Extract ALL freight rates you can find.
+CRITICAL RULES — NEVER BREAK THESE:
+1. Extract EVERY SINGLE RATE ROW. Count them as you go. Do NOT skip any row for any reason.
+2. Do NOT summarize, group, or combine rows. One destination port = one array element.
+3. Do NOT stop early. Process the ENTIRE text from start to finish.
+4. Do NOT add commentary, explanations, or markdown. Return ONLY the raw JSON array.
+5. If a field is missing, use null. Never invent data.
 
-Return a JSON array. Each element must have these exact fields (use null if not found):
-- shipping_line: string (e.g. "MSC", "PIL", "COSCO", "ESL", "ONE" — infer from document header if not per row)
-- origin_country: string (usually "INDIA" for these sheets)
-- origin_port: string (e.g. "NHAVA SHEVA", "MUNDRA")
-- dest_country: string
-- dest_port: string
-- currency: string (e.g. "USD", "EUR")
-- rate_20: number or null (20' container rate — numeric only, no symbols)
-- rate_40: number or null (40' container rate — numeric only, no symbols)
-- valid_from: string ISO date "YYYY-MM-DD" or null
-- valid_to: string ISO date "YYYY-MM-DD" or null
-- transit_days: number or null
-- via_port: string or null (transhipment/connecting port)
-- surcharges: string or null (semicolon-separated KEY:VALUE pairs, e.g. "EFS:55;BUC:50;OCC:86")
-- notes: string or null (route-specific short note)
-- clauses: string or null (pipe-separated list of ALL general terms, conditions, footnotes, disclaimers, surcharge explanations found ANYWHERE in the document — same value for every row since they are document-level)
-- pdf_url: null (always null — set after upload)
+FIELD SCHEMA (every object must have all these keys):
+{
+  "shipping_line": string — e.g. "MSC", "PIL", "COSCO", "ESL", "ONE". Use the override value if provided.
+  "origin_country": string — usually "INDIA"
+  "origin_port": string — e.g. "NHAVA SHEVA", "MUNDRA"
+  "dest_country": string
+  "dest_port": string — exact port name as written
+  "currency": string — "USD" or "EUR"
+  "rate_20": number or null — 20ft container rate, digits only
+  "rate_40": number or null — 40ft container rate, digits only
+  "valid_from": "YYYY-MM-DD" or null
+  "valid_to": "YYYY-MM-DD" or null
+  "transit_days": number or null
+  "via_port": string or null — transhipment port
+  "surcharges": string or null — format: "KEY:VALUE;KEY:VALUE" e.g. "EFS:55;BUC:50"
+  "notes": string or null — route-specific note only
+  "clauses": string or null — ALL document-level terms, footnotes, disclaimers joined with | separator. Same value on every row.
+  "pdf_url": null
+}
 
-Rules:
-1. Extract EVERY route row without exception, including nominal/freight-free routes ($1 rates).
-2. clauses: capture everything from the footnotes/terms section using | as separator.
-3. surcharges: abbreviation:value format only, semicolon-separated.
-4. Convert date formats like "01 Apr 2026 – 14 Apr 2026" → valid_from "2026-04-01", valid_to "2026-04-14".
-5. Do NOT invent data. Missing fields = null.
-6. Return ONLY the raw JSON array — no markdown fences, no explanation text.`
+DATE CONVERSION: "01 Apr 2026 – 14 Apr 2026" → valid_from "2026-04-01", valid_to "2026-04-14"
+SURCHARGES: Extract abbreviation and value only. "EFS USD 55/TEU" → "EFS:55"
+OUTPUT: Raw JSON array only. No markdown fences. No text before or after the array.`
 
 export async function POST(req: NextRequest) {
   let tempFilePath: string | null = null
@@ -60,6 +63,12 @@ export async function POST(req: NextRequest) {
 
     if (!file.name.toLowerCase().endsWith(".pdf")) {
       return NextResponse.json({ error: "Only PDF files are supported" }, { status: 400 })
+    }
+
+    // Optional shipping line override (for PDFs where line name is an image)
+    const shippingLineOverride = (formData.get("shipping_line") as string | null)?.trim().toUpperCase() || null
+    if (shippingLineOverride) {
+      console.log(`[extract] Shipping line override: ${shippingLineOverride}`)
     }
 
     // ── Write temp file for extraction ────────────────────────
@@ -101,17 +110,20 @@ export async function POST(req: NextRequest) {
     const truncated =
       pdfText.length > 80000 ? pdfText.slice(0, 80000) + "\n[...truncated]" : pdfText
 
+    const userPrompt = shippingLineOverride
+      ? `SHIPPING LINE OVERRIDE: Every rate in this document belongs to "${shippingLineOverride}". Set shipping_line = "${shippingLineOverride}" on ALL rows.\n\nExtract every freight rate from this rate sheet:\n\n--- PDF TEXT START ---\n${truncated}\n--- PDF TEXT END ---`
+      : `Extract every freight rate from this rate sheet:\n\n--- PDF TEXT START ---\n${truncated}\n--- PDF TEXT END ---`
+
     let completion
     try {
       completion = await openai.chat.completions.create({
         model: "gpt-4o",
         max_tokens: 16384,
+        temperature: 0,         // deterministic — same input always gives same output
+        seed: 42,               // extra determinism where supported
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          {
-            role: "user",
-            content: `Extract all freight rates from this rate sheet:\n\n--- PDF TEXT START ---\n${truncated}\n--- PDF TEXT END ---`,
-          },
+          { role: "user",   content: userPrompt },
         ],
       })
     } catch (err: unknown) {
@@ -149,7 +161,7 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json(
         {
-          error: `GPT-4o returned malformed data: ${message}. Try again with a clearer PDF.`,
+          error: `GPT-4o-mini returned malformed data: ${message}. Try again with a clearer PDF.`,
         },
         { status: 500 }
       )

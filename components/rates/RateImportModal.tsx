@@ -195,13 +195,16 @@ export function RateImportModal({ onClose, onImported }: Props) {
   const fileRef   = useRef<HTMLInputElement>(null)
   const dropRef   = useRef<HTMLDivElement>(null)
 
-  const [file,         setFile]         = useState<File | null>(null)
-  const [dragging,     setDragging]     = useState(false)
-  const [extracting,   setExtracting]   = useState(false)
-  const [extractError, setExtractError] = useState<string | null>(null)
-  const [rates,        setRates]        = useState<ExtractedRate[] | null>(null)
-  const [importing,    setImporting]    = useState(false)
-  const [importResult, setImportResult] = useState<{ ok: number; fail: number } | null>(null)
+  const [file,           setFile]         = useState<File | null>(null)
+  const [shippingLine,   setShippingLine]  = useState("")
+  const [dragging,       setDragging]     = useState(false)
+  const [extracting,     setExtracting]   = useState(false)
+  const [extractError,   setExtractError] = useState<string | null>(null)
+  const [rates,          setRates]        = useState<ExtractedRate[] | null>(null)
+  const [importing,      setImporting]    = useState(false)
+  const [importResult,   setImportResult] = useState<{ ok: number; fail: number } | null>(null)
+
+  const KNOWN_LINES = ["MSC", "PIL", "COSCO", "ESL", "ONE", "MAERSK", "CMA CGM", "EVERGREEN", "HAPAG-LLOYD", "YANG MING"]
 
   // ── Drag & drop ──────────────────────────────────────────────
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -225,14 +228,20 @@ export function RateImportModal({ onClose, onImported }: Props) {
     try {
       const fd = new FormData()
       fd.append("file", file)
+      if (shippingLine.trim()) {
+        fd.append("shipping_line", shippingLine.trim().toUpperCase())
+      }
 
       const res = await fetch("/api/rates/extract", { method: "POST", body: fd })
       const data = await res.json()
 
       if (!res.ok) throw new Error(data.error ?? "Extraction failed")
 
+      const overrideLine = shippingLine.trim().toUpperCase()
+
       const extracted: ExtractedRate[] = (data.rates as Partial<ExtractedRate>[]).map((r) => ({
-        shipping_line:  (r.shipping_line  ?? "").toUpperCase(),
+        // If user specified a shipping line override, apply to every row
+        shipping_line: overrideLine || (r.shipping_line ?? "").toUpperCase(),
         origin_country: (r.origin_country ?? "INDIA").toUpperCase(),
         origin_port:    r.origin_port ?? null,
         dest_country:   (r.dest_country  ?? "").toUpperCase(),
@@ -409,6 +418,38 @@ export function RateImportModal({ onClose, onImported }: Props) {
                   <p className="text-xs text-muted-foreground mt-1">or click to browse</p>
                 </>
               )}
+            </div>
+          )}
+
+          {/* Shipping Line Override — shown before extraction */}
+          {!rates && (
+            <div className="space-y-2">
+              <div>
+                <label className="block text-xs font-medium text-foreground mb-1">
+                  Shipping Line <span className="text-muted-foreground font-normal">(required if not in PDF text)</span>
+                </label>
+                <Input
+                  value={shippingLine}
+                  onChange={(e) => setShippingLine(e.target.value.toUpperCase())}
+                  placeholder="e.g. MSC, PIL, COSCO, ESL, ONE"
+                  className="h-9 text-sm uppercase font-medium tracking-wide"
+                />
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {KNOWN_LINES.map((line) => (
+                  <button
+                    key={line}
+                    onClick={() => setShippingLine(line)}
+                    className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                      shippingLine === line
+                        ? "border-primary bg-primary/10 text-primary font-medium"
+                        : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {line}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
