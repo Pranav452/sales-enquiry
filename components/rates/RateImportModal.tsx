@@ -4,9 +4,11 @@ import { useRef, useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { SHIPPING_LINES } from "@/lib/constants/dropdowns"
 import {
   Upload,
   FileText,
+  FileSpreadsheet,
   X,
   CheckCircle2,
   AlertCircle,
@@ -14,6 +16,7 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
+  Ship,
 } from "lucide-react"
 
 // ─── Types ────────────────────────────────────────────────────
@@ -35,13 +38,12 @@ interface ExtractedRate {
   notes:          string | null
   clauses:        string | null
   pdf_url:        string | null
-  // UI state
   _selected: boolean
   _error?:   string
 }
 
 interface Props {
-  onClose:   () => void
+  onClose:    () => void
   onImported: (count: number) => void
 }
 
@@ -171,7 +173,6 @@ function RateRow({
             </div>
           ))}
 
-          {/* Clauses textarea */}
           <div className="col-span-2 sm:col-span-3 lg:col-span-4">
             <label className="block text-xs text-muted-foreground mb-0.5">
               Clauses <span className="text-muted-foreground/60">(pipe-separated)</span>
@@ -192,28 +193,46 @@ function RateRow({
 // ─── Main modal ───────────────────────────────────────────────
 
 export function RateImportModal({ onClose, onImported }: Props) {
-  const fileRef   = useRef<HTMLInputElement>(null)
-  const dropRef   = useRef<HTMLDivElement>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const dropRef = useRef<HTMLDivElement>(null)
 
-  const [file,         setFile]         = useState<File | null>(null)
-  const [dragging,     setDragging]     = useState(false)
-  const [extracting,   setExtracting]   = useState(false)
-  const [extractError, setExtractError] = useState<string | null>(null)
-  const [rates,        setRates]        = useState<ExtractedRate[] | null>(null)
-  const [importing,    setImporting]    = useState(false)
-  const [importResult, setImportResult] = useState<{ ok: number; fail: number } | null>(null)
+  const [file,           setFile]           = useState<File | null>(null)
+  const [shippingLine,   setShippingLine]   = useState("")
+  const [dragging,       setDragging]       = useState(false)
+  const [extracting,     setExtracting]     = useState(false)
+  const [extractError,   setExtractError]   = useState<string | null>(null)
+  const [rates,          setRates]          = useState<ExtractedRate[] | null>(null)
+  const [importing,      setImporting]      = useState(false)
+  const [importResult,   setImportResult]   = useState<{ ok: number; fail: number } | null>(null)
+
+  const ACCEPTED = ".pdf,.xlsx,.xls"
+
+  function isValidFile(f: File) {
+    const name = f.name.toLowerCase()
+    return name.endsWith(".pdf") || name.endsWith(".xlsx") || name.endsWith(".xls")
+  }
+
+  function isXlsx(f: File) {
+    const name = f.name.toLowerCase()
+    return name.endsWith(".xlsx") || name.endsWith(".xls")
+  }
+
+  function setValidFile(f: File) {
+    if (isValidFile(f)) {
+      setFile(f)
+      setRates(null)
+      setExtractError(null)
+      setImportResult(null)
+    }
+  }
 
   // ── Drag & drop ──────────────────────────────────────────────
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     setDragging(false)
     const f = e.dataTransfer.files[0]
-    if (f?.name.toLowerCase().endsWith(".pdf")) {
-      setFile(f)
-      setRates(null)
-      setExtractError(null)
-    }
-  }, [])
+    if (f) setValidFile(f)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Extract ───────────────────────────────────────────────────
   async function handleExtract() {
@@ -225,14 +244,15 @@ export function RateImportModal({ onClose, onImported }: Props) {
     try {
       const fd = new FormData()
       fd.append("file", file)
+      if (shippingLine) fd.append("shipping_line", shippingLine)
 
-      const res = await fetch("/api/rates/extract", { method: "POST", body: fd })
+      const res  = await fetch("/api/rates/extract", { method: "POST", body: fd })
       const data = await res.json()
 
       if (!res.ok) throw new Error(data.error ?? "Extraction failed")
 
       const extracted: ExtractedRate[] = (data.rates as Partial<ExtractedRate>[]).map((r) => ({
-        shipping_line:  (r.shipping_line  ?? "").toUpperCase(),
+        shipping_line:  (r.shipping_line  ?? shippingLine ?? "").toUpperCase(),
         origin_country: (r.origin_country ?? "INDIA").toUpperCase(),
         origin_port:    r.origin_port ?? null,
         dest_country:   (r.dest_country  ?? "").toUpperCase(),
@@ -284,8 +304,7 @@ export function RateImportModal({ onClose, onImported }: Props) {
     if (selected.length === 0) return
 
     setImporting(true)
-    let ok = 0
-    let fail = 0
+    let ok = 0, fail = 0
 
     for (let i = 0; i < rates.length; i++) {
       const r = rates[i]
@@ -318,7 +337,7 @@ export function RateImportModal({ onClose, onImported }: Props) {
         if (res.ok) {
           ok++
           setRates((prev) =>
-            prev?.map((row, idx) => (idx === i ? { ...row, _selected: false } : row)) ?? null
+            prev?.map((row, idx) => idx === i ? { ...row, _selected: false } : row) ?? null
           )
         } else {
           const d = await res.json()
@@ -354,7 +373,7 @@ export function RateImportModal({ onClose, onImported }: Props) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
           <div>
-            <h2 className="text-lg font-semibold">Import Rates from PDF</h2>
+            <h2 className="text-lg font-semibold">Import Rates from PDF / XLSX</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
               Upload a rate sheet — AI extracts all routes, clauses, and surcharges for your review.
             </p>
@@ -369,6 +388,38 @@ export function RateImportModal({ onClose, onImported }: Props) {
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+
+          {/* Shipping Line selector — always visible before extraction */}
+          {!rates && (
+            <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-2">
+              <div className="flex items-center gap-2 mb-1">
+                <Ship className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Shipping Line</span>
+                <span className="text-xs text-muted-foreground">(auto-detected from PDF — set here for image PDFs and XLSX)</span>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                {/* Quick select buttons */}
+                {SHIPPING_LINES.map((sl) => (
+                  <button
+                    key={sl}
+                    onClick={() => setShippingLine(shippingLine === sl ? "" : sl)}
+                    className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                      shippingLine === sl
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-background text-foreground hover:border-primary/50 hover:bg-muted/50"
+                    }`}
+                  >
+                    {sl}
+                  </button>
+                ))}
+              </div>
+              {shippingLine && (
+                <p className="text-xs text-primary mt-1">
+                  Override active: all extracted rates will be labelled <strong>{shippingLine}</strong>
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Upload zone */}
           {!rates && (
@@ -387,26 +438,33 @@ export function RateImportModal({ onClose, onImported }: Props) {
               <input
                 ref={fileRef}
                 type="file"
-                accept=".pdf"
+                accept={ACCEPTED}
                 className="hidden"
                 onChange={(e) => {
                   const f = e.target.files?.[0]
-                  if (f) { setFile(f); setRates(null); setExtractError(null) }
+                  if (f) setValidFile(f)
                 }}
               />
-              <Upload className="h-8 w-8 text-muted-foreground mb-3" />
               {file ? (
                 <div className="flex items-center gap-2 text-sm font-medium">
-                  <FileText className="h-4 w-4 text-primary" />
+                  {isXlsx(file)
+                    ? <FileSpreadsheet className="h-5 w-5 text-green-600" />
+                    : <FileText className="h-5 w-5 text-primary" />
+                  }
                   {file.name}
                   <span className="text-xs text-muted-foreground">
                     ({(file.size / 1024).toFixed(0)} KB)
                   </span>
+                  {isXlsx(file) && (
+                    <Badge variant="secondary" className="text-xs">XLSX</Badge>
+                  )}
                 </div>
               ) : (
                 <>
-                  <p className="text-sm font-medium">Drop a PDF rate sheet here</p>
+                  <Upload className="h-8 w-8 text-muted-foreground mb-3" />
+                  <p className="text-sm font-medium">Drop a PDF or XLSX rate sheet here</p>
                   <p className="text-xs text-muted-foreground mt-1">or click to browse</p>
+                  <p className="text-xs text-muted-foreground/60 mt-2">Supports .pdf · .xlsx · .xls</p>
                 </>
               )}
             </div>
@@ -415,11 +473,23 @@ export function RateImportModal({ onClose, onImported }: Props) {
           {/* Change file button once extracted */}
           {rates && (
             <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-4 py-2.5">
-              <FileText className="h-4 w-4 text-primary shrink-0" />
+              {file && isXlsx(file)
+                ? <FileSpreadsheet className="h-4 w-4 text-green-600 shrink-0" />
+                : <FileText className="h-4 w-4 text-primary shrink-0" />
+              }
               <span className="text-sm font-medium flex-1 truncate">{file?.name}</span>
+              {shippingLine && (
+                <Badge variant="secondary" className="text-xs shrink-0">{shippingLine}</Badge>
+              )}
               <button
-                onClick={() => { setFile(null); setRates(null); setImportResult(null); setExtractError(null) }}
-                className="text-xs text-muted-foreground hover:text-foreground underline"
+                onClick={() => {
+                  setFile(null)
+                  setRates(null)
+                  setImportResult(null)
+                  setExtractError(null)
+                  setShippingLine("")
+                }}
+                className="text-xs text-muted-foreground hover:text-foreground underline shrink-0"
               >
                 Change file
               </button>

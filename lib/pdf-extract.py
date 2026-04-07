@@ -1,48 +1,64 @@
 #!/usr/bin/env python3
 """
-Extract text and tables from rate sheet PDFs using pdfplumber.
-Called by Node.js via subprocess.
+Raw PDF content extractor — returns text + unmodified table arrays.
+Structure analysis (which row is the header, which columns are rates, etc.)
+is intentionally left to the AI layer in TypeScript.
 """
 import sys
 import json
 import logging
 import pdfplumber
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
 
 
-def extract_text_from_pdf(file_path: str) -> str:
-    """Extract text and tables from a digital PDF using pdfplumber."""
+def clean_cell(cell) -> str:
+    if cell is None:
+        return ""
+    return str(cell).replace("\n", " ").replace("\r", " ").strip()
+
+
+def extract_pdf(pdf_path: str) -> dict:
     full_text = ""
-    try:
-        with pdfplumber.open(file_path) as pdf:
-            for i, page in enumerate(pdf.pages):
-                full_text += f"\n--- PAGE {i + 1} ---\n"
+    raw_tables = []
 
-                # Extract tables first (rate sheets are usually tables)
-                tables = page.extract_tables()
-                if tables:
-                    for table in tables:
-                        for row in table:
-                            # Clean cell content
-                            cleaned = [
-                                (cell.replace("\n", " ").strip() if cell else "")
-                                for cell in row
-                            ]
-                            full_text += "\t".join(cleaned) + "\n"
-                        full_text += "\n"
+    with pdfplumber.open(pdf_path) as pdf:
+        for page_num, page in enumerate(pdf.pages):
+            page_text = f"\n--- PAGE {page_num + 1} ---\n"
 
-                # Then extract remaining text
-                text = page.extract_text(x_tolerance=3, y_tolerance=3)
-                if text:
-                    full_text += text + "\n"
+            page_tables = page.extract_tables()
+            if page_tables:
+                for table in page_tables:
+                    if not table:
+                        continue
+                    # Return raw rows — no header detection, no interpretation
+                    rows = [
+                        [clean_cell(c) for c in row]
+                        for row in table
+                        if any(clean_cell(c) for c in row)  # skip fully empty rows
+                    ]
+                    if len(rows) >= 2:
+                        raw_tables.append({"page": page_num + 1, "rows": rows})
+                    # Also add to text for context extraction
+                    for row in rows:
+                        page_text += "\t".join(row) + "\n"
+                    page_text += "\n"
 
-        logger.info(f"Extracted {len(full_text)} chars from {file_path}")
-        return full_text.strip()
-    except Exception as e:
-        logger.error(f"Error extracting PDF: {str(e)}")
-        raise
+            text = page.extract_text(x_tolerance=3, y_tolerance=3)
+            if text:
+                page_text += text + "\n"
+
+            full_text += page_text
+
+    full_text = full_text.strip()
+    return {
+        "success":    True,
+        "text":       full_text,
+        "header_text": full_text[:3000],
+        "tables":     raw_tables,
+        "has_tables": len(raw_tables) > 0,
+    }
 
 
 if __name__ == "__main__":
@@ -52,8 +68,8 @@ if __name__ == "__main__":
 
     file_path = sys.argv[1]
     try:
-        text = extract_text_from_pdf(file_path)
-        print(json.dumps({"success": True, "text": text}))
+        result = extract_pdf(file_path)
+        print(json.dumps(result))
     except Exception as e:
         print(json.dumps({"success": False, "error": str(e)}))
         sys.exit(1)
