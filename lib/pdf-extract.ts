@@ -4,6 +4,11 @@
  * Falls back to local pdf-parse if service unavailable.
  */
 import fs from "fs"
+import path from "path"
+import { execFile } from "child_process"
+import { promisify } from "util"
+
+const execFileAsync = promisify(execFile)
 
 const PDF_SERVICE_URL = process.env.PDF_SERVICE_URL || ""
 

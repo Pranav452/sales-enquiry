@@ -487,7 +487,7 @@ export function RateImportModal({ onClose, onImported }: Props) {
                 />
               </div>
               <div className="flex flex-wrap gap-1.5">
-                {KNOWN_LINES.map((line) => (
+                {SHIPPING_LINES.map((line) => (
                   <button
                     key={line}
                     onClick={() => setShippingLine(line)}
