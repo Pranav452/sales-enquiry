@@ -7,10 +7,14 @@ import { ValidityBadge } from "./ValidityBadge"
 import { RateFormModal } from "./RateFormModal"
 import { RateImportModal } from "./RateImportModal"
 import type { FreightRate } from "@/lib/types/rates"
-import { Plus, Pencil, Trash2, FileUp } from "lucide-react"
+import { Plus, Pencil, Trash2, FileUp, ChevronLeft, ChevronRight, Search } from "lucide-react"
+
+const PAGE_SIZE = 20
 
 export function RateManageTable() {
   const [rates, setRates]               = useState<FreightRate[]>([])
+  const [total, setTotal]               = useState(0)
+  const [page, setPage]                 = useState(1)
   const [loading, setLoading]           = useState(true)
   const [error, setError]               = useState<string | null>(null)
   const [modalOpen, setModalOpen]       = useState(false)
@@ -19,13 +23,27 @@ export function RateManageTable() {
   const [deletingId, setDeletingId]     = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
-  const loadRates = useCallback(async () => {
+  // Filter state
+  const [originPortQ, setOriginPortQ]   = useState("")
+  const [destPortQ, setDestPortQ]       = useState("")
+  const [lineQ, setLineQ]               = useState("")
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+
+  const loadRates = useCallback(async (pg: number, op: string, dp: string, sl: string) => {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch("/api/rates?admin=true")
+      const params = new URLSearchParams({ admin: "true", page: String(pg), limit: String(PAGE_SIZE) })
+      if (op) params.set("origin_port",   op)
+      if (dp) params.set("dest_port",     dp)
+      if (sl) params.set("shipping_line", sl)
+
+      const res = await fetch(`/api/rates?${params}`)
       if (!res.ok) throw new Error("Failed to load rates")
-      setRates(await res.json())
+      const json = await res.json()
+      setRates(json.data ?? [])
+      setTotal(json.total ?? 0)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load")
     } finally {
@@ -33,13 +51,24 @@ export function RateManageTable() {
     }
   }, [])
 
-  useEffect(() => { loadRates() }, [loadRates])
+  useEffect(() => {
+    loadRates(page, originPortQ, destPortQ, lineQ)
+  }, [loadRates, page, originPortQ, destPortQ, lineQ])
+
+  // Debounce filter inputs — reset to page 1 when filters change
+  function handleFilterChange(setter: (v: string) => void) {
+    return (e: React.ChangeEvent<HTMLInputElement>) => {
+      setter(e.target.value)
+      setPage(1)
+    }
+  }
 
   async function handleDelete(id: string) {
     setDeletingId(id)
     try {
       await fetch(`/api/rates/${id}`, { method: "DELETE" })
-      setRates((prev) => prev.filter((r) => r.id !== id))
+      // Reload current page (count may have changed)
+      loadRates(page, originPortQ, destPortQ, lineQ)
     } catch {
       // ignore
     } finally {
@@ -48,18 +77,12 @@ export function RateManageTable() {
     }
   }
 
-  function openAdd() {
-    setEditing(null)
-    setModalOpen(true)
-  }
-
-  function openEdit(rate: FreightRate) {
-    setEditing(rate)
-    setModalOpen(true)
-  }
+  function openAdd() { setEditing(null); setModalOpen(true) }
+  function openEdit(rate: FreightRate) { setEditing(rate); setModalOpen(true) }
 
   return (
     <div>
+      {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-xl font-semibold">Manage Rates</h1>
@@ -77,6 +100,51 @@ export function RateManageTable() {
         </div>
       </div>
 
+      {/* Filter row */}
+      <div className="flex flex-wrap gap-2 mb-3">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            value={lineQ}
+            onChange={handleFilterChange(setLineQ)}
+            placeholder="Shipping line…"
+            className="pl-8 pr-3 py-1.5 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring w-44"
+          />
+        </div>
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            value={originPortQ}
+            onChange={handleFilterChange(setOriginPortQ)}
+            placeholder="Origin port…"
+            className="pl-8 pr-3 py-1.5 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring w-40"
+          />
+        </div>
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            value={destPortQ}
+            onChange={handleFilterChange(setDestPortQ)}
+            placeholder="Dest port…"
+            className="pl-8 pr-3 py-1.5 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring w-40"
+          />
+        </div>
+        {(lineQ || originPortQ || destPortQ) && (
+          <button
+            onClick={() => { setLineQ(""); setOriginPortQ(""); setDestPortQ(""); setPage(1) }}
+            className="text-xs text-muted-foreground hover:text-foreground px-2 py-1.5"
+          >
+            Clear
+          </button>
+        )}
+        <span className="ml-auto text-xs text-muted-foreground self-center">
+          {loading ? "Loading…" : `${total.toLocaleString()} rate${total !== 1 ? "s" : ""}`}
+        </span>
+      </div>
+
       {error && (
         <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
           {error}
@@ -85,13 +153,15 @@ export function RateManageTable() {
 
       {loading ? (
         <div className="space-y-2">
-          {[1,2,3,4].map((n) => (
+          {[1,2,3,4,5].map((n) => (
             <div key={n} className="h-12 rounded-lg border bg-muted/30 animate-pulse" />
           ))}
         </div>
       ) : rates.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-10 text-center">
-          <p className="text-muted-foreground text-sm">No rates yet. Click "Add Rate" to get started.</p>
+          <p className="text-muted-foreground text-sm">
+            {lineQ || originPortQ || destPortQ ? "No rates match your filters." : "No rates yet. Click \"Add Rate\" to get started."}
+          </p>
         </div>
       ) : (
         <div className="rounded-xl border border-border overflow-hidden">
@@ -104,7 +174,7 @@ export function RateManageTable() {
                   <th className="text-left px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">Ports</th>
                   <th className="text-right px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">20'</th>
                   <th className="text-right px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">40'</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">Validity</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap min-w-[155px]">Validity</th>
                   <th className="px-4 py-2.5" />
                 </tr>
               </thead>
@@ -132,7 +202,7 @@ export function RateManageTable() {
                         : <span className="text-muted-foreground">—</span>
                       }
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap min-w-[155px]">
                       <ValidityBadge valid_from={r.valid_from} valid_to={r.valid_to} />
                     </td>
                     <td className="px-4 py-3">
@@ -181,11 +251,57 @@ export function RateManageTable() {
         </div>
       )}
 
+      {/* Pagination */}
+      {total > PAGE_SIZE && (
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-xs text-muted-foreground">
+            Page {page} of {totalPages}
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1 || loading}
+              className="p-1.5 rounded-md border border-input text-muted-foreground hover:text-foreground hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+
+            {/* Page number pills */}
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              const start = Math.max(1, Math.min(page - 2, totalPages - 4))
+              const pg = start + i
+              return (
+                <button
+                  key={pg}
+                  onClick={() => setPage(pg)}
+                  disabled={loading}
+                  className={`min-w-[32px] h-8 rounded-md text-xs font-medium border transition-colors ${
+                    pg === page
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-input text-muted-foreground hover:text-foreground hover:bg-accent"
+                  }`}
+                >
+                  {pg}
+                </button>
+              )
+            })}
+
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages || loading}
+              className="p-1.5 rounded-md border border-input text-muted-foreground hover:text-foreground hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       <RateFormModal
         open={modalOpen}
         rate={editing}
         onClose={() => setModalOpen(false)}
-        onSaved={loadRates}
+        onSaved={() => loadRates(page, originPortQ, destPortQ, lineQ)}
       />
 
       {importOpen && (
@@ -193,7 +309,8 @@ export function RateManageTable() {
           onClose={() => setImportOpen(false)}
           onImported={() => {
             setImportOpen(false)
-            loadRates()
+            loadRates(1, originPortQ, destPortQ, lineQ)
+            setPage(1)
           }}
         />
       )}

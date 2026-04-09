@@ -33,12 +33,15 @@ interface DocumentSchema {
   extraction_mode: "table" | "text"
 
   // For table mode — column indices within each table row
-  col_dest_port:  number          // Required
-  col_rate_20:    number          // Required
-  col_rate_40:    number          // Required
-  col_via_port:   number | null
-  col_surcharges: number | null
-  col_transit:    number | null
+  col_dest_port:    number          // Required
+  col_rate_20:      number          // Required
+  col_rate_40:      number          // Required
+  col_dest_country: number | null   // If table has explicit country column
+  col_via_port:     number | null
+  col_surcharges:   number | null
+  col_transit:      number | null
+  col_valid_from:   number | null   // Per-row effective date column
+  col_valid_to:     number | null   // Per-row expiry date column
 
   // Rows to skip — any row whose first cell matches one of these (case-insensitive)
   skip_row_starts: string[]
@@ -53,6 +56,8 @@ interface RateRow {
   via_port:     string | null
   surcharges:   string | null
   notes:        string | null
+  _valid_from?: string | null   // Per-row override
+  _valid_to?:   string | null   // Per-row override
 }
 
 // ── Phase 1: Analyze document structure ───────────────────────
@@ -66,8 +71,19 @@ interface RateRow {
  */
 async function analyzeStructure(
   rawContent: string,
+  tableForSample: PdfTable | null,
   shippingLineOverride?: string | null
 ): Promise<DocumentSchema> {
+  // Build a sample of actual table rows so AI can see the real column structure
+  let tableSample = ""
+  if (tableForSample) {
+    const sampleRows = tableForSample.rows.slice(0, 20)
+    tableSample = "\n\n--- RAW TABLE ROWS (tab-separated, first 20 rows) ---\n"
+    sampleRows.forEach((row, i) => {
+      tableSample += `ROW ${i}: ${row.map((c, j) => `[${j}]${c}`).join("\t")}\n`
+    })
+  }
+
   const completion = await openai.chat.completions.create({
     model: "gpt-5.4-mini",
     max_completion_tokens: 1024,
@@ -76,26 +92,33 @@ async function analyzeStructure(
       {
         role: "system",
         content: `You are a freight rate sheet document analyst.
-You receive raw extracted content from a shipping rate sheet (tab-separated table rows or plain text).
+You receive raw extracted content from a shipping rate sheet plus actual raw table rows with column indices shown as [0], [1], [2], etc.
 Your job is to understand the document structure and return a JSON schema that describes:
 1. Document metadata (shipping line, origin, validity, currency, clauses)
 2. Exact column positions for rate data extraction
 
 COLUMN DETECTION RULES:
-- col_dest_port: the column that has destination port names (usually col 0)
-- col_rate_20: the column with 20ft container rates (look for "20'" or "20" in the header row)
-- col_rate_40: the column with 40ft container rates (look for "40'" or "40HC" or "40" in the header row)
-- If columns are unclear, default: dest_port=0, rate_20=1, rate_40=2
-- col_via_port / col_surcharges / col_transit: set to null if not present
+Look at the RAW TABLE ROWS for a header row (a row containing "20'" or "20GP" and "40'" or "40HC").
+The column indices [0], [1], [2]... are shown explicitly in each row.
+
+- col_dest_port: index of the column with DESTINATION PORT NAMES (city/port names like "Mombasa", "Shanghai")
+  NOT the trade lane, NOT the origin port, NOT service names — the actual destination port
+- col_rate_20: index of the column under "20'" or "20GP" or "20'GP" header
+- col_rate_40: index of the column under "40'" or "40HC" or "40'HC" or "40GP" header
+- col_dest_country: index of column with destination COUNTRY names (e.g. "POD Country", "Country"), or null
+- col_via_port: index of via/routing column, or null
+- col_transit: index of transit time column, or null
+- col_surcharges: index of surcharges/remarks column, or null
+- col_valid_from: index of per-row effective/start date column, or null
+- col_valid_to: index of per-row expiry/end date column, or null
+- If no clear header found, default: dest_port=0, rate_20=1, rate_40=2
 
 SKIP ROW DETECTION:
-- skip_row_starts: list of strings that identify section headers, not rate rows
-  (e.g. "WEST AFRICA", "EAST AFRICA", "Ex-", "Rates in USD", "Subject to")
-  These are rows where the first cell is a section title, not a port name.
+- skip_row_starts: ONLY strings that appear in the FIRST COLUMN [0] of non-data rows
+  (section headers, terms & conditions labels, notes). Keep this list SHORT (max 5 items).
+  Do NOT put long sentences here. Do NOT include actual port names.
 
-EXTRACTION MODE:
-- Use "table" if the content has clear tab-separated columns with rate data
-- Use "text" if the content is mostly plain text paragraphs (no clear table structure)
+EXTRACTION MODE: Use "table" if clear column structure exists, else "text".
 
 Return ONLY a raw JSON object (no markdown, no explanation):
 {
@@ -110,15 +133,18 @@ Return ONLY a raw JSON object (no markdown, no explanation):
   "col_dest_port": number,
   "col_rate_20": number,
   "col_rate_40": number,
+  "col_dest_country": number or null,
   "col_via_port": number or null,
   "col_surcharges": number or null,
   "col_transit": number or null,
+  "col_valid_from": number or null,
+  "col_valid_to": number or null,
   "skip_row_starts": string[]
 }`,
       },
       {
         role: "user",
-        content: rawContent.slice(0, 4000),
+        content: rawContent.slice(0, 3000) + tableSample,
       },
     ],
   })
@@ -138,13 +164,16 @@ Return ONLY a raw JSON object (no markdown, no explanation):
       currency:        parsed.currency         || "USD",
       clauses:         parsed.clauses          || null,
       extraction_mode: parsed.extraction_mode  || "table",
-      col_dest_port:   parsed.col_dest_port    ?? 0,
-      col_rate_20:     parsed.col_rate_20      ?? 1,
-      col_rate_40:     parsed.col_rate_40      ?? 2,
-      col_via_port:    parsed.col_via_port     ?? null,
-      col_surcharges:  parsed.col_surcharges   ?? null,
-      col_transit:     parsed.col_transit      ?? null,
-      skip_row_starts: Array.isArray(parsed.skip_row_starts) ? parsed.skip_row_starts : [],
+      col_dest_port:    parsed.col_dest_port    ?? 0,
+      col_rate_20:      parsed.col_rate_20      ?? 1,
+      col_rate_40:      parsed.col_rate_40      ?? 2,
+      col_dest_country: parsed.col_dest_country ?? null,
+      col_via_port:     parsed.col_via_port     ?? null,
+      col_surcharges:   parsed.col_surcharges   ?? null,
+      col_transit:      parsed.col_transit      ?? null,
+      col_valid_from:   parsed.col_valid_from   ?? null,
+      col_valid_to:     parsed.col_valid_to     ?? null,
+      skip_row_starts:  Array.isArray(parsed.skip_row_starts) ? parsed.skip_row_starts : [],
     }
   } catch {
     console.warn("[extract] analyzeStructure parse failed, using defaults")
@@ -157,13 +186,16 @@ Return ONLY a raw JSON object (no markdown, no explanation):
       currency:        "USD",
       clauses:         null,
       extraction_mode: "table",
-      col_dest_port:   0,
-      col_rate_20:     1,
-      col_rate_40:     2,
-      col_via_port:    null,
-      col_surcharges:  null,
-      col_transit:     null,
-      skip_row_starts: [],
+      col_dest_port:    0,
+      col_rate_20:      1,
+      col_rate_40:      2,
+      col_dest_country: null,
+      col_via_port:     null,
+      col_surcharges:   null,
+      col_transit:      null,
+      col_valid_from:   null,
+      col_valid_to:     null,
+      skip_row_starts:  [],
     }
   }
 }
@@ -172,13 +204,149 @@ Return ONLY a raw JSON object (no markdown, no explanation):
 
 function parseRateCell(cell: string): number | null {
   if (!cell) return null
-  const cleaned = cell.replace(/[$,+\s]|USD|EUR/gi, "")
-  const match = cleaned.match(/\b(\d{3,6})\b/)
+  const lower = cell.toLowerCase().trim()
+  // Non-numeric indicators
+  if (lower === "case by case" || lower === "cbc" || lower === "on request" || lower === "n/a" || lower === "-") return null
+  const cleaned = cell.replace(/[$,+]|USD|EUR/gi, "")  // preserve spaces so "3,163 3,245" → "3163 3245" not "31633245"
+  const match = cleaned.match(/\b(\d{1,6})\b/)
   if (match) {
     const val = parseInt(match[1])
-    return val >= 200 ? val : null
+    return val >= 5 ? val : null  // Allow low rates (e.g. $20 for nearby ports)
   }
   return null
+}
+
+/**
+ * Deterministic column detection from named header row.
+ * Finds the header row in a table, then maps known column names to schema fields.
+ * Overrides AI-detected column indices with exact matches when found.
+ */
+function detectColumnsFromHeader(table: PdfTable, schema: DocumentSchema): DocumentSchema {
+  // Find the header row — a row containing rate column headers
+  const headerRow = table.rows.find(r =>
+    r.some(c => /OFT\s*20|20'D|20'GP|^\s*20'\s*$/i.test(c))
+  )
+  if (!headerRow) return schema
+
+  const h = headerRow.map(c => c.trim().toLowerCase())
+
+  function idx(...patterns: RegExp[]): number | null {
+    for (const pat of patterns) {
+      const i = h.findIndex(c => pat.test(c))
+      if (i >= 0) return i
+    }
+    return null
+  }
+
+  // Port name: prefer "description" columns, then "pod" columns
+  const destPort =
+    idx(/^del\s*description$/i, /^pod\s*description$/i, /^destination\s*port$/i, /^port\s*of\s*discharge$/i) ??
+    idx(/^pod$/i, /^pol$/i, /^del$/i) ??
+    schema.col_dest_port
+
+  const rate20   = idx(/oft\s*20|20'd|20'gp|^20'$/i) ?? schema.col_rate_20
+  const rate40   = idx(/oft\s*40|40'd|40'gp|oft\s*hc|40'hc|hcd|^40'$/i) ?? schema.col_rate_40
+  const country  = idx(/^pod\s*country$/i, /^dest.*country$/i, /^country$/i) ?? schema.col_dest_country
+  const viaPort  = idx(/^t\/s\s*port$/i, /^routing$/i, /^via$/i) ?? schema.col_via_port
+  const transit  = idx(/^transit/i, /^t\.time/i) ?? schema.col_transit
+  const validFrom= idx(/^effective\s*date$/i, /^valid.*from$/i) ?? schema.col_valid_from
+  const validTo  = idx(/^expiry\s*date$/i, /^expiration\s*date$/i, /^valid.*to$/i, /^validity$/i) ?? schema.col_valid_to
+
+  return {
+    ...schema,
+    col_dest_port:    destPort,
+    col_rate_20:      rate20,
+    col_rate_40:      rate40,
+    col_dest_country: country,
+    col_via_port:     viaPort,
+    col_transit:      transit,
+    col_valid_from:   validFrom,
+    col_valid_to:     validTo,
+  }
+}
+
+function parseDate(val: string): string | null {
+  if (!val) return null
+  const s = val.trim()
+  // Already YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+  // "1-Apr-26" or "20-Apr-26"
+  const m1 = s.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{2,4})$/)
+  if (m1) {
+    const months: Record<string,string> = {jan:"01",feb:"02",mar:"03",apr:"04",may:"05",jun:"06",jul:"07",aug:"08",sep:"09",oct:"10",nov:"11",dec:"12"}
+    const mon = months[m1[2].toLowerCase()]
+    if (mon) {
+      const yr = m1[3].length === 2 ? `20${m1[3]}` : m1[3]
+      return `${yr}-${mon}-${m1[1].padStart(2,"0")}`
+    }
+  }
+  // "Apr-26" or "Apr 2026"
+  const m2 = s.match(/^([A-Za-z]{3})[-\s](\d{2,4})$/)
+  if (m2) {
+    const months: Record<string,string> = {jan:"01",feb:"02",mar:"03",apr:"04",may:"05",jun:"06",jul:"07",aug:"08",sep:"09",oct:"10",nov:"11",dec:"12"}
+    const mon = months[m2[1].toLowerCase()]
+    if (mon) {
+      const yr = m2[2].length === 2 ? `20${m2[2]}` : m2[2]
+      return `${yr}-${mon}-01`
+    }
+  }
+  return null
+}
+
+/**
+ * Detect and flatten multi-group tables.
+ * Some PDFs lay out 2-3 port groups side by side in the same table row:
+ *   ["", "20'GP", "40'GP", "40'HC", "", "20'GP", "40'GP", "40'HC", ...]
+ * This function splits each row into one row per group.
+ */
+function flattenMultiGroupTable(table: PdfTable): PdfTable {
+  // Find the header row: one that has "20'" appearing 2+ times AND "40'" 2+ times
+  // (both must repeat — avoids false positives on single-column tables)
+  const headerRow = table.rows.find(r =>
+    r.filter(c => /20'|20GP|20'GP/i.test(c)).length >= 2 &&
+    r.filter(c => /40'|40HC|40GP/i.test(c)).length >= 2
+  )
+  if (!headerRow) return table  // Not a multi-group table
+
+  // Find group start columns: columns where the header cell is empty (port column)
+  // and the next columns have rate headers
+  const groupStarts: number[] = []
+  for (let i = 0; i < headerRow.length - 1; i++) {
+    const cell = headerRow[i].trim()
+    const next = headerRow[i + 1]?.trim() ?? ""
+    if (!cell && /20'|20GP|20'GP/i.test(next)) {
+      groupStarts.push(i)
+    }
+  }
+
+  if (groupStarts.length < 2) return table  // Not multi-group
+
+  // Determine column offsets within each group: port, 20', 40'
+  const firstGroup = groupStarts[0]
+  const groupSize  = groupStarts[1] - groupStarts[0]
+
+  // Within a group, find 20' and 40' column offsets
+  let off20 = 1, off40 = 2
+  for (let j = firstGroup + 1; j < firstGroup + groupSize; j++) {
+    const h = headerRow[j]?.trim() ?? ""
+    if (/20'|20GP/i.test(h)) off20 = j - firstGroup
+    if (/40'|40GP|40HC/i.test(h)) off40 = j - firstGroup
+  }
+
+  // Expand all data rows
+  const expanded: string[][] = []
+  for (const row of table.rows) {
+    if (row === headerRow) continue  // Skip header
+    for (const start of groupStarts) {
+      const port   = (row[start]           ?? "").trim()
+      const rate20 = (row[start + off20]   ?? "").trim()
+      const rate40 = (row[start + off40]   ?? "").trim()
+      if (!port && !rate20 && !rate40) continue
+      expanded.push([port, rate20, rate40])
+    }
+  }
+
+  return { page: table.page, rows: expanded }
 }
 
 function extractFromTablesWithSchema(tables: PdfTable[], schema: DocumentSchema): RateRow[] {
@@ -190,19 +358,30 @@ function extractFromTablesWithSchema(tables: PdfTable[], schema: DocumentSchema)
       const destPort = (row[schema.col_dest_port] ?? "").trim()
       if (!destPort) continue
 
-      // Skip section headers and meta rows identified by the schema
       const destUpper = destPort.toUpperCase()
       if (skipSet.some(skip => destUpper.startsWith(skip))) continue
 
       const rate20 = parseRateCell(row[schema.col_rate_20] ?? "")
       const rate40 = parseRateCell(row[schema.col_rate_40] ?? "")
 
-      // Skip rows with no valid rates (section sub-headers, blank rows)
       if (rate20 === null && rate40 === null) continue
+
+      // Per-row country (use schema column if available, else Phase 3 assigns it)
+      const rowCountry = schema.col_dest_country !== null
+        ? (row[schema.col_dest_country]?.trim().toUpperCase() || null)
+        : null
+
+      // Per-row validity dates (override schema-level dates when present)
+      const rowValidFrom = schema.col_valid_from !== null
+        ? parseDate(row[schema.col_valid_from] ?? "")
+        : null
+      const rowValidTo = schema.col_valid_to !== null
+        ? parseDate(row[schema.col_valid_to] ?? "")
+        : null
 
       rows.push({
         dest_port:    destPort,
-        dest_country: null, // assigned in Phase 3
+        dest_country: rowCountry,
         rate_20:      rate20,
         rate_40:      rate40,
         transit_days: schema.col_transit !== null
@@ -215,6 +394,8 @@ function extractFromTablesWithSchema(tables: PdfTable[], schema: DocumentSchema)
           ? (row[schema.col_surcharges]?.trim() || null)
           : null,
         notes: null,
+        _valid_from: rowValidFrom,
+        _valid_to:   rowValidTo,
       })
     }
   }
@@ -306,50 +487,57 @@ async function assignDestCountries(rows: RateRow[]): Promise<RateRow[]> {
   )]
   if (portsNeedingCountry.length === 0) return rows
 
-  const portList = portsNeedingCountry.map((p, i) => `${i + 1}. ${p}`).join("\n")
   let countryMap      = new Map<string, string>()
   let correctedPortMap = new Map<string, string>()
 
-  try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-5.4-mini",
-      max_completion_tokens: 2048,
-      temperature: 0,
-      messages: [
-        {
-          role: "system",
-          content: `You are a shipping port expert. For each port name:
+  // Process in chunks of 60 to avoid token limits
+  const CHUNK_SIZE = 60
+  const chunks: string[][] = []
+  for (let i = 0; i < portsNeedingCountry.length; i += CHUNK_SIZE) {
+    chunks.push(portsNeedingCountry.slice(i, i + CHUNK_SIZE))
+  }
+
+  const chunkResults = await runWithConcurrency(
+    chunks.map(chunk => async () => {
+      const portList = chunk.map((p, i) => `${i + 1}. ${p}`).join("\n")
+      try {
+        const completion = await openai.chat.completions.create({
+          model: "gpt-5.4-mini",
+          max_completion_tokens: 2048,
+          temperature: 0,
+          messages: [
+            {
+              role: "system",
+              content: `You are a shipping port expert. For each port name:
 1. Correct any spelling errors (e.g. "Brsibane" → "Brisbane", "Melbourn" → "Melbourne", "Neiper" → "Napier")
 2. Map to its country
 
-Return ONLY raw JSON where each KEY is the ORIGINAL (possibly misspelled) port name and VALUE is an object:
+Return ONLY raw JSON where each KEY is the ORIGINAL port name and VALUE is an object:
 {"ORIGINAL_PORT": {"corrected": "CORRECT PORT NAME", "country": "COUNTRY NAME"}}
 Use UPPERCASE for all values. Example:
 {"Brsibane": {"corrected": "BRISBANE", "country": "AUSTRALIA"}, "APAPA": {"corrected": "APAPA", "country": "NIGERIA"}}`,
-        },
-        { role: "user", content: `Process these ports:\n${portList}` },
-      ],
-    })
+            },
+            { role: "user", content: `Process these ports:\n${portList}` },
+          ],
+        })
+        let text = completion.choices[0]?.message?.content?.trim() ?? "{}"
+        if (text.startsWith("```")) text = text.replace(/^```[a-z]*\n?/, "").replace(/\n?```$/, "").trim()
+        return JSON.parse(text) as Record<string, { corrected?: string; country?: string }>
+      } catch {
+        return {}
+      }
+    }),
+    5
+  )
 
-    let text = completion.choices[0]?.message?.content?.trim() ?? "{}"
-    if (text.startsWith("```")) text = text.replace(/^```[a-z]*\n?/, "").replace(/\n?```$/, "").trim()
-    const parsed = JSON.parse(text)
-    // Build two maps: original → corrected port name, original → country
-    type PortInfo = { corrected?: string; country?: string }
-    correctedPortMap = new Map(
-      Object.entries(parsed).map(([k, v]) => {
-        const info = v as PortInfo
-        return [k.toUpperCase(), (info.corrected ?? k).toUpperCase()]
-      })
-    )
-    countryMap = new Map(
-      Object.entries(parsed).map(([k, v]) => {
-        const info = v as PortInfo
-        return [k.toUpperCase(), (info.country ?? "").toUpperCase()]
-      })
-    )
-  } catch (e) {
-    console.warn("[extract] assignDestCountries failed:", e)
+  // Merge all chunk results
+  type PortInfo = { corrected?: string; country?: string }
+  for (const parsed of chunkResults) {
+    for (const [k, v] of Object.entries(parsed)) {
+      const info = v as PortInfo
+      correctedPortMap.set(k.toUpperCase(), (info.corrected ?? k).toUpperCase())
+      countryMap.set(k.toUpperCase(), (info.country ?? "").toUpperCase())
+    }
   }
 
   return rows.map(r => ({
@@ -372,10 +560,11 @@ function expandGroupedPorts(rows: RateRow[]): RateRow[] {
   for (const row of rows) {
     if (!row.dest_port) { expanded.push(row); continue }
 
-    // Split on comma or slash when the cell clearly contains multiple port names
-    // (only split if there are 2+ words that look like port names — not "NEW ZEALAND")
+    // Split on "/" only — commas are often "Port, Country" format and must NOT be split
+    // e.g. "Kingston /Cartagena/ Caucedo" → 3 ports ✓
+    //      "Buenaventura,Colombia" → stays as 1 port ✓
     const parts = row.dest_port
-      .split(/[,\/]/)
+      .split("/")
       .map(p => p.trim())
       .filter(p => p.length >= 3)
 
@@ -497,18 +686,52 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── Phase 1: AI analyzes structure → DocumentSchema ─────────
+    // ── Phase 1: AI analyzes structure — per-table for multi-sheet XLSX ─
     console.log("[extract] Phase 1 — analyzing document structure...")
-    const schema = await analyzeStructure(fullText, shippingLineOverride)
+    let schemas: DocumentSchema[]
+    if (tables.length > 1) {
+      // Multi-sheet: analyze each table independently in parallel
+      schemas = await runWithConcurrency(
+        tables.map(t => () => analyzeStructure(fullText, t, shippingLineOverride)),
+        5
+      )
+      console.log(`[extract] Per-table schemas: ${schemas.map((s,i) => `T${i+1}[${s.col_dest_port},${s.col_rate_20},${s.col_rate_40}]`).join(" ")}`)
+    } else {
+      schemas = [await analyzeStructure(fullText, tables[0] ?? null, shippingLineOverride)]
+    }
+    const schema = schemas[0] // Use first schema for metadata (carrier, dates, etc.)
     console.log(`[extract] Schema: ${schema.shipping_line} | ${schema.origin_port} | ${schema.valid_from}–${schema.valid_to} | mode=${schema.extraction_mode} | cols=[${schema.col_dest_port},${schema.col_rate_20},${schema.col_rate_40}] | skip=${JSON.stringify(schema.skip_row_starts)}`)
 
     // ── Phase 2: Extract rates using schema ─────────────────────
     let rawRows: RateRow[]
 
     if (schema.extraction_mode === "table" && tables.length > 0) {
-      // PATH A — deterministic table extraction (zero additional GPT calls)
+      // PATH A — per-table deterministic extraction
       console.log(`[extract] Phase 2A — table extraction (${tables.length} tables)`)
-      rawRows = extractFromTablesWithSchema(tables, schema)
+      rawRows = []
+      for (let i = 0; i < tables.length; i++) {
+        let tbl = tables[i]
+        let tSchema = schemas[i] ?? schema
+
+        // Override AI schema with deterministic header-name detection
+        tSchema = detectColumnsFromHeader(tbl, tSchema)
+        console.log(`[extract] T${i+1} after header detection: [${tSchema.col_dest_port},${tSchema.col_rate_20},${tSchema.col_rate_40}] country=${tSchema.col_dest_country} from=${tSchema.col_valid_from} to=${tSchema.col_valid_to}`)
+
+        // Only attempt multi-group flattening when schema shows dest_port in col 0 or 1
+        // (if AI detected col 5+ for dest_port, the table is already structured correctly)
+        if (tSchema.col_dest_port <= 1) {
+          const flattened = flattenMultiGroupTable(tbl)
+          if (flattened !== tbl) {
+            console.log(`[extract] T${i+1}: multi-group flattened`)
+            tbl = flattened
+            tSchema = { ...tSchema, col_dest_port: 0, col_rate_20: 1, col_rate_40: 2 }
+          }
+        }
+
+        const tableRows = extractFromTablesWithSchema([tbl], tSchema)
+        console.log(`[extract] T${i+1} (${tSchema.col_dest_port},${tSchema.col_rate_20},${tSchema.col_rate_40}) → ${tableRows.length} rows`)
+        rawRows.push(...tableRows)
+      }
       console.log(`[extract] Phase 2A → ${rawRows.length} rows`)
     } else {
       // PATH B — text-based batch GPT (fallback for non-table PDFs)
@@ -564,8 +787,8 @@ export async function POST(req: NextRequest) {
       currency:       schema.currency,
       rate_20:        row.rate_20,
       rate_40:        row.rate_40,
-      valid_from:     schema.valid_from,
-      valid_to:       schema.valid_to,
+      valid_from:     row._valid_from ?? schema.valid_from,
+      valid_to:       row._valid_to   ?? schema.valid_to,
       transit_days:   row.transit_days,
       via_port:       row.via_port,
       surcharges:     row.surcharges,
