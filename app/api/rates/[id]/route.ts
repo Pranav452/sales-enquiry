@@ -43,7 +43,7 @@ export async function GET(
     const pool = await getPool("manilal")
     const result = await pool
       .request()
-      .input("pk_id", sql.Int, pkId)
+      .input("pk_id", pkId)
       .query(`SELECT ${SELECT_COLS} FROM [dbo].[FREIGHT_RATES] WHERE PK_ID = @pk_id`)
 
     if (!result.recordset.length) {
@@ -82,25 +82,25 @@ export async function PATCH(
 
     await pool
       .request()
-      .input("pk_id",          sql.Int,            pkId)
-      .input("shipping_line",  sql.VarChar(50),    body.shipping_line != null ? body.shipping_line.trim().toUpperCase() : undefined)
-      .input("origin_country", sql.VarChar(100),   body.origin_country != null ? body.origin_country.trim().toUpperCase() : undefined)
-      .input("dest_country",   sql.VarChar(100),   body.dest_country != null ? body.dest_country.trim().toUpperCase() : undefined)
-      .input("origin_port",    sql.VarChar(100),   body.origin_port?.trim() ?? null)
-      .input("dest_port",      sql.VarChar(100),   body.dest_port?.trim() ?? null)
-      .input("currency",       sql.VarChar(5),     body.currency?.trim() ?? null)
-      .input("rate_20",        sql.Decimal(10, 2), body.rate_20 ?? null)
-      .input("rate_40",        sql.Decimal(10, 2), body.rate_40 ?? null)
-      .input("valid_from",     sql.VarChar(10),    body.valid_from ?? null)
-      .input("valid_to",       sql.VarChar(10),    body.valid_to ?? null)
-      .input("transit_days",   sql.Int,            body.transit_days ?? null)
-      .input("via_port",       sql.VarChar(200),   body.via_port?.trim() ?? null)
-      .input("surcharges",     sql.VarChar(500),        body.surcharges?.trim() ?? null)
-      .input("notes",          sql.VarChar(500),        body.notes?.trim() ?? null)
-      .input("pdf_url",        sql.VarChar(500),        body.pdf_url?.trim() ?? null)
-      .input("clauses",        sql.VarChar(sql.MAX),    body.clauses?.trim() ?? null)
-      .input("is_active",      sql.Bit,                 body.is_active ?? null)
-      .input("updated_at",     sql.DateTime,            now)
+      .input("pk_id",          pkId)
+      .input("shipping_line",  body.shipping_line != null ? body.shipping_line.trim().toUpperCase() : undefined)
+      .input("origin_country", body.origin_country != null ? body.origin_country.trim().toUpperCase() : undefined)
+      .input("dest_country",   body.dest_country != null ? body.dest_country.trim().toUpperCase() : undefined)
+      .input("origin_port",    body.origin_port?.trim() ?? null)
+      .input("dest_port",      body.dest_port?.trim() ?? null)
+      .input("currency",       body.currency?.trim() ?? null)
+      .input("rate_20",        body.rate_20 ?? null)
+      .input("rate_40",        body.rate_40 ?? null)
+      .input("valid_from",     body.valid_from ?? null)
+      .input("valid_to",       body.valid_to ?? null)
+      .input("transit_days",   body.transit_days ?? null)
+      .input("via_port",       body.via_port?.trim() ?? null)
+      .input("surcharges",     body.surcharges?.trim() ?? null)
+      .input("notes",          body.notes?.trim() ?? null)
+      .input("pdf_url",        body.pdf_url?.trim() ?? null)
+      .input("clauses",        body.clauses?.trim() ?? null)
+      .input("is_active",      body.is_active ?? null)
+      .input("updated_at",     now)
       .query(`
         UPDATE [dbo].[FREIGHT_RATES] SET
           SHIPPING_LINE  = COALESCE(@shipping_line,  SHIPPING_LINE),
@@ -149,8 +149,8 @@ export async function DELETE(
     const pool = await getPool("manilal")
     await pool
       .request()
-      .input("pk_id",      sql.Int,      pkId)
-      .input("updated_at", sql.DateTime, new Date())
+      .input("pk_id",      pkId)
+      .input("updated_at", new Date())
       .query(`UPDATE [dbo].[FREIGHT_RATES] SET IS_ACTIVE = 0, UPDATED_AT = @updated_at WHERE PK_ID = @pk_id`)
 
     return NextResponse.json({ ok: true })

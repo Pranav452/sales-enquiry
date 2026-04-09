@@ -8,9 +8,11 @@ import { ClausesPanel } from "./ClausesPanel"
 interface Props {
   origin: string
   dest: string
+  originPort?: string
+  destPort?: string
 }
 
-export function RateResultsGrid({ origin, dest }: Props) {
+export function RateResultsGrid({ origin, dest, originPort = "", destPort = "" }: Props) {
   const [rates, setRates]     = useState<FreightRate[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState<string | null>(null)
@@ -21,6 +23,8 @@ export function RateResultsGrid({ origin, dest }: Props) {
     setError(null)
 
     const params = new URLSearchParams({ origin_country: origin, dest_country: dest })
+    if (originPort) params.set("origin_port", originPort)
+    if (destPort)   params.set("dest_port",   destPort)
     fetch(`/api/rates?${params}`)
       .then((r) => r.json())
       .then((data: FreightRate[] | { error: string }) => {

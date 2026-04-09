@@ -28,44 +28,113 @@ const SELECT_COLS = `
 `
 
 // ─── GET /api/rates ───────────────────────────────────────────
-// ?origin_country=INDIA&dest_country=BRAZIL  → search by route
-// ?admin=true                                → all active rates (admin only)
+// ?origin_country=INDIA&dest_country=BRAZIL  → search by route (plain array)
+// ?admin=true&page=1&limit=20&origin_port=X&dest_port=Y&shipping_line=Z
+//                                            → paginated admin list { data, total }
 export async function GET(req: NextRequest) {
   const auth = await getAuthContext()
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const origin = req.nextUrl.searchParams.get("origin_country")?.toUpperCase() ?? ""
-  const dest   = req.nextUrl.searchParams.get("dest_country")?.toUpperCase() ?? ""
-  const admin  = req.nextUrl.searchParams.get("admin") === "true"
+  const p      = req.nextUrl.searchParams
+  const origin = p.get("origin_country")?.toUpperCase() ?? ""
+  const dest   = p.get("dest_country")?.toUpperCase() ?? ""
+  const admin  = p.get("admin") === "true"
+
+  // Optional port/line filters (used in both admin and route-search modes)
+  const originPort   = p.get("origin_port")?.trim() ?? ""
+  const destPort     = p.get("dest_port")?.trim() ?? ""
+  const shippingLine = p.get("shipping_line")?.trim() ?? ""
 
   if (admin && auth.role !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
   try {
-    const pool = await getPool("manilal")
+    const pool    = await getPool("manilal")
     const request = pool.request()
 
-    let where: string
     if (admin) {
-      where = "WHERE IS_ACTIVE = 1"
-    } else {
-      if (!origin || !dest) {
-        return NextResponse.json([], { status: 200 })
+      // ── Paginated admin list ──────────────────────────────
+      const page   = Math.max(1, parseInt(p.get("page") ?? "1") || 1)
+      const limit  = Math.min(100, Math.max(1, parseInt(p.get("limit") ?? "20") || 20))
+      const offset = (page - 1) * limit  // safe integer, used in SQL directly
+
+      // Build optional LIKE clauses — only add inputs that are actually used
+      const likeClauses: string[] = []
+      if (shippingLine) {
+        request.input("sl", shippingLine)
+        likeClauses.push("SHIPPING_LINE LIKE '%' + @sl + '%'")
       }
-      request.input("origin", sql.VarChar(100), origin)
-      request.input("dest",   sql.VarChar(100), dest)
-      where = "WHERE ORIGIN_COUNTRY = @origin AND DEST_COUNTRY = @dest AND IS_ACTIVE = 1"
+      if (originPort) {
+        request.input("op", originPort)
+        likeClauses.push("ORIGIN_PORT LIKE '%' + @op + '%'")
+      }
+      if (destPort) {
+        request.input("dp", destPort)
+        likeClauses.push("DEST_PORT LIKE '%' + @dp + '%'")
+      }
+
+      const extraWhere = likeClauses.length ? " AND " + likeClauses.join(" AND ") : ""
+      const baseWhere  = `WHERE IS_ACTIVE = 1${extraWhere}`
+
+      // MSSQL 2008 R2: ROW_NUMBER() pattern (no OFFSET/FETCH support)
+      // offset and limit are validated integers — safe to inline
+      const from = offset + 1
+      const to   = offset + limit
+
+      const countResult = await request.query(`
+        SELECT COUNT(*) AS total
+        FROM [dbo].[FREIGHT_RATES]
+        ${baseWhere}
+      `)
+      const total = (countResult.recordset[0]?.total as number) ?? 0
+
+      const dataRequest = pool.request()
+      if (shippingLine) dataRequest.input("sl", shippingLine)
+      if (originPort)   dataRequest.input("op", originPort)
+      if (destPort)     dataRequest.input("dp", destPort)
+
+      const dataResult = await dataRequest.query(`
+        SELECT * FROM (
+          SELECT ROW_NUMBER() OVER (ORDER BY VALID_TO DESC, SHIPPING_LINE ASC) AS rn,
+          ${SELECT_COLS}
+          FROM [dbo].[FREIGHT_RATES]
+          ${baseWhere}
+        ) AS paged
+        WHERE rn BETWEEN ${from} AND ${to}
+      `)
+
+      return NextResponse.json({
+        data:  dataResult.recordset,
+        total,
+      })
+    } else {
+      // ── Route search (non-admin) — returns plain array ────
+      if (!origin || !dest) return NextResponse.json([], { status: 200 })
+
+      request.input("origin", origin)
+      request.input("dest",   dest)
+
+      const likeClauses: string[] = []
+      if (originPort) {
+        request.input("op", originPort)
+        likeClauses.push("ORIGIN_PORT LIKE '%' + @op + '%'")
+      }
+      if (destPort) {
+        request.input("dp", destPort)
+        likeClauses.push("DEST_PORT LIKE '%' + @dp + '%'")
+      }
+      const extraWhere = likeClauses.length ? " AND " + likeClauses.join(" AND ") : ""
+
+      const result = await request.query(`
+        SELECT ${SELECT_COLS}
+        FROM [dbo].[FREIGHT_RATES]
+        WHERE ORIGIN_COUNTRY = @origin AND DEST_COUNTRY = @dest AND IS_ACTIVE = 1
+        ${extraWhere}
+        ORDER BY VALID_TO DESC, SHIPPING_LINE ASC
+      `)
+      return NextResponse.json(result.recordset)
     }
-
-    const result = await request.query(`
-      SELECT ${SELECT_COLS}
-      FROM [dbo].[FREIGHT_RATES]
-      ${where}
-      ORDER BY VALID_TO DESC, SHIPPING_LINE ASC
-    `)
-
-    return NextResponse.json(result.recordset)
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Database error"
     return NextResponse.json({ error: message }, { status: 500 })
@@ -95,25 +164,25 @@ export async function POST(req: NextRequest) {
 
     const result = await pool
       .request()
-      .input("shipping_line",   sql.VarChar(50),    body.shipping_line.trim().toUpperCase())
-      .input("origin_country",  sql.VarChar(100),   body.origin_country.trim().toUpperCase())
-      .input("dest_country",    sql.VarChar(100),   body.dest_country.trim().toUpperCase())
-      .input("origin_port",     sql.VarChar(100),   body.origin_port?.trim() ?? null)
-      .input("dest_port",       sql.VarChar(100),   body.dest_port?.trim() ?? null)
-      .input("currency",        sql.VarChar(5),     body.currency?.trim() ?? "USD")
-      .input("rate_20",         sql.Decimal(10, 2), body.rate_20 ?? null)
-      .input("rate_40",         sql.Decimal(10, 2), body.rate_40 ?? null)
-      .input("valid_from",      sql.VarChar(10),    body.valid_from ?? null)
-      .input("valid_to",        sql.VarChar(10),    body.valid_to ?? null)
-      .input("transit_days",    sql.Int,            body.transit_days ?? null)
-      .input("via_port",        sql.VarChar(200),   body.via_port?.trim() ?? null)
-      .input("surcharges",      sql.VarChar(500),   body.surcharges?.trim() ?? null)
-      .input("notes",           sql.VarChar(500),   body.notes?.trim() ?? null)
-      .input("pdf_url",         sql.VarChar(500),   body.pdf_url?.trim() ?? null)
-      .input("clauses",         sql.VarChar(sql.MAX), body.clauses?.trim() ?? null)
-      .input("created_by",      sql.VarChar(100),   auth.userId)
-      .input("created_at",      sql.DateTime,       now)
-      .input("updated_at",      sql.DateTime,       now)
+      .input("shipping_line",   body.shipping_line.trim().toUpperCase())
+      .input("origin_country",  body.origin_country.trim().toUpperCase())
+      .input("dest_country",    body.dest_country.trim().toUpperCase())
+      .input("origin_port",     body.origin_port?.trim() ?? null)
+      .input("dest_port",       body.dest_port?.trim() ?? null)
+      .input("currency",        body.currency?.trim() ?? "USD")
+      .input("rate_20",         body.rate_20 ?? null)
+      .input("rate_40",         body.rate_40 ?? null)
+      .input("valid_from",      body.valid_from ?? null)
+      .input("valid_to",        body.valid_to ?? null)
+      .input("transit_days",    body.transit_days ?? null)
+      .input("via_port",        body.via_port?.trim() ?? null)
+      .input("surcharges",      body.surcharges?.trim() ?? null)
+      .input("notes",           body.notes?.trim() ?? null)
+      .input("pdf_url",         body.pdf_url?.trim() ?? null)
+      .input("clauses",         body.clauses?.trim() ?? null)
+      .input("created_by",      auth.userId)
+      .input("created_at",      now)
+      .input("updated_at",      now)
       .query<{ PK_ID: number }>(`
         INSERT INTO [dbo].[FREIGHT_RATES] (
           SHIPPING_LINE, ORIGIN_COUNTRY, DEST_COUNTRY,

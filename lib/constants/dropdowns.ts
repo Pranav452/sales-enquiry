@@ -54,7 +54,31 @@ export const SALESPERSON_CODE_MAP: Record<string, string> = {
 
 export const SALES_PERSONS = LINKS_SALES_PERSONS
 
-export const FN_OPTIONS = ["FREEHAND", "NOMINATION"]  
+export const SHIPPING_LINES = [
+  "ARKAS",
+  "CMA CGM",
+  "COSCO",
+  "EMIRATES SHIPPING",
+  "ESL",
+  "EVERGREEN",
+  "GOLD STAR LINE",
+  "HAPAG-LLOYD",
+  "HMM",
+  "MAERSK",
+  "MSC",
+  "ONE",
+  "PIL",
+  "SCI",
+  "SEALAND",
+  "SINOLINES",
+  "TRANSWORLD",
+  "UAFL",
+  "X-PRESS FEEDERS",
+  "YANGMING",
+  "ZIM",
+]
+
+export const FN_OPTIONS = ["FREEHAND", "NOMINATION"]
 
 export const BRANCHES = [
   "MUMBAI",
