@@ -75,11 +75,11 @@ export async function GET(req: NextRequest) {
     }
 
     if (dateFrom) {
-      request.input("date_from", sql.VarChar(10), dateFrom)
+      request.input("date_from", dateFrom)
       conditions.push("ENQRECPTDT >= @date_from")
     }
     if (dateTo) {
-      request.input("date_to", sql.VarChar(10), dateTo)
+      request.input("date_to", dateTo)
       conditions.push("ENQRECPTDT <= @date_to")
     }
     if (salesPerson) {
