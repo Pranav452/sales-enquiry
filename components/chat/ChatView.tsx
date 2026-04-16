@@ -4,9 +4,14 @@ import { useState } from "react"
 import { MessageSquare } from "lucide-react"
 import { ChatSidebar } from "@/components/chat/ChatSidebar"
 import { ChatRoom } from "@/components/chat/ChatRoom"
+import { useChatGlobalRealtime } from "@/components/chat/useChatGlobalRealtime"
 
 export function ChatView() {
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null)
+
+  // Single global subscription — lives for the lifetime of the chat page,
+  // handles ALL rooms (messages + sidebar unread counts).
+  useChatGlobalRealtime(selectedRoomId)
 
   return (
     <div className="flex h-full overflow-hidden">

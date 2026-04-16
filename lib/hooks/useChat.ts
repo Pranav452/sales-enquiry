@@ -6,14 +6,8 @@ import {
   useQueryClient,
   useInfiniteQuery,
 } from "@tanstack/react-query"
-import type {
-  ChatRoom,
-  ChatMessage,
-  ChatUser,
-  EnquirySearchResult,
-} from "@/lib/types/chat"
+import type { ChatRoom, ChatMessage, ChatUser, EnquirySearchResult } from "@/lib/types/chat"
 
-// ─── Query keys ──────────────────────────────────────────────────────────────
 export const chatKeys = {
   rooms:         () => ["chat", "rooms"] as const,
   messages:      (roomId: string) => ["chat", "messages", roomId] as const,
@@ -21,15 +15,11 @@ export const chatKeys = {
   enquirySearch: (q: string) => ["chat", "enquiry-search", q] as const,
 }
 
-// ─── Shared fetch helper that extracts the server error message ───────────────
 async function apiFetch(url: string, options?: RequestInit): Promise<Response> {
   const res = await fetch(url, options)
   if (!res.ok) {
     let msg = `HTTP ${res.status}`
-    try {
-      const body = await res.json()
-      if (body?.error) msg = body.error
-    } catch { /* ignore */ }
+    try { const b = await res.json(); if (b?.error) msg = b.error } catch { /* ignore */ }
     throw new Error(msg)
   }
   return res
@@ -43,23 +33,18 @@ export function useRooms() {
       const res = await apiFetch("/api/chat/rooms")
       return res.json()
     },
-    refetchInterval: 30_000,
+    refetchInterval: 15_000, // lighter poll — realtime handles live updates
   })
 }
 
-// ─── useMessages (infinite scroll) ───────────────────────────────────────────
+// ─── useMessages ─────────────────────────────────────────────────────────────
 export function useMessages(roomId: string | null) {
   return useInfiniteQuery({
     queryKey: chatKeys.messages(roomId ?? ""),
     enabled: !!roomId,
     initialPageParam: undefined as string | undefined,
-    queryFn: async ({
-      pageParam,
-    }): Promise<{ messages: ChatMessage[]; nextCursor: string | null }> => {
-      const url = new URL(
-        `/api/chat/rooms/${roomId}/messages`,
-        window.location.origin
-      )
+    queryFn: async ({ pageParam }): Promise<{ messages: ChatMessage[]; nextCursor: string | null }> => {
+      const url = new URL(`/api/chat/rooms/${roomId}/messages`, window.location.origin)
       if (pageParam) url.searchParams.set("cursor", pageParam)
       url.searchParams.set("limit", "50")
       const res = await apiFetch(url.toString())
@@ -82,7 +67,8 @@ export function useUsers() {
 }
 
 // ─── useSendMessage ───────────────────────────────────────────────────────────
-export function useSendMessage(roomId: string) {
+// currentUserId is required so the optimistic message renders on the RIGHT side immediately
+export function useSendMessage(roomId: string, currentUserId: string | null) {
   const qc = useQueryClient()
 
   return useMutation({
@@ -102,10 +88,11 @@ export function useSendMessage(roomId: string) {
     onMutate: async (payload) => {
       await qc.cancelQueries({ queryKey: chatKeys.messages(roomId) })
 
+      // Use real userId so the bubble shows on the RIGHT side immediately
       const optimistic: ChatMessage = {
         id:           `optimistic-${Date.now()}`,
         room_id:      roomId,
-        sender_id:    "__optimistic__",
+        sender_id:    currentUserId ?? "__me__",
         content:      payload.content,
         mentions:     payload.mentions,
         enquiry_refs: payload.enquiry_refs,
@@ -128,8 +115,6 @@ export function useSendMessage(roomId: string) {
           ],
         }
       })
-
-      return { optimistic }
     },
 
     onError: () => {
@@ -145,7 +130,6 @@ export function useSendMessage(roomId: string) {
 // ─── useCreateRoom ────────────────────────────────────────────────────────────
 export function useCreateRoom() {
   const qc = useQueryClient()
-
   return useMutation({
     mutationFn: async (payload: {
       type: "direct" | "group"
@@ -159,7 +143,18 @@ export function useCreateRoom() {
       })
       return res.json()
     },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: chatKeys.rooms() }) },
+  })
+}
 
+// ─── useMarkAsRead ────────────────────────────────────────────────────────────
+export function useMarkAsRead(roomId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async () => {
+      if (!roomId) return
+      await fetch(`/api/chat/rooms/${roomId}/read`, { method: "PATCH" })
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: chatKeys.rooms() })
     },
@@ -173,13 +168,9 @@ export function useEnquirySearch(query: string) {
     enabled: query.length >= 2,
     queryFn: async (): Promise<EnquirySearchResult[]> => {
       try {
-        const res = await apiFetch(
-          `/api/chat/enquiry-search?q=${encodeURIComponent(query)}`
-        )
+        const res = await apiFetch(`/api/chat/enquiry-search?q=${encodeURIComponent(query)}`)
         return res.json()
-      } catch {
-        return []
-      }
+      } catch { return [] }
     },
     staleTime: 0,
   })

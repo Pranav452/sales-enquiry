@@ -4,7 +4,6 @@ import { getAuthContext } from "@/lib/api-auth"
 import { createClient } from "@/lib/supabase/server"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
-// ─── Helper: resolve user names for a list of IDs ────────────────────────────
 async function fetchProfiles(
   supabase: SupabaseClient,
   userIds: string[]
@@ -20,7 +19,6 @@ async function fetchProfiles(
   return map
 }
 
-// ─── Helper: fetch a room + its members (with names) ────────────────────────
 async function enrichRoom(supabase: SupabaseClient, roomId: string, base: Record<string, unknown>) {
   const { data: members } = await supabase
     .from("chat_members")
@@ -49,7 +47,6 @@ export async function GET() {
 
   const supabase = await createClient()
 
-  // 1. Room IDs the user belongs to
   const { data: memberRows, error: memberErr } = await supabase
     .from("chat_members")
     .select("room_id")
@@ -60,42 +57,35 @@ export async function GET() {
 
   const roomIds = memberRows.map((r) => r.room_id)
 
-  // 2. Room details
-  const { data: rooms, error: roomErr } = await supabase
-    .from("chat_rooms")
-    .select("*")
-    .in("id", roomIds)
-    .order("created_at", { ascending: false })
+  // Rooms, members, messages, unread counts — all in parallel
+  const [roomsRes, membersRes, messagesRes, unreadRes] = await Promise.all([
+    supabase.from("chat_rooms").select("*").in("id", roomIds),
+    supabase.from("chat_members").select("room_id, user_id, joined_at").in("room_id", roomIds),
+    supabase
+      .from("chat_messages")
+      .select("id, room_id, sender_id, content, created_at")
+      .in("room_id", roomIds)
+      .order("created_at", { ascending: false }),
+    supabase.rpc("get_room_unread_counts", {
+      p_user_id:  auth.userId,
+      p_room_ids: roomIds,
+    }),
+  ])
 
-  if (roomErr) return NextResponse.json({ error: roomErr.message }, { status: 500 })
+  if (roomsRes.error)   return NextResponse.json({ error: roomsRes.error.message },   { status: 500 })
+  if (membersRes.error) return NextResponse.json({ error: membersRes.error.message }, { status: 500 })
+  if (messagesRes.error) return NextResponse.json({ error: messagesRes.error.message }, { status: 500 })
 
-  // 3. Members (raw)
-  const { data: allMembers, error: membersErr } = await supabase
-    .from("chat_members")
-    .select("room_id, user_id, joined_at")
-    .in("room_id", roomIds)
-
-  if (membersErr) return NextResponse.json({ error: membersErr.message }, { status: 500 })
-
-  // 4. Last message per room (raw)
-  const { data: allMessages, error: msgErr } = await supabase
-    .from("chat_messages")
-    .select("id, room_id, sender_id, content, created_at")
-    .in("room_id", roomIds)
-    .order("created_at", { ascending: false })
-
-  if (msgErr) return NextResponse.json({ error: msgErr.message }, { status: 500 })
-
-  // 5. Resolve names in one batch
+  // Resolve names in one batch
   const allUserIds = [
-    ...(allMembers ?? []).map((m) => m.user_id),
-    ...(allMessages ?? []).map((m) => m.sender_id),
+    ...(membersRes.data  ?? []).map((m) => m.user_id),
+    ...(messagesRes.data ?? []).map((m) => m.sender_id),
   ]
   const profiles = await fetchProfiles(supabase, allUserIds)
 
-  // 6. Build maps
+  // Last message per room
   const lastMessageByRoom = new Map<string, unknown>()
-  for (const msg of allMessages ?? []) {
+  for (const msg of messagesRes.data ?? []) {
     if (!lastMessageByRoom.has(msg.room_id)) {
       lastMessageByRoom.set(msg.room_id, {
         id: msg.id, room_id: msg.room_id, sender_id: msg.sender_id,
@@ -105,8 +95,9 @@ export async function GET() {
     }
   }
 
+  // Members per room
   const membersByRoom = new Map<string, unknown[]>()
-  for (const m of allMembers ?? []) {
+  for (const m of membersRes.data ?? []) {
     if (!membersByRoom.has(m.room_id)) membersByRoom.set(m.room_id, [])
     const p = profiles.get(m.user_id)
     membersByRoom.get(m.room_id)!.push({
@@ -115,11 +106,25 @@ export async function GET() {
     })
   }
 
-  const result = (rooms ?? []).map((room) => ({
+  // Unread count per room
+  const unreadByRoom = new Map<string, number>()
+  for (const row of (unreadRes.data ?? []) as { room_id: string; unread_count: number }[]) {
+    unreadByRoom.set(row.room_id, Number(row.unread_count))
+  }
+
+  const result = (roomsRes.data ?? []).map((room) => ({
     ...room,
     members:      membersByRoom.get(room.id) ?? [],
     last_message: lastMessageByRoom.get(room.id) ?? null,
+    unread_count: unreadByRoom.get(room.id) ?? 0,
   }))
+
+  // Sort by last message time descending (most recent at top — Instagram style)
+  result.sort((a, b) => {
+    const tA = (a.last_message as { created_at: string } | null)?.created_at ?? a.created_at
+    const tB = (b.last_message as { created_at: string } | null)?.created_at ?? b.created_at
+    return new Date(tB).getTime() - new Date(tA).getTime()
+  })
 
   return NextResponse.json(result)
 }
@@ -142,7 +147,7 @@ export async function POST(request: Request) {
 
   const supabase = await createClient()
 
-  // ── Deduplicate direct rooms ──────────────────────────────────────────────
+  // Deduplicate direct rooms
   if (type === "direct") {
     const otherId = member_ids[0]
     if (!otherId) return NextResponse.json({ error: "member_ids required" }, { status: 400 })
@@ -154,18 +159,10 @@ export async function POST(request: Request) {
     const sharedIds = (otherRooms ?? []).map((r) => r.room_id).filter((id) => myRoomIds.has(id))
 
     if (sharedIds.length > 0) {
-      // Check if any of the shared rooms is a direct room
       const { data: existing } = await supabase
-        .from("chat_rooms")
-        .select("*")
-        .in("id", sharedIds)
-        .eq("type", "direct")
-        .limit(1)
-
+        .from("chat_rooms").select("*").in("id", sharedIds).eq("type", "direct").limit(1)
       if (existing && existing.length > 0) {
-        return NextResponse.json(
-          await enrichRoom(supabase, existing[0].id, existing[0] as Record<string, unknown>)
-        )
+        return NextResponse.json(await enrichRoom(supabase, existing[0].id, existing[0] as Record<string, unknown>))
       }
     }
   }
@@ -174,49 +171,30 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Group name is required" }, { status: 400 })
   }
 
-  // ── KEY FIX: pre-generate the UUID so we never need RETURNING ────────────
-  // This avoids the RLS timing issue where INSERT...RETURNING runs the SELECT
-  // policy before any chat_members rows exist, making the row invisible.
+  // Pre-generate UUID to avoid INSERT...RETURNING + RLS timing issue
   const newRoomId = randomUUID()
   const now       = new Date().toISOString()
 
   const { error: roomErr } = await supabase
     .from("chat_rooms")
-    .insert({
-      id:         newRoomId,
-      type,
-      name:       name?.trim() ?? null,
-      created_by: auth.userId,
-      created_at: now,
-    })
+    .insert({ id: newRoomId, type, name: name?.trim() ?? null, created_by: auth.userId, created_at: now })
 
   if (roomErr) {
     console.error("[POST /api/chat/rooms] insert room:", roomErr)
     return NextResponse.json({ error: roomErr.message }, { status: 500 })
   }
 
-  // Insert ALL members immediately (creator always included)
   const allMemberIds  = [...new Set([auth.userId, ...member_ids])]
-  const memberInserts = allMemberIds.map((uid) => ({
-    room_id:   newRoomId,
-    user_id:   uid,
-    joined_at: now,
-  }))
-
   const { error: insertErr } = await supabase
     .from("chat_members")
-    .insert(memberInserts)
+    .insert(allMemberIds.map((uid) => ({ room_id: newRoomId, user_id: uid, joined_at: now })))
 
   if (insertErr) {
     console.error("[POST /api/chat/rooms] insert members:", insertErr)
     return NextResponse.json({ error: insertErr.message }, { status: 500 })
   }
 
-  // Now that the creator is a member, SELECT + enrichment will work
-  const enriched = await enrichRoom(supabase, newRoomId, {
-    id: newRoomId, type, name: name?.trim() ?? null,
-    created_by: auth.userId, created_at: now,
-  })
-
-  return NextResponse.json(enriched)
+  return NextResponse.json(await enrichRoom(supabase, newRoomId, {
+    id: newRoomId, type, name: name?.trim() ?? null, created_by: auth.userId, created_at: now,
+  }))
 }
