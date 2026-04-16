@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   List,
   LogOut,
+  MessageSquare,
   Moon,
   Sun,
   Heart,
@@ -74,6 +75,7 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
     { label: "New Enquiry",      href: "/enquiry",        icon: ClipboardList },
     { label: "Recent Enquiries", href: "/enquiries",      icon: List },
     { label: "Rate Explorer",    href: "/rates",          icon: TrendingUp },
+    { label: "Chat",             href: "/chat",           icon: MessageSquare },
     ...(role === "admin"
       ? [
           { label: "Dashboard",    href: "/dashboard",    icon: LayoutDashboard },
