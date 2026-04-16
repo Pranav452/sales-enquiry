@@ -39,7 +39,7 @@ export function useChatGlobalRealtime(activeRoomId: string | null) {
 
           // Look up sender name from the already-cached users list (zero extra fetch)
           const users      = qc.getQueryData<ChatUser[]>(chatKeys.users())
-          const senderName = users?.find((u) => u.id === newMsg.sender_id)?.full_name ?? null
+          const senderName = users?.find((u) => u.id === newMsg.sender_id)?.full_name ?? undefined
           const msgWithName: ChatMessage = { ...newMsg, sender_name: senderName }
 
           // ── 1. Inject into the open room's message list ──────────────────
