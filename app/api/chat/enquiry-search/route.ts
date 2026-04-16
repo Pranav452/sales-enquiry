@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { getAuthContext } from "@/lib/api-auth"
-import { getPool, sql } from "@/lib/mssql/client"
+import { getPool } from "@/lib/mssql/client"
 
 // ─── GET /api/chat/enquiry-search?q= ─────────────────────────────────────────
 // Searches MSSQL TBL_ADMIN_SALESENQUIRY by ENQREFNO (contains match).
@@ -23,12 +23,12 @@ export async function GET(req: Request) {
     const mssql  = pool.request()
 
     // Contains match — so typing "BOM" matches "MP/BOM/2604/001" etc.
-    mssql.input("q", sql.NVarChar(50), q)
+    mssql.input("q", q)
     let whereClause = "ENQREFNO LIKE N'%' + @q + N'%'"
 
     // Non-admin users only see their own enquiries
     if (auth.role !== "admin" && auth.salesperson) {
-      mssql.input("sp", sql.NVarChar(100), auth.salesperson)
+      mssql.input("sp", auth.salesperson)
       whereClause += " AND SALESPERSON = @sp"
     }
 

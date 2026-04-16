@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getAuthContext } from "@/lib/api-auth"
-import { getPool, sql } from "@/lib/mssql/client"
+import { getPool } from "@/lib/mssql/client"
 import { SALESPERSON_CODE_MAP } from "@/lib/constants/dropdowns"
 
 const SELECT_COLS = `
@@ -56,15 +56,15 @@ export async function GET(req: NextRequest) {
 
     // Role-based scoping
     if (auth.role !== "admin") {
-      request.input("created_by", sql.VarChar(100), auth.userId)
-      request.input("salesperson_me", sql.VarChar(100), auth.salesperson ?? "")
+      request.input("created_by", auth.userId)
+      request.input("salesperson_me", auth.salesperson ?? "")
 
       const oldCodes = Object.entries(SALESPERSON_CODE_MAP)
         .filter(([, name]) => name === auth.salesperson)
         .map(([code]) => code)
 
       if (oldCodes.length > 0) {
-        oldCodes.forEach((code, i) => request.input(`sp_code${i}`, sql.VarChar(20), code))
+        oldCodes.forEach((code, i) => request.input(`sp_code${i}`, code))
         const placeholders = oldCodes.map((_, i) => `@sp_code${i}`).join(", ")
         conditions.push(
           `(CREATED_BY = @created_by OR SALESPERSON = @salesperson_me OR SALESPERSON IN (${placeholders}))`
@@ -83,27 +83,27 @@ export async function GET(req: NextRequest) {
       conditions.push("ENQRECPTDT <= @date_to")
     }
     if (salesPerson) {
-      request.input("sales_person", sql.VarChar(15), salesPerson)
+      request.input("sales_person", salesPerson)
       conditions.push("SALESPERSON = @sales_person")
     }
     if (mode) {
-      request.input("mode", sql.VarChar(10), mode)
+      request.input("mode", mode)
       conditions.push("MODE = @mode")
     }
     if (exim) {
-      request.input("exim", sql.VarChar(10), exim)
+      request.input("exim", exim)
       conditions.push("EXIM = @exim")
     }
     if (branch) {
-      request.input("branch", sql.VarChar(10), branch)
+      request.input("branch", branch)
       conditions.push("BRANCH = @branch")
     }
     if (status) {
-      request.input("status", sql.VarChar(25), status)
+      request.input("status", status)
       conditions.push("STATUS = @status")
     }
     if (enqType) {
-      request.input("enq_type", sql.VarChar(10), enqType)
+      request.input("enq_type", enqType)
       conditions.push("ENQTYPE = @enq_type")
     }
 

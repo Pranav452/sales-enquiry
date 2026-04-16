@@ -3,7 +3,7 @@ export const maxDuration = 60
 
 import { NextRequest, NextResponse } from "next/server"
 import { getAuthContext } from "@/lib/api-auth"
-import { getPool, sql } from "@/lib/mssql/client"
+import { getPool } from "@/lib/mssql/client"
 import OpenAI from "openai"
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -64,8 +64,8 @@ export async function POST(req: NextRequest) {
       let where = "WHERE IS_ACTIVE = 1"
 
       if (body.origin && body.dest) {
-        request.input("origin", sql.VarChar(100), body.origin.toUpperCase())
-        request.input("dest",   sql.VarChar(100), body.dest.toUpperCase())
+        request.input("origin", body.origin.toUpperCase())
+        request.input("dest", body.dest.toUpperCase())
         where = "WHERE IS_ACTIVE = 1 AND ORIGIN_COUNTRY = @origin AND DEST_COUNTRY = @dest"
       }
 

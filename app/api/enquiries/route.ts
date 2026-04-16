@@ -54,11 +54,11 @@ export async function GET(_req: NextRequest) {
     let where = ""
     if (mine) {
       // Recent tab — only rows this user created in the new system
-      req.input("created_by", sql.VarChar(100), auth.userId)
+      req.input("created_by", auth.userId)
       where = "WHERE CREATED_BY = @created_by"
     } else if (auth.role !== "admin") {
-      req.input("created_by", sql.VarChar(100), auth.userId)
-      req.input("salesperson", sql.VarChar(100), auth.salesperson ?? "")
+      req.input("created_by", auth.userId)
+      req.input("salesperson", auth.salesperson ?? "")
 
       // Reverse-lookup legacy codes that map to this salesperson's name
       const oldCodes = Object.entries(SALESPERSON_CODE_MAP)
@@ -66,7 +66,7 @@ export async function GET(_req: NextRequest) {
         .map(([code]) => code)
 
       if (oldCodes.length > 0) {
-        oldCodes.forEach((code, i) => req.input(`sp_code${i}`, sql.VarChar(20), code))
+        oldCodes.forEach((code, i) => req.input(`sp_code${i}`, code))
         const placeholders = oldCodes.map((_, i) => `@sp_code${i}`).join(", ")
         where = `WHERE (CREATED_BY = @created_by OR SALESPERSON = @salesperson OR SALESPERSON IN (${placeholders}))`
       } else {
@@ -117,34 +117,34 @@ export async function POST(req: NextRequest) {
 
     const result = await pool
       .request()
-      .input("enqrefno",      sql.VarChar(15),  enqRefNo)
-      .input("enqrecptdt",    sql.VarChar(10),  receiptDateStr)
-      .input("mode",          sql.VarChar(10),  truncate(body.mode, 10))
-      .input("enqtype",       sql.VarChar(10),  truncate(body.enq_type, 10))
-      .input("exim",          sql.VarChar(10),  truncate(body.exim, 10))
-      .input("fn",            sql.VarChar(20),  truncate(body.fn, 20))
-      .input("salesperson",   sql.VarChar(15),  truncate(body.sales_person, 15))
-      .input("agent_name",    sql.VarChar(100), truncate(body.agent_name, 100))
-      .input("country_code",  sql.VarChar(15),  truncate(body.country, 15))
-      .input("branch",        sql.VarChar(10),  truncate(body.branch, 10))
-      .input("network",       sql.VarChar(25),  truncate(body.network, 25))
-      .input("pol",           sql.VarChar(100), truncate(body.pol, 100))
-      .input("pod",           sql.VarChar(100), truncate(body.pod, 100))
-      .input("incoterm",      sql.VarChar(10),  truncate(body.incoterms, 10))
-      .input("dimension",     sql.VarChar(20),  truncate(body.container_type, 20))
-      .input("status",        sql.VarChar(25),  truncate(body.status ?? "PENDING", 25))
-      .input("email_subject", sql.VarChar(200), truncate(body.email_subject_line, 200))
-      .input("shipper",       sql.VarChar(100), truncate(body.shipper, 100))
-      .input("consignee",     sql.VarChar(100), truncate(body.consignee, 100))
-      .input("remark",        sql.VarChar(200), truncate(body.remarks, 200))
-      .input("mbl_awb_no",    sql.VarChar(50),  truncate(body.mbl_awb_no, 50))
-      .input("job_invoice_no",sql.VarChar(50),  truncate(body.job_invoice_no, 50))
-      .input("gop",           sql.VarChar(50),  truncate(body.gop, 50))
-      .input("assigned_user", sql.VarChar(100), truncate(body.assigned_user, 100))
+      .input("enqrefno",      enqRefNo)
+      .input("enqrecptdt",    receiptDateStr)
+      .input("mode",          truncate(body.mode, 10))
+      .input("enqtype",       truncate(body.enq_type, 10))
+      .input("exim",          truncate(body.exim, 10))
+      .input("fn",            truncate(body.fn, 20))
+      .input("salesperson",   truncate(body.sales_person, 15))
+      .input("agent_name",    truncate(body.agent_name, 100))
+      .input("country_code",  truncate(body.country, 15))
+      .input("branch",        truncate(body.branch, 10))
+      .input("network",       truncate(body.network, 25))
+      .input("pol",           truncate(body.pol, 100))
+      .input("pod",           truncate(body.pod, 100))
+      .input("incoterm",      truncate(body.incoterms, 10))
+      .input("dimension",     truncate(body.container_type, 20))
+      .input("status",        truncate(body.status ?? "PENDING", 25))
+      .input("email_subject", truncate(body.email_subject_line, 200))
+      .input("shipper",       truncate(body.shipper, 100))
+      .input("consignee",     truncate(body.consignee, 100))
+      .input("remark",        truncate(body.remarks, 200))
+      .input("mbl_awb_no",    truncate(body.mbl_awb_no, 50))
+      .input("job_invoice_no",truncate(body.job_invoice_no, 50))
+      .input("gop",           truncate(body.gop, 50))
+      .input("assigned_user", truncate(body.assigned_user, 100))
       .input("assigned_date", sql.DateTime,     body.assigned_date ? new Date(body.assigned_date) : null)
-      .input("buy_rate_file", sql.VarChar(500), body.buy_rate_file ?? null)
-      .input("sell_rate_file",sql.VarChar(500), body.sell_rate_file ?? null)
-      .input("created_by",    sql.VarChar(100), auth.userId)
+      .input("buy_rate_file", body.buy_rate_file ?? null)
+      .input("sell_rate_file",body.sell_rate_file ?? null)
+      .input("created_by",    auth.userId)
       .input("makerdt",       sql.DateTime,     now)
       .input("updated_at",    sql.DateTime,     now)
       .query<{ PK_ID: number }>(`

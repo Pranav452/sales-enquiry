@@ -32,11 +32,11 @@ export async function GET(req: NextRequest) {
     const r = pool.request()
 
     // Common filter inputs — ENQRECPTDT is varchar(10) stored as 'YYYY-MM-DD'
-    r.input("mode",      sql.VarChar(10), mode || null)
-    r.input("branch",    sql.VarChar(10), branch || null)
-    r.input("enq_type",  sql.VarChar(10), enqType || null)
-    r.input("from_date", sql.VarChar(10), range ? range.from : null)
-    r.input("to_date",   sql.VarChar(10), range ? range.to : null)
+    r.input("mode", mode || null)
+    r.input("branch", branch || null)
+    r.input("enq_type", enqType || null)
+    r.input("from_date", range ? range.from : null)
+    r.input("to_date", range ? range.to : null)
 
     // ENQRECPTDT is varchar so we compare strings directly (YYYY-MM-DD sorts lexicographically)
     const where = `
