@@ -7,6 +7,7 @@ import { useEffect, useState } from "react"
 import {
   Anchor,
   ClipboardList,
+  FileDown,
   LayoutDashboard,
   List,
   LogOut,
@@ -74,6 +75,7 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
   const navLinks = [
     { label: "New Enquiry",      href: "/enquiry",        icon: ClipboardList },
     { label: "Recent Enquiries", href: "/enquiries",      icon: List },
+    { label: "Export",           href: "/export",         icon: FileDown },
     { label: "Rate Explorer",    href: "/rates",          icon: TrendingUp },
     { label: "Chat",             href: "/chat",           icon: MessageSquare },
     ...(role === "admin"
