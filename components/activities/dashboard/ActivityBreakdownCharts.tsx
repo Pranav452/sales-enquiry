@@ -63,7 +63,7 @@ export function StatusBreakdownChart() {
               </Pie>
               <Tooltip
                 contentStyle={{ fontSize: 12, border: "1px solid hsl(var(--border))", borderRadius: 6, background: "hsl(var(--card))", color: "hsl(var(--foreground))" }}
-                formatter={(v: number, name: string) => [v, name]}
+                formatter={(v: number | undefined, name: string | undefined) => [v ?? 0, name ?? ""]}
               />
               <Legend wrapperStyle={{ fontSize: 10 }} />
             </PieChart>
@@ -122,7 +122,7 @@ export function TypeBreakdownChart() {
               </Pie>
               <Tooltip
                 contentStyle={{ fontSize: 12, border: "1px solid hsl(var(--border))", borderRadius: 6, background: "hsl(var(--card))", color: "hsl(var(--foreground))" }}
-                formatter={(v: number, name: string) => [`${v} activities`, name]}
+                formatter={(v: number | undefined, name: string | undefined) => [`${v ?? 0} activities`, name ?? ""]}
               />
               <Legend wrapperStyle={{ fontSize: 10 }} />
             </PieChart>
