@@ -6,12 +6,13 @@ import { getActivityPoints, ACTIVITY_TYPE_MAP } from "@/lib/constants/activities
 // ─── GET /api/activities/[id] ─────────────────────────────────
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await getAuthContext()
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const id = parseInt(params.id, 10)
+  const { id: idStr } = await params
+  const id = parseInt(idStr, 10)
   if (isNaN(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 })
 
   try {
@@ -53,12 +54,13 @@ export async function GET(
 // ─── PATCH /api/activities/[id] ───────────────────────────────
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await getAuthContext()
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const id = parseInt(params.id, 10)
+  const { id: idStr } = await params
+  const id = parseInt(idStr, 10)
   if (isNaN(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 })
 
   let body: Partial<ActivityPayload>
