@@ -8,6 +8,7 @@ import {
   Anchor,
   ClipboardList,
   FileDown,
+  Flame,
   LayoutDashboard,
   List,
   LogOut,
@@ -29,6 +30,7 @@ interface Props {
   branch: string
   company: string
   userId: string
+  email: string
   children: React.ReactNode
 }
 
@@ -37,7 +39,7 @@ const COMPANY_LABELS: Record<string, string> = {
   links: "Sales bridge - Links",
 }
 
-export function ProtectedLayoutClient({ role, displayName, branch, company, userId, children }: Props) {
+export function ProtectedLayoutClient({ role, displayName, branch, company, userId, email, children }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
@@ -84,6 +86,9 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
           { label: "Audit Log",    href: "/audit",        icon: ScrollText },
           { label: "Manage Rates", href: "/rates/manage", icon: Settings2 },
         ]
+      : []),
+    ...(email === "sales2.bom@manilal.com"
+      ? [{ label: "Ronaldo", href: "/ronaldo", icon: Flame }]
       : []),
   ]
 

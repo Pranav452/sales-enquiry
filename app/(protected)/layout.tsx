@@ -26,8 +26,10 @@ export default async function ProtectedLayout({
   const branch = profile?.branch || ""
   const company = profile?.company || ""
 
+  const email = profile?.email || user.email || ""
+
   return (
-    <ProtectedLayoutClient role={role} displayName={displayName} branch={branch} company={company} userId={user.id}>
+    <ProtectedLayoutClient role={role} displayName={displayName} branch={branch} company={company} userId={user.id} email={email}>
       {children}
     </ProtectedLayoutClient>
   )
