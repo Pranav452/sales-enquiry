@@ -6,6 +6,7 @@ import { useTheme } from "next-themes"
 import { useEffect, useState } from "react"
 import {
   Anchor,
+  BarChart2,
   ClipboardList,
   FileDown,
   Flame,
@@ -14,6 +15,7 @@ import {
   LogOut,
   MessageSquare,
   Moon,
+  Phone,
   Sun,
   Heart,
   User,
@@ -75,16 +77,18 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
   const CurrentThemeIcon = THEMES[currentThemeIndex]?.icon ?? Sun
 
   const navLinks = [
-    { label: "New Enquiry",      href: "/enquiry",        icon: ClipboardList },
-    { label: "Recent Enquiries", href: "/enquiries",      icon: List },
-    { label: "Export",           href: "/export",         icon: FileDown },
-    { label: "Rate Explorer",    href: "/rates",          icon: TrendingUp },
-    { label: "Chat",             href: "/chat",           icon: MessageSquare },
+    { label: "New Enquiry",       href: "/enquiry",               icon: ClipboardList },
+    { label: "Recent Enquiries",  href: "/enquiries",             icon: List },
+    { label: "Activity Tracker",  href: "/activities",            icon: Phone },
+    { label: "Export",            href: "/export",                icon: FileDown },
+    { label: "Rate Explorer",     href: "/rates",                 icon: TrendingUp },
+    { label: "Chat",              href: "/chat",                  icon: MessageSquare },
     ...(role === "admin"
       ? [
-          { label: "Dashboard",    href: "/dashboard",    icon: LayoutDashboard },
-          { label: "Audit Log",    href: "/audit",        icon: ScrollText },
-          { label: "Manage Rates", href: "/rates/manage", icon: Settings2 },
+          { label: "Dashboard",          href: "/dashboard",          icon: LayoutDashboard },
+          { label: "Activity Dashboard", href: "/activities/dashboard",icon: BarChart2 },
+          { label: "Audit Log",          href: "/audit",              icon: ScrollText },
+          { label: "Manage Rates",       href: "/rates/manage",       icon: Settings2 },
         ]
       : []),
     ...(email === "sales2.bom@manilal.com"
@@ -181,7 +185,9 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
                 ? pathname === "/enquiry" || pathname.startsWith("/enquiry?")
                 : href === "/rates"
                   ? pathname === "/rates"
-                  : pathname.startsWith(href)
+                  : href === "/activities"
+                    ? pathname === "/activities"
+                    : pathname.startsWith(href)
 
             return (
               <Link
