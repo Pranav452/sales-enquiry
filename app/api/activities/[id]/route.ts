@@ -31,11 +31,25 @@ export async function GET(
 
     const result = await req.query(`
       SELECT
-        CAST(ID AS varchar(20))  AS id,
-        ACTIVITY_DATE, ACTIVITY_TYPE, SALES_PERSON, BRANCH,
-        CLIENT_NAME, CONTACT_PERSON, CONTACT_NUMBER, EMAIL,
-        MODE, POL, POD, COMMODITY, STATUS, NOTES, POINTS,
-        CREATED_BY,
+        CAST(ID AS varchar(20))         AS id,
+        ACTIVITY_DATE                   AS activity_date,
+        ACTIVITY_TYPE                   AS activity_type,
+        SALES_PERSON                    AS sales_person,
+        BRANCH                          AS branch,
+        CLIENT_NAME                     AS client_name,
+        CONTACT_PERSON                  AS contact_person,
+        CONTACT_NUMBER                  AS contact_number,
+        EMAIL                           AS email,
+        MODE                            AS mode,
+        POL                             AS pol,
+        POD                             AS pod,
+        COMMODITY                       AS commodity,
+        STATUS                          AS status,
+        NOTES                           AS notes,
+        POINTS                          AS points,
+        REMINDER_DATE                   AS reminder_date,
+        REMINDER_DONE                   AS reminder_done,
+        CREATED_BY                      AS created_by,
         CONVERT(varchar(10), CREATED_AT, 120) AS created_at
       FROM [dbo].[TBL_CALLS_VISITS]
       ${where}
