@@ -118,7 +118,8 @@ export function ChatDockPanel({ roomId, minimized }: Props) {
           <button
             type="button"
             title="Open full page"
-            onClick={() => router.push("/chat")}
+            onClick={() => router.push(`/chat?room=${roomId}`)}
+
             className="h-6 w-6 flex items-center justify-center rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
           >
             <Maximize2 className="h-3 w-3" />

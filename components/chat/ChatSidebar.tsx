@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Users, Plus, MessageSquare } from "lucide-react"
+import { Users, Plus, MessageSquare, ExternalLink } from "lucide-react"
 import { useUsers, useRooms, useCreateRoom } from "@/lib/hooks/useChat"
 import { useCurrentUser } from "@/lib/hooks/useCurrentUser"
 import { GroupChatModal } from "@/components/chat/GroupChatModal"
@@ -19,11 +19,15 @@ function relativeTime(iso: string): string {
   return `${Math.floor(hr / 24)}d`
 }
 
-export function ChatSidebar() {
+interface Props {
+  selectedRoomId: string | null
+  onSelectRoom:   (roomId: string) => void
+}
+
+export function ChatSidebar({ selectedRoomId, onSelectRoom }: Props) {
   const [groupModalOpen, setGroupModalOpen] = useState(false)
 
-  const { items, openChat } = useChatDock()
-  const activeRoomIds       = items.filter((i) => !i.minimized).map((i) => i.roomId)
+  const { openChat } = useChatDock()
 
   const currentUser                          = useCurrentUser()
   const { data: allUsers = [], isLoading: usersLoading } = useUsers()
@@ -51,10 +55,10 @@ export function ChatSidebar() {
     const existing = rooms.find(
       (r) => r.type === "direct" && r.members?.some((m) => m.user_id === user.id)
     )
-    if (existing) { openChat(existing.id); return }
+    if (existing) { onSelectRoom(existing.id); return }
     try {
       const room = await createRoom.mutateAsync({ type: "direct", member_ids: [user.id] })
-      openChat(room.id)
+      onSelectRoom(room.id)
     } catch (err) {
       console.error("[ChatSidebar] create DM:", err)
     }
@@ -95,8 +99,9 @@ export function ChatSidebar() {
                     key={room.id}
                     room={room}
                     currentUserId={currentUser?.id ?? null}
-                    isActive={activeRoomIds.includes(room.id)}
-                    onClick={() => openChat(room.id)}
+                    isActive={selectedRoomId === room.id}
+                    onClick={() => onSelectRoom(room.id)}
+                    onPopOut={() => openChat(room.id)}
                   />
                 ))
               )}
@@ -133,7 +138,7 @@ export function ChatSidebar() {
       <GroupChatModal
         open={groupModalOpen}
         onOpenChange={setGroupModalOpen}
-        onCreated={(room) => { setGroupModalOpen(false); openChat(room.id) }}
+        onCreated={(room) => { setGroupModalOpen(false); onSelectRoom(room.id) }}
       />
     </>
   )
@@ -145,11 +150,13 @@ function ConversationRow({
   currentUserId,
   isActive,
   onClick,
+  onPopOut,
 }: {
   room: ChatRoom
   currentUserId: string | null
   isActive: boolean
   onClick: () => void
+  onPopOut: () => void
 }) {
   const unread = room.unread_count ?? 0
 
@@ -176,57 +183,75 @@ function ConversationRow({
     : isGroup ? `${room.members?.length ?? 0} members` : ""
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "w-full flex items-center gap-2.5 px-3 py-2.5 text-left transition-colors",
-        "hover:bg-accent",
-        isActive && "bg-primary/10"
-      )}
-    >
-      {/* Avatar */}
-      <div className={cn(
-        "h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 relative",
-        isGroup ? "rounded-lg" : "rounded-full",
-        isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-      )}>
-        {isGroup ? <Users className="h-4 w-4" /> : initials}
-      </div>
+    <div className="relative group/row">
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          "w-full flex items-center gap-2.5 px-3 py-2.5 text-left transition-colors",
+          "hover:bg-accent",
+          isActive && "bg-primary/10"
+        )}
+      >
+        {/* Avatar */}
+        <div className={cn(
+          "h-9 w-9 flex items-center justify-center text-xs font-bold flex-shrink-0",
+          isGroup ? "rounded-lg" : "rounded-full",
+          isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+        )}>
+          {isGroup ? <Users className="h-4 w-4" /> : initials}
+        </div>
 
-      {/* Text */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-1">
-          <p className={cn(
-            "text-sm truncate",
-            unread > 0 ? "font-semibold text-foreground" : "font-medium"
-          )}>
-            {displayName}
-          </p>
-          {lastTime && (
-            <span className={cn(
-              "text-[10px] flex-shrink-0",
-              unread > 0 ? "text-primary font-medium" : "text-muted-foreground"
+        {/* Text */}
+        <div className="flex-1 min-w-0 pr-5">
+          <div className="flex items-center justify-between gap-1">
+            <p className={cn(
+              "text-sm truncate",
+              unread > 0 ? "font-semibold text-foreground" : "font-medium"
             )}>
-              {lastTime}
-            </span>
-          )}
+              {displayName}
+            </p>
+            {lastTime && (
+              <span className={cn(
+                "text-[10px] flex-shrink-0 group-hover/row:opacity-0 transition-opacity",
+                unread > 0 ? "text-primary font-medium" : "text-muted-foreground"
+              )}>
+                {lastTime}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center justify-between gap-1">
+            <p className={cn(
+              "text-xs truncate",
+              unread > 0 ? "text-foreground" : "text-muted-foreground"
+            )}>
+              {preview}
+            </p>
+            {unread > 0 && !isActive && (
+              <span className="flex-shrink-0 h-5 min-w-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center px-1">
+                {unread > 99 ? "99+" : unread}
+              </span>
+            )}
+          </div>
         </div>
-        <div className="flex items-center justify-between gap-1">
-          <p className={cn(
-            "text-xs truncate",
-            unread > 0 ? "text-foreground" : "text-muted-foreground"
-          )}>
-            {preview}
-          </p>
-          {unread > 0 && !isActive && (
-            <span className="flex-shrink-0 h-5 min-w-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center px-1">
-              {unread > 99 ? "99+" : unread}
-            </span>
-          )}
-        </div>
-      </div>
-    </button>
+      </button>
+
+      {/* Pop-out button — visible on hover */}
+      <button
+        type="button"
+        title="Pop out chat"
+        onClick={(e) => { e.stopPropagation(); onPopOut() }}
+        className={cn(
+          "absolute right-2 top-1/2 -translate-y-1/2",
+          "h-6 w-6 flex items-center justify-center rounded-md",
+          "opacity-0 group-hover/row:opacity-100 transition-opacity",
+          "bg-background/80 hover:bg-accent border border-border",
+          "text-muted-foreground hover:text-foreground"
+        )}
+      >
+        <ExternalLink className="h-3 w-3" />
+      </button>
+    </div>
   )
 }
 
