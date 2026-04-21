@@ -101,9 +101,19 @@ export default function ActivitiesPage() {
       {(showForm || editingActivity) && (
         <div className="rounded-xl border border-border bg-card p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold">
-              {editingActivity ? "Edit Activity" : "Log New Activity"}
-            </h2>
+            <div>
+              <h2 className="text-sm font-semibold">
+                {editingActivity ? "Edit Activity" : "Log New Activity"}
+              </h2>
+              {editingActivity?.client_name && (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {editingActivity.client_name}
+                  {editingActivity.activity_date
+                    ? ` · ${new Date(editingActivity.activity_date).toLocaleDateString("en-GB")}`
+                    : ""}
+                </p>
+              )}
+            </div>
             <button
               type="button"
               onClick={() => { setShowForm(false); setEditing(null) }}
@@ -167,7 +177,11 @@ export default function ActivitiesPage() {
           </span>
         </div>
         <ActivityList
-          onEdit={(a) => { setEditing(a); setShowForm(false) }}
+          onEdit={(a) => {
+            setEditing(a)
+            setShowForm(false)
+            window.scrollTo({ top: 0, behavior: "smooth" })
+          }}
           refresh={refresh}
         />
       </div>

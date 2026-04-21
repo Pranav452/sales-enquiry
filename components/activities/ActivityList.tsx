@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Pencil } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   ACTIVITY_TYPE_MAP,
@@ -202,7 +203,7 @@ export function ActivityList({ onEdit, refresh = 0 }: Props) {
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-border">
-              {["Date", "Type", "Client", "Contact", "Mode / Route", "Sales Person", "Branch", "Status", "Reminder", "Notes", "XP"].map((h) => (
+              {["Date", "Type", "Client", "Contact", "Mode / Route", "Sales Person", "Branch", "Status", "Reminder", "Notes", "XP", ""].map((h) => (
                 <th key={h} className="px-3 py-3 text-left font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -210,7 +211,7 @@ export function ActivityList({ onEdit, refresh = 0 }: Props) {
           <tbody>
             {paginated.length === 0 ? (
               <tr>
-                <td colSpan={11} className="px-4 py-8 text-center text-muted-foreground">
+                <td colSpan={12} className="px-4 py-8 text-center text-muted-foreground">
                   No activities found.
                 </td>
               </tr>
@@ -218,7 +219,7 @@ export function ActivityList({ onEdit, refresh = 0 }: Props) {
               paginated.map((r) => (
                 <tr
                   key={r.id}
-                  className="border-b border-border/50 hover:bg-accent transition-colors cursor-pointer"
+                  className="group border-b border-border/50 hover:bg-accent transition-colors cursor-pointer"
                   onClick={() => onEdit?.(r)}
                 >
                   <td className="px-3 py-2.5 whitespace-nowrap text-muted-foreground">
@@ -245,6 +246,20 @@ export function ActivityList({ onEdit, refresh = 0 }: Props) {
                   </td>
                   <td className="px-3 py-2.5 whitespace-nowrap font-semibold text-primary">
                     {r.points != null ? `+${r.points}` : "—"}
+                  </td>
+                  <td className="px-2 py-2.5 whitespace-nowrap">
+                    <button
+                      type="button"
+                      title="Edit activity"
+                      onClick={(e) => { e.stopPropagation(); onEdit?.(r) }}
+                      className={cn(
+                        "h-6 w-6 flex items-center justify-center rounded transition-all",
+                        "opacity-0 group-hover:opacity-100",
+                        "text-muted-foreground hover:text-foreground hover:bg-accent-foreground/10"
+                      )}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
                   </td>
                 </tr>
               ))
