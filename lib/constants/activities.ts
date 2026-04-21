@@ -67,6 +67,7 @@ export interface StatusDef {
 export const ACTIVITY_STATUSES: StatusDef[] = [
   { value: "INTERESTED",      label: "Interested",       color: "bg-blue-100 dark:bg-blue-900/40",   textColor: "text-blue-700 dark:text-blue-300" },
   { value: "FOLLOW_UP",       label: "Follow Up",        color: "bg-amber-100 dark:bg-amber-900/40", textColor: "text-amber-700 dark:text-amber-300" },
+  { value: "Nominated",        label: "Nominated",         color: "bg-indigo-100 dark:bg-indigo-900/40",textColor: "text-indigo-700 dark:text-indigo-300" },
   { value: "SECURED",         label: "Secured",          color: "bg-green-100 dark:bg-green-900/40", textColor: "text-green-700 dark:text-green-300" },
   { value: "CALLBACK",        label: "Callback Requested",color: "bg-orange-100 dark:bg-orange-900/40",textColor: "text-orange-700 dark:text-orange-300" },
   { value: "NOT_INTERESTED",  label: "Not Interested",   color: "bg-red-100 dark:bg-red-900/40",     textColor: "text-red-700 dark:text-red-300" },
