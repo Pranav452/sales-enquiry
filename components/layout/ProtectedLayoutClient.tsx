@@ -3,10 +3,11 @@
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import {
   Anchor,
   BarChart2,
+  Bell,
   ClipboardList,
   FileDown,
   Flame,
@@ -22,9 +23,294 @@ import {
   ScrollText,
   TrendingUp,
   Settings2,
+  X,
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
+import { ACTIVITY_TYPE_MAP } from "@/lib/constants/activities"
+
+// ─── Types ────────────────────────────────────────────────────
+
+interface Reminder {
+  id:            string
+  client_name:   string | null
+  sales_person:  string | null
+  activity_type: string | null
+  activity_date: string | null
+  reminder_date: string | null
+  notes:         string | null
+  status:        string | null
+}
+
+interface ChatRoom {
+  id:           string
+  name:         string | null
+  type:         string
+  unread_count: number
+  last_message: {
+    content:     string
+    created_at:  string
+    sender_name: string | null
+  } | null
+  members: { user_id: string; full_name: string | null }[]
+}
+
+// ─── Notification hook ───────────────────────────────────────
+
+function useNotifications(userId: string) {
+  const [reminders,    setReminders]    = useState<Reminder[]>([])
+  const [chatRooms,    setChatRooms]    = useState<ChatRoom[]>([])
+  const [loading,      setLoading]      = useState(true)
+
+  const fetchAll = useCallback(async () => {
+    try {
+      const [remRes, chatRes] = await Promise.all([
+        fetch("/api/activities/reminders"),
+        fetch("/api/chat/rooms"),
+      ])
+      if (remRes.ok)  setReminders(await remRes.json())
+      if (chatRes.ok) setChatRooms(await chatRes.json())
+    } catch {
+      // silent — notifications are non-critical
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchAll()
+    // Poll every 5 minutes
+    const interval = setInterval(fetchAll, 5 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [fetchAll])
+
+  const unreadRooms  = chatRooms.filter((r) => r.unread_count > 0)
+  const totalUnread  = unreadRooms.reduce((s, r) => s + r.unread_count, 0)
+  const totalCount   = reminders.length + totalUnread
+
+  async function dismissReminder(id: string) {
+    // Optimistic update
+    setReminders((prev) => prev.filter((r) => r.id !== id))
+    await fetch(`/api/activities/reminders?id=${id}`, { method: "PATCH" })
+  }
+
+  return { reminders, unreadRooms, totalCount, loading, dismissReminder, refetch: fetchAll }
+}
+
+// ─── Notification panel ───────────────────────────────────────
+
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime()
+  const mins  = Math.floor(diff / 60000)
+  if (mins < 1)   return "just now"
+  if (mins < 60)  return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24)   return `${hrs}h ago`
+  return `${Math.floor(hrs / 24)}d ago`
+}
+
+function overdueLabel(reminderDate: string): string {
+  const today   = new Date().toISOString().split("T")[0]
+  if (reminderDate === today) return "Today"
+  if (reminderDate < today) {
+    const days = Math.round(
+      (new Date(today).getTime() - new Date(reminderDate).getTime()) / 86400000
+    )
+    return `${days}d overdue`
+  }
+  return new Date(reminderDate + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+}
+
+interface PanelProps {
+  reminders:       Reminder[]
+  unreadRooms:     ChatRoom[]
+  totalCount:      number
+  loading:         boolean
+  userId:          string
+  onDismiss:       (id: string) => void
+  onClose:         () => void
+  onNavigateChat:  () => void
+}
+
+function NotificationPanel({
+  reminders, unreadRooms, totalCount, loading, userId,
+  onDismiss, onClose, onNavigateChat,
+}: PanelProps) {
+  return (
+    <div
+      className={cn(
+        "absolute right-0 top-full mt-2 w-[380px] max-h-[520px] overflow-y-auto z-50",
+        "rounded-xl border border-border bg-card shadow-xl",
+        "animate-in slide-in-from-top-2 fade-in duration-150"
+      )}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border sticky top-0 bg-card z-10">
+        <div className="flex items-center gap-2">
+          <Bell className="h-4 w-4 text-foreground" />
+          <span className="text-sm font-semibold">Notifications</span>
+          {totalCount > 0 && (
+            <span className="text-[11px] font-bold bg-primary text-primary-foreground rounded-full px-1.5 py-0.5 leading-none">
+              {totalCount}
+            </span>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      {loading && (
+        <div className="py-8 text-center text-sm text-muted-foreground">Loading...</div>
+      )}
+
+      {!loading && totalCount === 0 && (
+        <div className="py-10 text-center space-y-1">
+          <p className="text-sm font-medium text-foreground">All caught up</p>
+          <p className="text-xs text-muted-foreground">No pending reminders or unread messages.</p>
+        </div>
+      )}
+
+      {/* ── Reminders section ──────────────────────────── */}
+      {reminders.length > 0 && (
+        <div>
+          <p className="px-4 pt-3 pb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            Reminders ({reminders.length})
+          </p>
+          {reminders.map((r) => {
+            const typeDef = r.activity_type ? ACTIVITY_TYPE_MAP[r.activity_type] : null
+            const today   = new Date().toISOString().split("T")[0]
+            const isOverdue = r.reminder_date ? r.reminder_date < today : false
+            const isToday   = r.reminder_date === today
+
+            return (
+              <div
+                key={r.id}
+                className={cn(
+                  "px-4 py-3 border-b border-border/50 flex items-start gap-3 group",
+                  "hover:bg-accent/50 transition-colors"
+                )}
+              >
+                {/* Status dot */}
+                <div className={cn(
+                  "mt-0.5 h-2 w-2 rounded-full shrink-0",
+                  isOverdue ? "bg-red-500" : isToday ? "bg-amber-500" : "bg-blue-500"
+                )} />
+
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-foreground truncate">
+                    {r.client_name || "Unknown client"}
+                  </p>
+                  <p className={cn(
+                    "text-[11px] font-medium",
+                    isOverdue ? "text-red-600 dark:text-red-400" :
+                    isToday   ? "text-amber-600 dark:text-amber-400" :
+                                "text-muted-foreground"
+                  )}>
+                    {r.reminder_date ? overdueLabel(r.reminder_date) : "No date"}
+                    {typeDef && ` · ${typeDef.label}`}
+                  </p>
+                  {r.notes && (
+                    <p className="text-[11px] text-muted-foreground truncate mt-0.5">{r.notes}</p>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => onDismiss(r.id)}
+                  className={cn(
+                    "text-[10px] font-medium px-2 py-0.5 rounded border shrink-0",
+                    "text-muted-foreground border-border hover:text-foreground hover:border-foreground",
+                    "transition-colors opacity-0 group-hover:opacity-100"
+                  )}
+                >
+                  Dismiss
+                </button>
+              </div>
+            )
+          })}
+          <Link
+            href="/activities"
+            onClick={onClose}
+            className="block px-4 py-2 text-[11px] text-primary hover:underline font-medium"
+          >
+            View all reminders →
+          </Link>
+        </div>
+      )}
+
+      {/* ── Unread messages section ────────────────────── */}
+      {unreadRooms.length > 0 && (
+        <div>
+          <p className="px-4 pt-3 pb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            Unread Messages ({unreadRooms.reduce((s, r) => s + r.unread_count, 0)})
+          </p>
+          {unreadRooms.map((room) => {
+            // For DMs, show the other person's name
+            const otherMember = room.type === "direct"
+              ? room.members.find((m) => m.user_id !== userId)
+              : null
+            const roomName = room.name || otherMember?.full_name || "Direct message"
+            const preview  = room.last_message?.content ?? ""
+
+            return (
+              <button
+                key={room.id}
+                type="button"
+                onClick={() => { onNavigateChat(); onClose() }}
+                className={cn(
+                  "w-full text-left px-4 py-3 border-b border-border/50",
+                  "hover:bg-accent/50 transition-colors flex items-start gap-3"
+                )}
+              >
+                {/* Avatar initial */}
+                <div className="h-7 w-7 rounded-full bg-primary/15 flex items-center justify-center shrink-0 text-[11px] font-bold text-primary">
+                  {roomName.charAt(0).toUpperCase()}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-semibold text-foreground truncate">{roomName}</p>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {room.last_message && (
+                        <span className="text-[10px] text-muted-foreground">
+                          {timeAgo(room.last_message.created_at)}
+                        </span>
+                      )}
+                      <span className="h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center leading-none">
+                        {room.unread_count > 9 ? "9+" : room.unread_count}
+                      </span>
+                    </div>
+                  </div>
+                  {preview && (
+                    <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                      {room.last_message?.sender_name
+                        ? `${room.last_message.sender_name}: ${preview}`
+                        : preview}
+                    </p>
+                  )}
+                </div>
+              </button>
+            )
+          })}
+          <button
+            type="button"
+            onClick={() => { onNavigateChat(); onClose() }}
+            className="block w-full text-left px-4 py-2 text-[11px] text-primary hover:underline font-medium"
+          >
+            Open chat →
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Main layout ──────────────────────────────────────────────
 
 interface Props {
   role: string
@@ -43,12 +329,28 @@ const COMPANY_LABELS: Record<string, string> = {
 
 export function ProtectedLayoutClient({ role, displayName, branch, company, userId, email, children }: Props) {
   const pathname = usePathname()
-  const router = useRouter()
+  const router   = useRouter()
   const supabase = createClient()
   const { theme, setTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
+  const [mounted, setMounted]     = useState(false)
+  const [bellOpen, setBellOpen]   = useState(false)
+  const bellRef = useRef<HTMLDivElement>(null)
+
+  const { reminders, unreadRooms, totalCount, loading, dismissReminder } =
+    useNotifications(userId)
 
   useEffect(() => { setMounted(true) }, [])
+
+  // Close bell dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
+        setBellOpen(false)
+      }
+    }
+    if (bellOpen) document.addEventListener("mousedown", handleClick)
+    return () => document.removeEventListener("mousedown", handleClick)
+  }, [bellOpen])
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -65,7 +367,7 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
   }
 
   const currentTheme = mounted ? (theme ?? "light") : "light"
-  const brandName = COMPANY_LABELS[company] || "Freight CRM"
+  const brandName    = COMPANY_LABELS[company] || "Freight CRM"
 
   const THEMES = [
     { key: "light", icon: Sun,   label: "Light mode" },
@@ -73,22 +375,22 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
     { key: "pink",  icon: Heart, label: "Pink mode"  },
   ]
   const currentThemeIndex = THEMES.findIndex((t) => t.key === currentTheme)
-  const nextTheme = THEMES[(currentThemeIndex + 1) % THEMES.length]
-  const CurrentThemeIcon = THEMES[currentThemeIndex]?.icon ?? Sun
+  const nextTheme         = THEMES[(currentThemeIndex + 1) % THEMES.length]
+  const CurrentThemeIcon  = THEMES[currentThemeIndex]?.icon ?? Sun
 
   const navLinks = [
-    { label: "New Enquiry",       href: "/enquiry",               icon: ClipboardList },
-    { label: "Recent Enquiries",  href: "/enquiries",             icon: List },
-    { label: "Activity Tracker",  href: "/activities",            icon: Phone },
-    { label: "Export",            href: "/export",                icon: FileDown },
-    { label: "Rate Explorer",     href: "/rates",                 icon: TrendingUp },
-    { label: "Chat",              href: "/chat",                  icon: MessageSquare },
+    { label: "New Enquiry",       href: "/enquiry",                icon: ClipboardList },
+    { label: "Recent Enquiries",  href: "/enquiries",              icon: List },
+    { label: "Activity Tracker",  href: "/activities",             icon: Phone },
+    { label: "Export",            href: "/export",                 icon: FileDown },
+    { label: "Rate Explorer",     href: "/rates",                  icon: TrendingUp },
+    { label: "Chat",              href: "/chat",                   icon: MessageSquare },
     ...(role === "admin"
       ? [
-          { label: "Dashboard",          href: "/dashboard",          icon: LayoutDashboard },
-          { label: "Activity Dashboard", href: "/activities/dashboard",icon: BarChart2 },
-          { label: "Audit Log",          href: "/audit",              icon: ScrollText },
-          { label: "Manage Rates",       href: "/rates/manage",       icon: Settings2 },
+          { label: "Dashboard",          href: "/dashboard",           icon: LayoutDashboard },
+          { label: "Activity Dashboard", href: "/activities/dashboard", icon: BarChart2 },
+          { label: "Audit Log",          href: "/audit",               icon: ScrollText },
+          { label: "Manage Rates",       href: "/rates/manage",        icon: Settings2 },
         ]
       : []),
     ...(email === "sales2.bom@manilal.com"
@@ -141,6 +443,45 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
             ))}
           </div>
         )}
+
+        {/* ── Bell notification button ────────────────────── */}
+        <div ref={bellRef} className="relative flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => setBellOpen((v) => !v)}
+            className={cn(
+              "relative flex items-center justify-center h-8 w-8 rounded-lg transition-colors",
+              bellOpen
+                ? "bg-white/20 text-white"
+                : "text-white/70 hover:text-white hover:bg-white/10"
+            )}
+            aria-label="Notifications"
+          >
+            <Bell className="h-4 w-4" />
+            {totalCount > 0 && (
+              <span className={cn(
+                "absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1",
+                "rounded-full bg-red-500 text-white text-[10px] font-bold",
+                "flex items-center justify-center leading-none"
+              )}>
+                {totalCount > 99 ? "99+" : totalCount}
+              </span>
+            )}
+          </button>
+
+          {bellOpen && (
+            <NotificationPanel
+              reminders={reminders}
+              unreadRooms={unreadRooms}
+              totalCount={totalCount}
+              loading={loading}
+              userId={userId}
+              onDismiss={dismissReminder}
+              onClose={() => setBellOpen(false)}
+              onNavigateChat={() => router.push("/chat")}
+            />
+          )}
+        </div>
 
         {/* User info + Logout */}
         <div className="flex items-center gap-2.5 flex-shrink-0">

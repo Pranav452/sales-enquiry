@@ -41,3 +41,37 @@ ELSE
 BEGIN
   PRINT 'TBL_CALLS_VISITS already exists — skipping.'
 END
+
+-- ============================================================
+-- Migration: Add reminder columns (safe to run multiple times)
+-- Run on BOTH manilal and LinksDB20 databases
+-- ============================================================
+
+IF NOT EXISTS (
+  SELECT * FROM sys.columns
+  WHERE object_id = OBJECT_ID('dbo.TBL_CALLS_VISITS') AND name = 'REMINDER_DATE'
+)
+BEGIN
+  ALTER TABLE [dbo].[TBL_CALLS_VISITS]
+    ADD REMINDER_DATE VARCHAR(10) NULL        -- YYYY-MM-DD — date to follow up
+  PRINT 'Added REMINDER_DATE column.'
+END
+
+IF NOT EXISTS (
+  SELECT * FROM sys.columns
+  WHERE object_id = OBJECT_ID('dbo.TBL_CALLS_VISITS') AND name = 'REMINDER_DONE'
+)
+BEGIN
+  ALTER TABLE [dbo].[TBL_CALLS_VISITS]
+    ADD REMINDER_DONE BIT NOT NULL DEFAULT 0  -- 0 = pending, 1 = dismissed
+  PRINT 'Added REMINDER_DONE column.'
+END
+
+IF NOT EXISTS (
+  SELECT * FROM sys.indexes
+  WHERE object_id = OBJECT_ID('dbo.TBL_CALLS_VISITS') AND name = 'IX_CV_REMINDER'
+)
+BEGIN
+  CREATE INDEX IX_CV_REMINDER ON [dbo].[TBL_CALLS_VISITS] (REMINDER_DATE, REMINDER_DONE)
+  PRINT 'Created IX_CV_REMINDER index.'
+END

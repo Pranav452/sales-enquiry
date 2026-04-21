@@ -28,6 +28,8 @@ export interface Activity {
   status:          string | null
   notes:           string | null
   points:          number | null
+  reminder_date:   string | null
+  reminder_done:   boolean | number | null
   created_at:      string | null
 }
 
@@ -55,6 +57,36 @@ function StatusBadge({ status }: { status: string | null }) {
   return (
     <span className={cn("inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium", def.color, def.textColor)}>
       {def.label}
+    </span>
+  )
+}
+
+function ReminderCell({ date, done }: { date: string | null; done: boolean }) {
+  if (!date) return <span className="text-muted-foreground text-xs">—</span>
+
+  const today    = new Date().toISOString().split("T")[0]
+  const isOverdue = !done && date < today
+  const isToday   = !done && date === today
+
+  if (done) {
+    return (
+      <span className="text-xs text-muted-foreground line-through">
+        {new Date(date + "T00:00:00").toLocaleDateString("en-GB")}
+      </span>
+    )
+  }
+  return (
+    <span className={cn(
+      "inline-flex items-center gap-1 text-xs font-medium",
+      isOverdue ? "text-red-600 dark:text-red-400" :
+      isToday   ? "text-amber-600 dark:text-amber-400" :
+                  "text-foreground"
+    )}>
+      {isOverdue && <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />}
+      {isToday   && <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />}
+      {new Date(date + "T00:00:00").toLocaleDateString("en-GB")}
+      {isOverdue && <span className="text-[10px] opacity-80">overdue</span>}
+      {isToday   && <span className="text-[10px] opacity-80">today</span>}
     </span>
   )
 }
@@ -170,7 +202,7 @@ export function ActivityList({ onEdit, refresh = 0 }: Props) {
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-border">
-              {["Date", "Type", "Client", "Contact", "Mode / Route", "Sales Person", "Branch", "Status", "Notes", "XP"].map((h) => (
+              {["Date", "Type", "Client", "Contact", "Mode / Route", "Sales Person", "Branch", "Status", "Reminder", "Notes", "XP"].map((h) => (
                 <th key={h} className="px-3 py-3 text-left font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -178,7 +210,7 @@ export function ActivityList({ onEdit, refresh = 0 }: Props) {
           <tbody>
             {paginated.length === 0 ? (
               <tr>
-                <td colSpan={10} className="px-4 py-8 text-center text-muted-foreground">
+                <td colSpan={11} className="px-4 py-8 text-center text-muted-foreground">
                   No activities found.
                 </td>
               </tr>
@@ -204,6 +236,9 @@ export function ActivityList({ onEdit, refresh = 0 }: Props) {
                   <td className="px-3 py-2.5 whitespace-nowrap text-muted-foreground">{r.branch || "—"}</td>
                   <td className="px-3 py-2.5 whitespace-nowrap">
                     <StatusBadge status={r.status} />
+                  </td>
+                  <td className="px-3 py-2.5 whitespace-nowrap">
+                    <ReminderCell date={r.reminder_date} done={!!r.reminder_done} />
                   </td>
                   <td className="px-3 py-2.5 max-w-[200px] whitespace-normal break-words text-muted-foreground">
                     {r.notes || "—"}

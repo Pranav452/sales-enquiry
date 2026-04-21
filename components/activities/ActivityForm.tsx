@@ -15,14 +15,14 @@ import { BRANCHES, MANILAL_SALES_PERSONS, LINKS_SALES_PERSONS } from "@/lib/cons
 
 const ALL_SALES_PERSONS = [...LINKS_SALES_PERSONS, ...MANILAL_SALES_PERSONS].sort()
 
+const CALL_TYPES = new Set(["COLD_CALL", "WARM_CALL"])
+
 interface Props {
-  /** If provided, the form pre-fills for editing */
-  editingId?: string | null
-  /** Pre-filled from user profile */
-  defaultSalesPerson?: string
-  defaultBranch?: string
-  onSuccess?: (id: string, points: number, isEdit: boolean) => void
-  onCancel?: () => void
+  editingId?:           string | null
+  defaultSalesPerson?:  string
+  defaultBranch?:       string
+  onSuccess?:           (id: string, points: number, isEdit: boolean) => void
+  onCancel?:            () => void
 }
 
 interface FormState {
@@ -40,6 +40,8 @@ interface FormState {
   commodity:       string
   status:          string
   notes:           string
+  reminder_date:   string
+  reminder_done:   boolean
 }
 
 function today() {
@@ -99,10 +101,15 @@ export function ActivityForm({ editingId, defaultSalesPerson, defaultBranch, onS
     commodity:      "",
     status:         "",
     notes:          "",
+    reminder_date:  "",
+    reminder_done:  false,
   })
-  const [saving, setSaving]   = useState(false)
-  const [error,  setError]    = useState<string | null>(null)
+  const [saving, setSaving]           = useState(false)
+  const [error,  setError]            = useState<string | null>(null)
   const [loadingEdit, setLoadingEdit] = useState(false)
+
+  const isCall         = CALL_TYPES.has(form.activity_type)
+  const reminderMissing = isCall && !form.reminder_date
 
   // Load existing record for edit
   useEffect(() => {
@@ -126,28 +133,33 @@ export function ActivityForm({ editingId, defaultSalesPerson, defaultBranch, onS
           commodity:      data.commodity      ?? "",
           status:         data.status         ?? "",
           notes:          data.notes          ?? "",
+          reminder_date:  data.reminder_date  ?? "",
+          reminder_done:  !!data.reminder_done,
         })
       })
       .catch(() => setError("Failed to load activity"))
       .finally(() => setLoadingEdit(false))
   }, [editingId, defaultSalesPerson, defaultBranch])
 
-  function set(field: keyof FormState, value: string) {
+  function set<K extends keyof FormState>(field: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [field]: value }))
+    // Clear reminder_date when switching away from call types
+    if (field === "activity_type" && !CALL_TYPES.has(value as string)) {
+      setForm((prev) => ({ ...prev, [field]: value, reminder_date: "" }))
+    }
   }
 
-  const previewPoints = form.activity_type
-    ? getActivityPoints(form.activity_type)
-    : null
-
-  const typeDef = form.activity_type
-    ? ACTIVITY_TYPE_MAP[form.activity_type]
-    : null
+  const previewPoints = form.activity_type ? getActivityPoints(form.activity_type) : null
+  const typeDef       = form.activity_type ? ACTIVITY_TYPE_MAP[form.activity_type] : null
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!form.activity_type || !form.activity_date) {
       setError("Date and Activity Type are required.")
+      return
+    }
+    if (reminderMissing) {
+      setError("Reminder Call Date is required for call activities.")
       return
     }
     setSaving(true)
@@ -156,11 +168,16 @@ export function ActivityForm({ editingId, defaultSalesPerson, defaultBranch, onS
     const url    = editingId ? `/api/activities/${editingId}` : "/api/activities"
     const method = editingId ? "PATCH" : "POST"
 
+    const payload = {
+      ...form,
+      reminder_date: form.reminder_date || null,
+    }
+
     try {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? "Save failed")
@@ -254,6 +271,58 @@ export function ActivityForm({ editingId, defaultSalesPerson, defaultBranch, onS
           required
         />
       </div>
+
+      {/* ── Reminder Call Date (mandatory for calls) ────── */}
+      {isCall && (
+        <div className={cn(
+          "rounded-lg border px-4 py-3 space-y-2 transition-colors",
+          reminderMissing
+            ? "border-red-300 bg-red-50/50 dark:border-red-800 dark:bg-red-950/20"
+            : "border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20"
+        )}>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-amber-700 dark:text-amber-400">
+              Reminder Required
+            </span>
+            {editingId && (
+              <label className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.reminder_done}
+                  onChange={(e) => set("reminder_done", e.target.checked)}
+                  className="h-3.5 w-3.5 rounded"
+                />
+                Mark reminder done
+              </label>
+            )}
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs">
+              Reminder Call Date<span className="text-red-500 ml-0.5">*</span>
+            </Label>
+            <Input
+              type="date"
+              value={form.reminder_date}
+              onChange={(e) => set("reminder_date", e.target.value)}
+              min={today()}
+              className={cn(
+                "h-9 text-sm max-w-xs",
+                reminderMissing && "border-red-400 focus-visible:ring-red-400"
+              )}
+            />
+            {reminderMissing && (
+              <p className="text-xs text-red-600 dark:text-red-400">
+                Set a date to follow up with this client — required for all calls.
+              </p>
+            )}
+            {!reminderMissing && form.reminder_date && (
+              <p className="text-xs text-amber-700 dark:text-amber-400">
+                You will be reminded on {new Date(form.reminder_date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Client details ──────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -360,7 +429,7 @@ export function ActivityForm({ editingId, defaultSalesPerson, defaultBranch, onS
             Cancel
           </Button>
         )}
-        <Button type="submit" size="sm" disabled={saving}>
+        <Button type="submit" size="sm" disabled={saving || (isCall && reminderMissing)}>
           {saving
             ? editingId ? "Saving..." : "Logging..."
             : editingId ? "Save Changes" : `Log Activity ${previewPoints != null ? `(+${previewPoints} XP)` : ""}`

@@ -107,6 +107,8 @@ export async function PATCH(
     if (body.status        !== undefined) { request.input("status",         trunc(body.status,         25)); sets.push("STATUS = @status") }
     if (body.notes         !== undefined) { request.input("notes",          trunc(body.notes,          500));sets.push("NOTES = @notes") }
     if (points !== undefined)             { request.input("points",         points);                         sets.push("POINTS = @points") }
+    if (body.reminder_date !== undefined) { request.input("reminder_date",  trunc(body.reminder_date,  10)); sets.push("REMINDER_DATE = @reminder_date") }
+    if (body.reminder_done !== undefined) { request.input("reminder_done",  body.reminder_done ? 1 : 0);    sets.push("REMINDER_DONE = @reminder_done") }
 
     const ownerClause = auth.role !== "admin" ? " AND CREATED_BY = @created_by" : ""
 
@@ -145,4 +147,6 @@ interface ActivityPayload {
   commodity?:       string | null
   status?:          string | null
   notes?:           string | null
+  reminder_date?:   string | null
+  reminder_done?:   boolean
 }

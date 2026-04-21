@@ -20,6 +20,8 @@ const SELECT_COLS = `
   STATUS                   AS status,
   NOTES                    AS notes,
   POINTS                   AS points,
+  REMINDER_DATE            AS reminder_date,
+  REMINDER_DONE            AS reminder_done,
   CREATED_BY               AS created_by,
   CONVERT(varchar(10), CREATED_AT, 120) AS created_at
 `
@@ -73,6 +75,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "activity_date is required" }, { status: 400 })
   }
 
+  // Reminder date is mandatory for call types
+  const isCall = body.activity_type === "COLD_CALL" || body.activity_type === "WARM_CALL"
+  if (isCall && !body.reminder_date) {
+    return NextResponse.json({ error: "reminder_date is required for call activities" }, { status: 400 })
+  }
+
   const points = getActivityPoints(body.activity_type)
   const now    = new Date()
 
@@ -95,6 +103,7 @@ export async function POST(req: NextRequest) {
       .input("status",         trunc(body.status,         25))
       .input("notes",          trunc(body.notes,          500))
       .input("points",         points)
+      .input("reminder_date",  trunc(body.reminder_date,  10) ?? null)
       .input("created_by",     auth.userId)
       .input("now",            now)
       .query<{ ID: number }>(`
@@ -102,14 +111,16 @@ export async function POST(req: NextRequest) {
           ACTIVITY_DATE, ACTIVITY_TYPE, SALES_PERSON, BRANCH,
           CLIENT_NAME, CONTACT_PERSON, CONTACT_NUMBER, EMAIL,
           MODE, POL, POD, COMMODITY, STATUS, NOTES,
-          POINTS, CREATED_BY, CREATED_AT, UPDATED_AT
+          POINTS, REMINDER_DATE, REMINDER_DONE,
+          CREATED_BY, CREATED_AT, UPDATED_AT
         )
         OUTPUT inserted.ID
         VALUES (
           @activity_date, @activity_type, @sales_person, @branch,
           @client_name, @contact_person, @contact_number, @email,
           @mode, @pol, @pod, @commodity, @status, @notes,
-          @points, @created_by, @now, @now
+          @points, @reminder_date, 0,
+          @created_by, @now, @now
         )
       `)
 
@@ -143,4 +154,5 @@ interface ActivityPayload {
   commodity?:       string | null
   status?:          string | null
   notes?:           string | null
+  reminder_date?:   string | null
 }
