@@ -28,6 +28,9 @@ import {
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 import { ACTIVITY_TYPE_MAP } from "@/lib/constants/activities"
+import { useChatDock } from "@/lib/store/chatDock"
+import { useChatGlobalRealtime } from "@/components/chat/useChatGlobalRealtime"
+import { ChatDock } from "@/components/chat/ChatDock"
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -122,19 +125,19 @@ function overdueLabel(reminderDate: string): string {
 }
 
 interface PanelProps {
-  reminders:       Reminder[]
-  unreadRooms:     ChatRoom[]
-  totalCount:      number
-  loading:         boolean
-  userId:          string
-  onDismiss:       (id: string) => void
-  onClose:         () => void
-  onNavigateChat:  () => void
+  reminders:    Reminder[]
+  unreadRooms:  ChatRoom[]
+  totalCount:   number
+  loading:      boolean
+  userId:       string
+  onDismiss:    (id: string) => void
+  onClose:      () => void
+  onOpenChat:   (roomId: string) => void  // opens room in dock panel
 }
 
 function NotificationPanel({
   reminders, unreadRooms, totalCount, loading, userId,
-  onDismiss, onClose, onNavigateChat,
+  onDismiss, onClose, onOpenChat,
 }: PanelProps) {
   return (
     <div
@@ -261,7 +264,7 @@ function NotificationPanel({
               <button
                 key={room.id}
                 type="button"
-                onClick={() => { onNavigateChat(); onClose() }}
+                onClick={() => { onOpenChat(room.id); onClose() }}
                 className={cn(
                   "w-full text-left px-4 py-3 border-b border-border/50",
                   "hover:bg-accent/50 transition-colors flex items-start gap-3"
@@ -297,13 +300,13 @@ function NotificationPanel({
               </button>
             )
           })}
-          <button
-            type="button"
-            onClick={() => { onNavigateChat(); onClose() }}
-            className="block w-full text-left px-4 py-2 text-[11px] text-primary hover:underline font-medium"
+          <Link
+            href="/chat"
+            onClick={onClose}
+            className="block px-4 py-2 text-[11px] text-primary hover:underline font-medium"
           >
-            Open chat →
-          </button>
+            Open full chat →
+          </Link>
         </div>
       )}
     </div>
@@ -338,6 +341,11 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
 
   const { reminders, unreadRooms, totalCount, loading, dismissReminder } =
     useNotifications(userId)
+
+  // ── Chat dock: global realtime subscription ─────────────────
+  const { items: dockItems, openChat } = useChatDock()
+  const activeRoomIds = dockItems.filter((i) => !i.minimized).map((i) => i.roomId)
+  useChatGlobalRealtime(activeRoomIds)
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -478,7 +486,7 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
               userId={userId}
               onDismiss={dismissReminder}
               onClose={() => setBellOpen(false)}
-              onNavigateChat={() => router.push("/chat")}
+              onOpenChat={(roomId) => { openChat(roomId); setBellOpen(false) }}
             />
           )}
         </div>
@@ -587,6 +595,9 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
         </main>
 
       </div>
+
+      {/* ── Global chat dock — persists across all pages ────── */}
+      <ChatDock />
     </div>
   )
 }

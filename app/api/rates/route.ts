@@ -51,6 +51,18 @@ export async function GET(req: NextRequest) {
 
   try {
     const pool    = await getPool("manilal")
+
+    // ── Hard-delete expired rates (fire-and-forget) ───────────
+    // Rates where VALID_TO is set and is before today are deleted from the DB entirely.
+    // Wrapped in try/catch so a cleanup failure never blocks the main query.
+    try {
+      await pool.request().query(`
+        DELETE FROM [dbo].[FREIGHT_RATES]
+        WHERE VALID_TO IS NOT NULL
+          AND VALID_TO < CONVERT(date, GETDATE())
+      `)
+    } catch { /* non-critical — proceed with read */ }
+
     const request = pool.request()
 
     if (admin) {
@@ -75,7 +87,8 @@ export async function GET(req: NextRequest) {
       }
 
       const extraWhere = likeClauses.length ? " AND " + likeClauses.join(" AND ") : ""
-      const baseWhere  = `WHERE IS_ACTIVE = 1${extraWhere}`
+      const baseWhere  = `WHERE IS_ACTIVE = 1
+        AND (VALID_TO IS NULL OR VALID_TO >= CONVERT(date, GETDATE()))${extraWhere}`
 
       // MSSQL 2008 R2: ROW_NUMBER() pattern (no OFFSET/FETCH support)
       // offset and limit are validated integers — safe to inline
@@ -130,6 +143,7 @@ export async function GET(req: NextRequest) {
         SELECT ${SELECT_COLS}
         FROM [dbo].[FREIGHT_RATES]
         WHERE ORIGIN_COUNTRY = @origin AND DEST_COUNTRY = @dest AND IS_ACTIVE = 1
+          AND (VALID_TO IS NULL OR VALID_TO >= CONVERT(date, GETDATE()))
         ${extraWhere}
         ORDER BY VALID_TO DESC, SHIPPING_LINE ASC
       `)

@@ -16,13 +16,17 @@ import { createClient } from "@/lib/supabase/client"
 import { chatKeys } from "@/lib/hooks/useChat"
 import type { ChatMessage, ChatRoom, ChatUser } from "@/lib/types/chat"
 
-export function useChatGlobalRealtime(activeRoomId: string | null) {
-  const qc            = useQueryClient()
+/**
+ * activeRoomIds — array of room IDs currently open and NOT minimized.
+ * Messages arriving in these rooms won't increment the unread counter.
+ */
+export function useChatGlobalRealtime(activeRoomIds: string[]) {
+  const qc               = useQueryClient()
   // Stable Supabase client — created ONCE for the lifetime of this hook
-  const supabaseRef   = useRef(createClient())
-  // Always-current active room without recreating the subscription
-  const activeRoomRef = useRef(activeRoomId)
-  useEffect(() => { activeRoomRef.current = activeRoomId }, [activeRoomId])
+  const supabaseRef      = useRef(createClient())
+  // Always-current active rooms without recreating the subscription
+  const activeRoomIdsRef = useRef(activeRoomIds)
+  useEffect(() => { activeRoomIdsRef.current = activeRoomIds }, [activeRoomIds])
 
   useEffect(() => {
     const supabase = supabaseRef.current
@@ -34,17 +38,18 @@ export function useChatGlobalRealtime(activeRoomId: string | null) {
         // No room filter here — RLS ensures we only receive rows we can SELECT
         { event: "INSERT", schema: "public", table: "chat_messages" },
         (payload) => {
-          const newMsg        = payload.new as ChatMessage
-          const currentRoomId = activeRoomRef.current
+          const newMsg         = payload.new as ChatMessage
+          const currentRoomIds = activeRoomIdsRef.current
 
           // Look up sender name from the already-cached users list (zero extra fetch)
           const users      = qc.getQueryData<ChatUser[]>(chatKeys.users())
           const senderName = users?.find((u) => u.id === newMsg.sender_id)?.full_name ?? undefined
           const msgWithName: ChatMessage = { ...newMsg, sender_name: senderName }
 
-          // ── 1. Inject into the open room's message list ──────────────────
-          if (currentRoomId && newMsg.room_id === currentRoomId) {
-            qc.setQueryData(chatKeys.messages(currentRoomId), (old: unknown) => {
+          // ── 1. Inject into any open (non-minimized) room's message list ──
+          const isInActiveRoom = currentRoomIds.includes(newMsg.room_id)
+          if (isInActiveRoom) {
+            qc.setQueryData(chatKeys.messages(newMsg.room_id), (old: unknown) => {
               const data = old as
                 | { pages: { messages: ChatMessage[]; nextCursor: string | null }[]; pageParams: unknown[] }
                 | undefined
@@ -89,7 +94,7 @@ export function useChatGlobalRealtime(activeRoomId: string | null) {
               return rooms
             }
 
-            const isActiveRoom = newMsg.room_id === currentRoomId
+            const isActiveRoom = currentRoomIds.includes(newMsg.room_id)
 
             const updated = rooms.map((room) => {
               if (room.id !== newMsg.room_id) return room

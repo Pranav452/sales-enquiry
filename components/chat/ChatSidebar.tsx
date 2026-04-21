@@ -5,6 +5,7 @@ import { Users, Plus, MessageSquare } from "lucide-react"
 import { useUsers, useRooms, useCreateRoom } from "@/lib/hooks/useChat"
 import { useCurrentUser } from "@/lib/hooks/useCurrentUser"
 import { GroupChatModal } from "@/components/chat/GroupChatModal"
+import { useChatDock } from "@/lib/store/chatDock"
 import { cn } from "@/lib/utils"
 import type { ChatRoom, ChatUser } from "@/lib/types/chat"
 
@@ -18,13 +19,11 @@ function relativeTime(iso: string): string {
   return `${Math.floor(hr / 24)}d`
 }
 
-interface Props {
-  selectedRoomId: string | null
-  onSelectRoom: (roomId: string) => void
-}
-
-export function ChatSidebar({ selectedRoomId, onSelectRoom }: Props) {
+export function ChatSidebar() {
   const [groupModalOpen, setGroupModalOpen] = useState(false)
+
+  const { items, openChat } = useChatDock()
+  const activeRoomIds       = items.filter((i) => !i.minimized).map((i) => i.roomId)
 
   const currentUser                          = useCurrentUser()
   const { data: allUsers = [], isLoading: usersLoading } = useUsers()
@@ -52,10 +51,10 @@ export function ChatSidebar({ selectedRoomId, onSelectRoom }: Props) {
     const existing = rooms.find(
       (r) => r.type === "direct" && r.members?.some((m) => m.user_id === user.id)
     )
-    if (existing) { onSelectRoom(existing.id); return }
+    if (existing) { openChat(existing.id); return }
     try {
       const room = await createRoom.mutateAsync({ type: "direct", member_ids: [user.id] })
-      onSelectRoom(room.id)
+      openChat(room.id)
     } catch (err) {
       console.error("[ChatSidebar] create DM:", err)
     }
@@ -96,8 +95,8 @@ export function ChatSidebar({ selectedRoomId, onSelectRoom }: Props) {
                     key={room.id}
                     room={room}
                     currentUserId={currentUser?.id ?? null}
-                    isActive={selectedRoomId === room.id}
-                    onClick={() => onSelectRoom(room.id)}
+                    isActive={activeRoomIds.includes(room.id)}
+                    onClick={() => openChat(room.id)}
                   />
                 ))
               )}
@@ -134,7 +133,7 @@ export function ChatSidebar({ selectedRoomId, onSelectRoom }: Props) {
       <GroupChatModal
         open={groupModalOpen}
         onOpenChange={setGroupModalOpen}
-        onCreated={(room) => { setGroupModalOpen(false); onSelectRoom(room.id) }}
+        onCreated={(room) => { setGroupModalOpen(false); openChat(room.id) }}
       />
     </>
   )
