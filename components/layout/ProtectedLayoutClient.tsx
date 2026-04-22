@@ -11,6 +11,7 @@ import {
   ClipboardList,
   FileDown,
   Flame,
+  Home,
   LayoutDashboard,
   List,
   LogOut,
@@ -387,6 +388,7 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
   const CurrentThemeIcon  = THEMES[currentThemeIndex]?.icon ?? Sun
 
   const navLinks = [
+    { label: "Home",              href: "/home",                   icon: Home },
     { label: "New Enquiry",       href: "/enquiry",                icon: ClipboardList },
     { label: "Recent Enquiries",  href: "/enquiries",              icon: List },
     { label: "Activity Tracker",  href: "/activities",             icon: Phone },
@@ -530,13 +532,15 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
           {/* Nav links */}
           {navLinks.map(({ label, href, icon: Icon }) => {
             const isActive =
-              href === "/enquiry"
-                ? pathname === "/enquiry" || pathname.startsWith("/enquiry?")
-                : href === "/rates"
-                  ? pathname === "/rates"
-                  : href === "/activities"
-                    ? pathname === "/activities"
-                    : pathname.startsWith(href)
+              href === "/home"
+                ? pathname === "/home"
+                : href === "/enquiry"
+                  ? pathname === "/enquiry" || pathname.startsWith("/enquiry?")
+                  : href === "/rates"
+                    ? pathname === "/rates"
+                    : href === "/activities"
+                      ? pathname === "/activities"
+                      : pathname.startsWith(href)
 
             return (
               <Link

@@ -38,10 +38,17 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Logged-in users don't need /login
+  // Logged-in users don't need /login; redirect to home dashboard
   if (user && pathname === "/login") {
     const url = request.nextUrl.clone()
-    url.pathname = "/enquiry"
+    url.pathname = "/home"
+    return NextResponse.redirect(url)
+  }
+
+  // Redirect bare root to /home
+  if (user && pathname === "/") {
+    const url = request.nextUrl.clone()
+    url.pathname = "/home"
     return NextResponse.redirect(url)
   }
 
