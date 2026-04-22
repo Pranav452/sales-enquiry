@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { getPool } from "@/lib/mssql/client"
 import { transporter } from "@/lib/email/mailer"
+import { getAuthContext } from "@/lib/api-auth"
 
 // ─── Types ────────────────────────────────────────────────────
 interface ReminderRow {
@@ -366,4 +367,22 @@ export async function GET(req: NextRequest) {
     total: all.length,
     emails: results,
   })
+}
+
+// ─── POST /api/cron/reminders ─────────────────────────────────
+// Manual trigger — admin only, no cron secret needed.
+// Returns full result so admins can verify emails were sent.
+export async function POST() {
+  const auth = await getAuthContext()
+  if (!auth)               return NextResponse.json({ error: "Unauthorized" },  { status: 401 })
+  if (auth.role !== "admin") return NextResponse.json({ error: "Admin only" }, { status: 403 })
+
+  // Re-use the same logic as the cron GET — create a synthetic request with no auth header
+  // so the secret check is bypassed (admin session is the gate here).
+  const syntheticReq = new NextRequest("http://localhost/api/cron/reminders", {
+    headers: process.env.CRON_SECRET
+      ? { authorization: `Bearer ${process.env.CRON_SECRET}` }
+      : {},
+  })
+  return GET(syntheticReq)
 }

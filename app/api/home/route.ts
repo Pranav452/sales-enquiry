@@ -58,8 +58,8 @@ export async function GET() {
     const enqStatsResult = await enqReq.query(`
       SELECT
         COUNT(*) AS total,
-        SUM(CASE WHEN STATUS IN ('INPROGRESS','PENDING','SUBMITTED') THEN 1 ELSE 0 END) AS in_progress,
-        SUM(CASE WHEN STATUS = 'WON' AND ENQRECPTDT >= @first_of_month               THEN 1 ELSE 0 END) AS won_month
+        SUM(CASE WHEN STATUS IN ('FOLLOW UP','NO FEEDBACK','PENDING','QUOTED') THEN 1 ELSE 0 END) AS in_progress,
+        SUM(CASE WHEN STATUS = 'WIN' AND ENQRECPTDT >= @first_of_month         THEN 1 ELSE 0 END) AS won_month
       FROM [dbo].[TBL_ADMIN_SALESENQUIRY]
       ${enqOwnerClause}
     `)
@@ -77,10 +77,10 @@ export async function GET() {
         SALESPERSON                 AS sales_person,
         MODE                        AS mode,
         STATUS                      AS status,
-        CONVERT(varchar(19), CREATED_AT, 120) AS created_at
+        CONVERT(varchar(19), MAKERDT, 120) AS created_at
       FROM [dbo].[TBL_ADMIN_SALESENQUIRY]
       ${enqOwnerClause}
-      ORDER BY CREATED_AT DESC
+      ORDER BY MAKERDT DESC
     `)
 
     // ── 3. Activity personal stats ───────────────────────────────

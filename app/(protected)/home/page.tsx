@@ -122,11 +122,12 @@ function overdueLabel(d: string): { text: string; urgent: boolean } {
 
 function statusBadge(status: string | null) {
   const map: Record<string, string> = {
-    WON:        "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
-    LOST:       "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-    INPROGRESS: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-    PENDING:    "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-    SUBMITTED:  "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+    "WIN":         "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+    "LOSE":        "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+    "PENDING":     "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+    "QUOTED":      "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+    "FOLLOW UP":   "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400",
+    "NO FEEDBACK": "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
   }
   const key = (status ?? "").toUpperCase()
   return (
@@ -256,12 +257,16 @@ export default function HomePage() {
   const router = useRouter()
   const { openChat } = useChatDock()
 
-  const [displayName, setDisplayName] = useState("")
-  const [userId,      setUserId]      = useState("")
-  const [data,        setData]        = useState<HomeData | null>(null)
-  const [chatRooms,   setChatRooms]   = useState<ChatRoom[]>([])
-  const [loading,     setLoading]     = useState(true)
-  const [dismissing,  setDismissing]  = useState<Set<string>>(new Set())
+  const [displayName,   setDisplayName]   = useState("")
+  const [userId,        setUserId]        = useState("")
+  const [userRole,      setUserRole]      = useState("")
+  const [data,          setData]          = useState<HomeData | null>(null)
+  const [chatRooms,     setChatRooms]     = useState<ChatRoom[]>([])
+  const [loading,       setLoading]       = useState(true)
+  const [dismissing,    setDismissing]    = useState<Set<string>>(new Set())
+  const [testEmailSent, setTestEmailSent] = useState(false)
+  const [testEmailBusy, setTestEmailBusy] = useState(false)
+  const [testEmailResult, setTestEmailResult] = useState<string | null>(null)
 
   // ── Load user info + home data ───────────────────────────────
   useEffect(() => {
@@ -270,11 +275,12 @@ export default function HomePage() {
       if (!user) return
       const { data: profile } = await supabase
         .from("user_profiles")
-        .select("full_name, role")
+        .select("full_name, role, salesperson")
         .eq("id", user.id)
         .single()
       setDisplayName(profile?.full_name ?? user.email ?? "")
       setUserId(user.id)
+      setUserRole(profile?.role ?? "")
     })
   }, [])
 
@@ -292,6 +298,29 @@ export default function HomePage() {
   }, [])
 
   useEffect(() => { fetchData() }, [fetchData])
+
+  async function triggerTestEmail() {
+    setTestEmailBusy(true)
+    setTestEmailResult(null)
+    try {
+      const res  = await fetch("/api/cron/reminders", { method: "POST" })
+      const json = await res.json()
+      if (!res.ok) {
+        setTestEmailResult(`Error: ${json.error ?? "Unknown"}`)
+      } else if (!json.sent) {
+        setTestEmailResult("No reminders due today — no emails sent.")
+      } else {
+        const ok    = json.emails.filter((e: { ok: boolean }) => e.ok).length
+        const total = json.emails.length
+        setTestEmailResult(`Sent! ${ok}/${total} emails delivered (${json.total} reminders).`)
+        setTestEmailSent(true)
+      }
+    } catch {
+      setTestEmailResult("Network error — check console.")
+    } finally {
+      setTestEmailBusy(false)
+    }
+  }
 
   async function dismissReminder(id: string) {
     setDismissing((prev) => new Set(prev).add(id))
@@ -368,6 +397,32 @@ export default function HomePage() {
           <span className="hidden sm:inline">New Enquiry</span>
         </Link>
       </div>
+
+      {/* ── Admin: test email trigger ─────────────────────────── */}
+      {userRole === "admin" && (
+        <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-foreground">Daily Reminder Emails</p>
+            <p className="text-[11px] text-muted-foreground">
+              {testEmailResult ?? "Send today's reminder digest to all users right now (normally runs at 9 AM IST)."}
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={testEmailBusy}
+            onClick={triggerTestEmail}
+            className={cn(
+              "shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors",
+              testEmailSent
+                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                : "bg-primary text-primary-foreground hover:opacity-90",
+              testEmailBusy && "opacity-60 cursor-not-allowed"
+            )}
+          >
+            {testEmailBusy ? "Sending…" : testEmailSent ? "Sent ✓" : "Send Now"}
+          </button>
+        </div>
+      )}
 
       {/* ── Reminders banner ─────────────────────────────────── */}
       {data && data.reminders.length > 0 && (
@@ -466,7 +521,7 @@ export default function HomePage() {
           icon={TrendingUp}
           label="Won this month"
           value={enqStats?.won_month ?? 0}
-          sub="enquiries"
+          sub={enqStats?.in_progress ? `${enqStats.in_progress} active` : "enquiries"}
           href="/enquiries"
           iconClass="bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
         />
