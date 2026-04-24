@@ -21,6 +21,7 @@ interface Props {
   editingId?:           string | null
   defaultSalesPerson?:  string
   defaultBranch?:       string
+  defaultValues?:       Partial<FormState>
   onSuccess?:           (id: string, points: number, isEdit: boolean) => void
   onCancel?:            () => void
 }
@@ -85,7 +86,7 @@ function NativeSelect({
   )
 }
 
-export function ActivityForm({ editingId, defaultSalesPerson, defaultBranch, onSuccess, onCancel }: Props) {
+export function ActivityForm({ editingId, defaultSalesPerson, defaultBranch, defaultValues, onSuccess, onCancel }: Props) {
   const [form, setForm] = useState<FormState>({
     activity_date:  today(),
     activity_type:  "",
@@ -103,6 +104,7 @@ export function ActivityForm({ editingId, defaultSalesPerson, defaultBranch, onS
     notes:          "",
     reminder_date:  "",
     reminder_done:  false,
+    ...defaultValues,
   })
   const [saving, setSaving]           = useState(false)
   const [error,  setError]            = useState<string | null>(null)

@@ -105,6 +105,33 @@ IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.FREIGH
   ALTER TABLE [dbo].[FREIGHT_RATES] ADD [CLAUSES] varchar(max) NULL
 GO
 
+-- STEP 6: Create TBL_CONTACTS table for the Contacts directory
+-- Run on BOTH [manilal] and [LinksDB20] databases.
+
+IF NOT EXISTS (
+  SELECT 1 FROM INFORMATION_SCHEMA.TABLES
+  WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'TBL_CONTACTS'
+)
+BEGIN
+  CREATE TABLE [dbo].[TBL_CONTACTS] (
+    [ID]              int           IDENTITY(1,1) PRIMARY KEY,
+    [SHIPPER_NAME]    varchar(200)  NULL,
+    [CONSIGNEE_NAME]  varchar(200)  NULL,
+    [MODE]            varchar(20)   NULL,
+    [POL]             varchar(100)  NULL,
+    [POD]             varchar(100)  NULL,
+    [CONTACT_PERSON]  varchar(100)  NULL,
+    [CONTACT_NUMBER]  varchar(50)   NULL,
+    [EMAIL]           varchar(200)  NULL,
+    [CREATED_BY]      varchar(100)  NULL,
+    [CREATED_AT]      datetime      NOT NULL DEFAULT GETUTCDATE(),
+    [UPDATED_AT]      datetime      NOT NULL DEFAULT GETUTCDATE()
+  )
+  CREATE INDEX IX_TBL_CONTACTS_SHIPPER    ON [dbo].[TBL_CONTACTS] ([SHIPPER_NAME])
+  CREATE INDEX IX_TBL_CONTACTS_CONSIGNEE  ON [dbo].[TBL_CONTACTS] ([CONSIGNEE_NAME])
+END
+GO
+
 -- STEP 3: Pre-populate ENQ_REF_SEQUENCES from existing data
 -- Run AFTER migrating data so the counters start from the right number.
 -- This prevents duplicate ref nos if new enquiries are created after migration.
