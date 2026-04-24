@@ -9,14 +9,19 @@ export const LINKS_SALES_PERSONS = [
   "BHUP KUMAR",
   "CHANDAR",
   "DEEPAK BHURA",
+  "DEVANSHI",
+  "GANESH",
   "MANAGEMENT",
   "MP OFFICE",
   "SAMIT BHATNAGAR",
   "SAYALI K",
+  "VIJAY DESHMUKH",
 ]
 
 export const MANILAL_SALES_PERSONS = [
   "BEENA DAS",
+  "DEVANSHI",
+  "GANESH",
   "GAUTAMI",
   "GURUSAMY",
   "JAI SINGH RAWAT",
@@ -26,7 +31,7 @@ export const MANILAL_SALES_PERSONS = [
   "SARTHAK",
   "SHRADDHA",
   "VAISHNAVI",
-  
+  "VIJAY DESHMUKH",
 ]
 
 // Maps legacy MSSQL codes → display names for dashboard charts
