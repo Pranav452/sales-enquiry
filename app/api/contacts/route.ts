@@ -28,7 +28,7 @@ const SELECT_COLS = `
 `
 
 export async function GET(req: NextRequest) {
-  const auth = await getAuthContext(req)
+  const auth = await getAuthContext()
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const pool = await getPool(auth.company)
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await getAuthContext(req)
+  const auth = await getAuthContext()
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const body = await req.json()

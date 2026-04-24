@@ -76,7 +76,7 @@ type ContactRow = {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await getAuthContext(req)
+  const auth = await getAuthContext()
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   try {
