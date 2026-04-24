@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import * as XLSX from "xlsx"
-import { Download, Eye, EyeOff, Filter, RefreshCw, X } from "lucide-react"
+import { Download, Eye, EyeOff, FileText, Filter, RefreshCw, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -171,6 +171,32 @@ export default function ExportPage() {
   // — Preview
   const [showPreview, setShowPreview] = useState(false)
 
+  // — Weekly report
+  const [weeklyLoading, setWeeklyLoading] = useState(false)
+
+  async function downloadWeeklyReport() {
+    setWeeklyLoading(true)
+    try {
+      const res = await fetch("/api/reports/weekly")
+      if (!res.ok) {
+        const j = await res.json()
+        throw new Error(j.error ?? "Failed to generate report")
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      const dateStr = new Date().toISOString().split("T")[0]
+      a.href = url
+      a.download = `Weekly_Report_${dateStr}.html`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed to download report")
+    } finally {
+      setWeeklyLoading(false)
+    }
+  }
+
   // — Search within results
   const [search, setSearch] = useState("")
 
@@ -320,28 +346,42 @@ export default function ExportPage() {
             Filter, preview, and download enquiries as Excel
           </p>
         </div>
-        {fetched && (
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowPreview((v) => !v)}
-              className="gap-1.5"
-            >
-              {showPreview ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-              {showPreview ? "Hide Preview" : "Show Preview"}
-            </Button>
-            <Button
-              size="sm"
-              onClick={doExport}
-              disabled={exportRows.length === 0}
-              className="gap-1.5"
-            >
-              <Download className="h-3.5 w-3.5" />
-              Export {exportRows.length > 0 ? `(${exportRows.length})` : ""}
-            </Button>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={downloadWeeklyReport}
+            disabled={weeklyLoading}
+            className="gap-1.5"
+          >
+            {weeklyLoading
+              ? <><RefreshCw className="h-3.5 w-3.5 animate-spin" /> Generating...</>
+              : <><FileText className="h-3.5 w-3.5" /> Download Weekly Report</>
+            }
+          </Button>
+          {fetched && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowPreview((v) => !v)}
+                className="gap-1.5"
+              >
+                {showPreview ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                {showPreview ? "Hide Preview" : "Show Preview"}
+              </Button>
+              <Button
+                size="sm"
+                onClick={doExport}
+                disabled={exportRows.length === 0}
+                className="gap-1.5"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Export {exportRows.length > 0 ? `(${exportRows.length})` : ""}
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* ── Filters ────────────────────────────────────── */}
