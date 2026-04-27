@@ -6,6 +6,7 @@ import { ActivityForm } from "@/components/activities/ActivityForm"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import * as XLSX from "xlsx"
 import {
   Upload,
   Search,
@@ -13,6 +14,7 @@ import {
   Trash2,
   Phone,
   Mail,
+  FileDown,
   MapPin,
   User,
   Package,
@@ -510,6 +512,63 @@ export default function ContactsPage() {
 
   const isAdmin = userInfo?.role === "admin"
 
+  // ── Download blank template ───────────────────────────────────
+
+  function downloadTemplate() {
+    const headers = [
+      "SHIPPER NAME",
+      "CONSIGNEE NAME",
+      "SEA/AIR",
+      "POL",
+      "POD",
+      "CONTACT PERSON",
+      "CONTACT",
+      "EMAIL ID",
+    ]
+
+    const examples = [
+      {
+        "SHIPPER NAME":    "ABC Textiles Pvt Ltd",
+        "CONSIGNEE NAME":  "Global Traders GmbH",
+        "SEA/AIR":         "SEA",
+        "POL":             "JNPT",
+        "POD":             "HAMBURG",
+        "CONTACT PERSON":  "Ramesh Kumar",
+        "CONTACT":         "91-9876543210",
+        "EMAIL ID":        "ramesh@abctextiles.com",
+      },
+      {
+        "SHIPPER NAME":    "Sunshine Garments",
+        "CONSIGNEE NAME":  "Fashion House Inc",
+        "SEA/AIR":         "AIR",
+        "POL":             "DELHI",
+        "POD":             "NEW YORK",
+        "CONTACT PERSON":  "Priya Singh",
+        "CONTACT":         "91-9123456789",
+        "EMAIL ID":        "priya@sunshinegarments.com",
+      },
+      {
+        "SHIPPER NAME":    "Spice Exports Ltd",
+        "CONSIGNEE NAME":  "Arabian Foods LLC",
+        "SEA/AIR":         "SEA",
+        "POL":             "COCHIN",
+        "POD":             "DUBAI",
+        "CONTACT PERSON":  "Anil Menon",
+        "CONTACT":         "91-9988776655",
+        "EMAIL ID":        "anil@spiceexports.com",
+      },
+    ]
+
+    const ws = XLSX.utils.json_to_sheet(examples, { header: headers })
+
+    // Style the header row width
+    ws["!cols"] = headers.map((h) => ({ wch: Math.max(h.length + 4, 20) }))
+
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "Contacts")
+    XLSX.writeFile(wb, "contacts_template.xlsx")
+  }
+
   return (
     <div className="p-4 max-w-screen-xl mx-auto space-y-5">
 
@@ -530,6 +589,16 @@ export default function ContactsPage() {
             className="hidden"
             onChange={handleFileChange}
           />
+          <Button
+            size="sm"
+            variant="ghost"
+            className="gap-1.5 text-muted-foreground"
+            onClick={downloadTemplate}
+            title="Download a blank Excel template showing the required column format"
+          >
+            <FileDown className="h-4 w-4" />
+            Download Template
+          </Button>
           <Button
             size="sm"
             variant="outline"
