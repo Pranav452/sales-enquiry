@@ -3,29 +3,18 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { ActivityForm } from "@/components/activities/ActivityForm"
+import { Timeline, type TimelineItem } from "@/components/ui/timeline"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import * as XLSX from "xlsx"
 import {
-  Upload,
-  Search,
-  X,
-  Trash2,
-  Phone,
-  Mail,
-  FileDown,
-  MapPin,
-  User,
-  AlertCircle,
-  CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
-  Pencil,
-  History,
-  PhoneCall,
+  Upload, Search, X, Trash2, Phone, Mail, FileDown,
+  MapPin, User, AlertCircle, CheckCircle2, ChevronLeft,
+  ChevronRight, Pencil, PhoneCall, PhoneForwarded, Users,
+  Trophy, PhoneIncoming,
 } from "lucide-react"
-import { ACTIVITY_TYPE_MAP } from "@/lib/constants/activities"
+import { ACTIVITY_TYPE_MAP, ACTIVITY_STATUSES } from "@/lib/constants/activities"
 
 // ─── Types ─────────────────────────────────────────────────────
 
@@ -47,13 +36,18 @@ interface Contact {
 }
 
 interface ActivityHistoryItem {
-  id:            string
-  activity_date: string
-  activity_type: string
-  sales_person:  string
-  status:        string
-  notes:         string
-  points:        number
+  id:             string
+  activity_date:  string
+  activity_type:  string
+  sales_person:   string
+  status:         string
+  notes:          string
+  points:         number
+  contact_person: string
+  contact_number: string
+  mode:           string
+  pol:            string
+  pod:            string
 }
 
 interface ParsedRow {
@@ -69,7 +63,7 @@ interface ParsedRow {
 
 type RowField = keyof ParsedRow
 
-// ─── Helpers ───────────────────────────────────────────────────
+// ─── Constants ─────────────────────────────────────────────────
 
 const PAGE_SIZE = 20
 
@@ -83,6 +77,16 @@ const PREVIEW_COLS: { key: RowField; label: string; width: string }[] = [
   { key: "contact_number", label: "Phone",          width: "min-w-[140px]" },
   { key: "email",          label: "Email",          width: "min-w-[180px]" },
 ]
+
+// Per activity type: dot colour + icon
+const TYPE_STYLE: Record<string, { dot: string; icon: React.ReactNode; label: string }> = {
+  COLD_CALL:     { dot: "bg-blue-500",   icon: <PhoneIncoming />,  label: "Cold Call" },
+  WARM_CALL:     { dot: "bg-amber-500",  icon: <PhoneForwarded />, label: "Warm Call" },
+  CLIENT_VISIT:  { dot: "bg-green-500",  icon: <Users />,          label: "Client Visit" },
+  VISIT_SECURED: { dot: "bg-purple-600", icon: <Trophy />,         label: "Visit Secured" },
+}
+
+// ─── Helpers ───────────────────────────────────────────────────
 
 function highlight(text: string, query: string) {
   if (!query || !text) return <>{text}</>
@@ -104,6 +108,38 @@ function formatDate(d: string | null) {
   return new Date(d + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" })
 }
 
+function statusLabel(val: string) {
+  return ACTIVITY_STATUSES.find((s) => s.value === val)?.label ?? val
+}
+
+/** Map an ActivityHistoryItem → generic TimelineItem for the Timeline component */
+function toTimelineItem(h: ActivityHistoryItem): TimelineItem {
+  const style = TYPE_STYLE[h.activity_type] ?? { dot: "bg-muted-foreground/40", icon: <Phone />, label: h.activity_type }
+
+  const descParts: string[] = []
+  if (h.status)         descParts.push(statusLabel(h.status))
+  if (h.mode || h.pol || h.pod) {
+    const route = [h.mode, h.pol && h.pod ? `${h.pol} → ${h.pod}` : h.pol || h.pod].filter(Boolean).join(" · ")
+    if (route) descParts.push(route)
+  }
+  if (h.notes) descParts.push(h.notes)
+
+  return {
+    id:          h.id,
+    date:        h.activity_date,
+    title:       style.label,
+    subtitle:    h.sales_person || undefined,
+    description: descParts.join("\n") || undefined,
+    icon:        style.icon,
+    dotColor:    style.dot,
+    badge: (
+      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
+        +{h.points} XP
+      </span>
+    ),
+  }
+}
+
 // ─── Editable preview modal ────────────────────────────────────
 
 function PreviewModal({
@@ -121,7 +157,7 @@ function PreviewModal({
       <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-6xl max-h-[85vh] flex flex-col">
         <div className="flex items-start justify-between px-5 py-4 border-b border-border flex-shrink-0">
           <div>
-            <h2 className="text-sm font-semibold text-foreground">Preview &amp; Edit Extracted Contacts</h2>
+            <h2 className="text-sm font-semibold">Preview &amp; Edit Extracted Contacts</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
               {rows.length} contact{rows.length !== 1 ? "s" : ""} found — click any cell to edit before importing
             </p>
@@ -164,11 +200,8 @@ function PreviewModal({
                     </td>
                   ))}
                   <td className="px-1 py-1 align-middle">
-                    <button
-                      type="button"
-                      onClick={() => onDeleteRow(i)}
-                      className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-1 rounded"
-                    >
+                    <button type="button" onClick={() => onDeleteRow(i)}
+                      className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-1 rounded">
                       <Trash2 className="h-3 w-3" />
                     </button>
                   </td>
@@ -195,9 +228,9 @@ function PreviewModal({
   )
 }
 
-// ─── Log Activity modal with call history ──────────────────────
+// ─── Client Detail modal (timeline + log form) ─────────────────
 
-function LogActivityModal({
+function ClientDetailModal({
   contact,
   defaultSalesPerson,
   onClose,
@@ -206,116 +239,189 @@ function LogActivityModal({
   defaultSalesPerson: string | undefined
   onClose:            () => void
 }) {
-  const [history, setHistory]   = useState<ActivityHistoryItem[]>([])
+  const [history,     setHistory]     = useState<ActivityHistoryItem[]>([])
   const [histLoading, setHistLoading] = useState(true)
-  const [showHistory, setShowHistory] = useState(true)
+  const [showForm,    setShowForm]    = useState(false)
 
-  // Pre-select WARM_CALL if this client has been contacted before
-  const defaultType = contact.activity_count > 0 ? "WARM_CALL" : undefined
+  // totalXp across all history entries
+  const totalXp = history.reduce((s, h) => s + (h.points ?? 0), 0)
+
+  // Pre-select WARM_CALL if prior history exists
+  const defaultType = history.length > 0 ? "WARM_CALL" : undefined
 
   useEffect(() => {
     if (!contact.shipper_name) { setHistLoading(false); return }
     fetch(`/api/contacts/history?client=${encodeURIComponent(contact.shipper_name)}`)
       .then((r) => r.json())
-      .then((d) => Array.isArray(d) ? setHistory(d) : setHistory([]))
+      .then((d) => setHistory(Array.isArray(d) ? d : []))
       .catch(() => setHistory([]))
       .finally(() => setHistLoading(false))
   }, [contact.shipper_name])
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col">
+  const timelineItems: TimelineItem[] = history.map(toTimelineItem)
 
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0">
-          <div>
-            <h2 className="text-sm font-semibold text-foreground">Log Activity</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {contact.shipper_name || contact.consignee_name || "Contact"}
-              {contact.activity_count > 0 && (
-                <span className="ml-1.5 text-amber-600 dark:text-amber-400 font-medium">
-                  · {contact.activity_count} previous call{contact.activity_count !== 1 ? "s" : ""}
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4">
+      <div className="bg-card border border-border rounded-t-2xl sm:rounded-xl shadow-2xl w-full sm:max-w-xl max-h-[92vh] flex flex-col">
+
+        {/* ── Header ─────────────────────────────────────── */}
+        <div className="flex items-start justify-between px-5 py-4 border-b border-border flex-shrink-0">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-base font-semibold text-foreground truncate">
+              {contact.shipper_name || contact.consignee_name || "Client"}
+            </h2>
+            <div className="flex items-center gap-3 mt-1 flex-wrap">
+              {contact.contact_person && (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <User className="h-3 w-3" />{contact.contact_person}
                 </span>
               )}
-            </p>
+              {contact.contact_number && (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Phone className="h-3 w-3" />{contact.contact_number}
+                </span>
+              )}
+              {contact.email && (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Mail className="h-3 w-3" />{contact.email}
+                </span>
+              )}
+              {(contact.pol || contact.pod) && (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <MapPin className="h-3 w-3" />
+                  {contact.pol || "—"} → {contact.pod || "—"}
+                </span>
+              )}
+            </div>
           </div>
-          <button type="button" onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
+          <button type="button" onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors ml-3 mt-0.5 shrink-0">
             <X className="h-4 w-4" />
           </button>
         </div>
 
+        {/* ── XP summary strip ───────────────────────────── */}
+        {!histLoading && history.length > 0 && (
+          <div className="flex items-center gap-4 px-5 py-2.5 bg-muted/40 border-b border-border flex-shrink-0 flex-wrap">
+            <span className="text-xs text-muted-foreground">
+              <span className="font-semibold text-foreground">{history.length}</span> call{history.length !== 1 ? "s" : ""} logged
+            </span>
+            <span className="text-xs text-muted-foreground">
+              <span className="font-semibold text-primary">{totalXp} XP</span> earned
+            </span>
+            {/* Type breakdown */}
+            <div className="flex items-center gap-2 ml-auto">
+              {(["COLD_CALL","WARM_CALL","CLIENT_VISIT","VISIT_SECURED"] as const).map((type) => {
+                const count = history.filter((h) => h.activity_type === type).length
+                if (!count) return null
+                const s = TYPE_STYLE[type]
+                return (
+                  <span key={type} className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                    <span className={cn("h-2 w-2 rounded-full", s.dot)} />
+                    {count}
+                  </span>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── Body: timeline or form ─────────────────────── */}
         <div className="overflow-y-auto flex-1">
 
-          {/* ── Call history strip ─────────────────────────── */}
-          {!histLoading && history.length > 0 && (
-            <div className="border-b border-border bg-muted/30">
-              <button
-                type="button"
-                onClick={() => setShowHistory((v) => !v)}
-                className="w-full flex items-center justify-between px-5 py-2.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <span className="flex items-center gap-1.5">
-                  <History className="h-3.5 w-3.5" />
-                  Call History ({history.length} recent)
-                </span>
-                <span>{showHistory ? "▲" : "▼"}</span>
-              </button>
-
-              {showHistory && (
-                <div className="px-5 pb-3 space-y-1.5">
-                  {history.map((h) => {
-                    const typeDef = ACTIVITY_TYPE_MAP[h.activity_type]
-                    return (
-                      <div key={h.id} className="flex items-start gap-3 text-xs">
-                        <span className="text-muted-foreground w-16 shrink-0 pt-0.5">
-                          {formatDate(h.activity_date)}
-                        </span>
-                        <span className={cn(
-                          "px-1.5 py-0.5 rounded text-[10px] font-semibold shrink-0",
-                          typeDef?.color ?? "bg-muted",
-                          typeDef?.textColor ?? "text-foreground"
-                        )}>
-                          {typeDef?.label ?? h.activity_type}
-                        </span>
-                        <span className="text-muted-foreground truncate flex-1">
-                          {h.status}{h.notes ? ` · ${h.notes}` : ""}
-                        </span>
-                        <span className="text-muted-foreground/60 shrink-0">+{h.points} XP</span>
-                      </div>
-                    )
-                  })}
-
-                  {/* Guidance based on history */}
-                  <div className="mt-2 pt-2 border-t border-border/40 text-[11px] text-amber-600 dark:text-amber-400">
-                    {contact.activity_count > 0
-                      ? "Log a Warm Call below for each follow-up — you earn 1 XP every time."
-                      : "This is your first contact with this client — log a Cold Call."
-                    }
-                  </div>
+          {showForm ? (
+            /* ── Log activity form ──────────────────────── */
+            <div className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-sm font-semibold">
+                    {history.length > 0 ? "Log Follow-up Call" : "Log Activity"}
+                  </h3>
+                  {history.length > 0 && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Warm Call pre-selected — you earn 1 XP for every follow-up
+                    </p>
+                  )}
                 </div>
+                <button type="button" onClick={() => setShowForm(false)}
+                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
+                  ← Back to timeline
+                </button>
+              </div>
+              <ActivityForm
+                defaultSalesPerson={defaultSalesPerson}
+                defaultValues={{
+                  client_name:    contact.shipper_name    || "",
+                  contact_person: contact.contact_person  || "",
+                  contact_number: contact.contact_number  || "",
+                  email:          contact.email           || "",
+                  mode:           contact.mode            || "",
+                  pol:            contact.pol             || "",
+                  pod:            contact.pod             || "",
+                  ...(defaultType ? { activity_type: defaultType } : {}),
+                }}
+                onSuccess={() => {
+                  setShowForm(false)
+                  // Refresh history after logging
+                  setHistLoading(true)
+                  fetch(`/api/contacts/history?client=${encodeURIComponent(contact.shipper_name)}`)
+                    .then((r) => r.json())
+                    .then((d) => setHistory(Array.isArray(d) ? d : []))
+                    .catch(() => {})
+                    .finally(() => setHistLoading(false))
+                }}
+                onCancel={() => setShowForm(false)}
+              />
+            </div>
+          ) : (
+            /* ── Call timeline ──────────────────────────── */
+            <div className="px-5 pt-5 pb-4">
+
+              {histLoading ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Loading call history…</p>
+              ) : timelineItems.length === 0 ? (
+                <div className="text-center py-10 space-y-2">
+                  <Phone className="h-7 w-7 text-muted-foreground/30 mx-auto" />
+                  <p className="text-sm font-medium text-foreground">No calls logged yet</p>
+                  <p className="text-xs text-muted-foreground">Log the first Cold Call to start the timeline.</p>
+                </div>
+              ) : (
+                <>
+                  {/* Legend */}
+                  <div className="flex items-center gap-3 mb-5 flex-wrap">
+                    {Object.entries(TYPE_STYLE).map(([type, s]) => (
+                      <span key={type} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                        <span className={cn("h-2.5 w-2.5 rounded-full", s.dot)} />
+                        {s.label}
+                      </span>
+                    ))}
+                  </div>
+
+                  <Timeline
+                    items={timelineItems}
+                    initialCount={6}
+                    showMoreText="Show older calls"
+                    showLessText="Show less"
+                  />
+                </>
               )}
             </div>
           )}
-
-          {/* ── Activity form ──────────────────────────────── */}
-          <div className="p-5">
-            <ActivityForm
-              defaultSalesPerson={defaultSalesPerson}
-              defaultValues={{
-                client_name:    contact.shipper_name    || "",
-                contact_person: contact.contact_person  || "",
-                contact_number: contact.contact_number  || "",
-                email:          contact.email           || "",
-                mode:           contact.mode            || "",
-                pol:            contact.pol             || "",
-                pod:            contact.pod             || "",
-                ...(defaultType ? { activity_type: defaultType } : {}),
-              }}
-              onSuccess={onClose}
-              onCancel={onClose}
-            />
-          </div>
         </div>
+
+        {/* ── Footer CTA ─────────────────────────────────── */}
+        {!showForm && (
+          <div className="flex items-center justify-between px-5 py-3.5 border-t border-border flex-shrink-0 bg-card">
+            <p className="text-xs text-muted-foreground">
+              {history.length > 0
+                ? `Last call ${formatDate(history[0]?.activity_date)}`
+                : "No calls yet"}
+            </p>
+            <Button size="sm" className="gap-1.5" onClick={() => setShowForm(true)}>
+              <Phone className="h-3.5 w-3.5" />
+              {history.length > 0 ? "Log Follow-up" : "Log First Call"}
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -324,53 +430,54 @@ function LogActivityModal({
 // ─── Contact card ──────────────────────────────────────────────
 
 function ContactCard({
-  contact, query, onLogActivity, onDelete, isAdmin,
+  contact, query, onClick, onDelete, isAdmin,
 }: {
-  contact:       Contact
-  query:         string
-  onLogActivity: (c: Contact) => void
-  onDelete:      (id: string) => void
-  isAdmin:       boolean
+  contact:  Contact
+  query:    string
+  onClick:  (c: Contact) => void
+  onDelete: (id: string) => void
+  isAdmin:  boolean
 }) {
   const [hovered, setHovered] = useState(false)
-  const canDelete = contact.source === "contact" // activity-sourced cards live in the activity log
+  const canDelete = contact.source === "contact"
 
   return (
     <div
       className={cn(
-        "rounded-lg border border-border bg-card transition-all duration-150 flex flex-col",
+        "rounded-lg border border-border bg-card transition-all duration-150 flex flex-col cursor-pointer",
         "hover:border-primary/40 hover:shadow-sm"
       )}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onClick={() => onClick(contact)}
     >
       <div className="p-4 flex-1">
 
         {/* Source badge */}
         {contact.source === "activity" && (
-          <div className="flex items-center gap-1 mb-2">
+          <div className="mb-2">
             <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
               From Activity Tracker
             </span>
           </div>
         )}
 
-        {/* Names + mode */}
+        {/* Name + mode */}
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="min-w-0 flex-1">
-            {contact.shipper_name ? (
+            {contact.shipper_name && (
               <p className="text-sm font-semibold text-foreground truncate leading-snug">
                 {highlight(contact.shipper_name, query)}
               </p>
-            ) : null}
-            {contact.consignee_name ? (
+            )}
+            {contact.consignee_name && (
               <p className="text-[11px] text-muted-foreground truncate mt-0.5">
-                <span className="font-medium uppercase tracking-wide text-[10px]">Consignee · </span>
+                <span className="font-medium text-[10px] uppercase tracking-wide">Consignee · </span>
                 {highlight(contact.consignee_name, query)}
               </p>
-            ) : null}
+            )}
           </div>
-          {contact.mode ? (
+          {contact.mode && (
             <span className={cn(
               "text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full shrink-0 mt-0.5",
               contact.mode === "AIR"
@@ -379,50 +486,50 @@ function ContactCard({
             )}>
               {contact.mode}
             </span>
-          ) : null}
+          )}
         </div>
 
         {/* Route */}
-        {(contact.pol || contact.pod) ? (
+        {(contact.pol || contact.pod) && (
           <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-2">
             <MapPin className="h-3 w-3 shrink-0" />
             <span>{contact.pol || "—"}</span>
             <span className="text-border">→</span>
             <span>{contact.pod || "—"}</span>
           </div>
-        ) : null}
+        )}
 
-        {/* Contact details */}
+        {/* Contact detail */}
         <div className="space-y-1">
-          {contact.contact_person ? (
+          {contact.contact_person && (
             <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
               <User className="h-3 w-3 shrink-0" />
               <span className="truncate">{highlight(contact.contact_person, query)}</span>
             </div>
-          ) : null}
-          {contact.contact_number ? (
+          )}
+          {contact.contact_number && (
             <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
               <Phone className="h-3 w-3 shrink-0" />
               <span className="truncate">{highlight(contact.contact_number, query)}</span>
             </div>
-          ) : null}
-          {contact.email && hovered ? (
+          )}
+          {contact.email && hovered && (
             <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
               <Mail className="h-3 w-3 shrink-0" />
               <span className="truncate">{highlight(contact.email, query)}</span>
             </div>
-          ) : null}
+          )}
         </div>
 
-        {/* Activity count */}
+        {/* Call count */}
         {contact.activity_count > 0 && (
-          <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <PhoneCall className="h-3 w-3 shrink-0 text-amber-500" />
+          <div className="mt-2.5 flex items-center gap-1.5 text-[11px]">
+            <PhoneCall className="h-3 w-3 text-amber-500 shrink-0" />
             <span className="text-amber-600 dark:text-amber-400 font-medium">
               {contact.activity_count} call{contact.activity_count !== 1 ? "s" : ""}
             </span>
             {contact.last_activity_date && (
-              <span>· last {formatDate(contact.last_activity_date)}</span>
+              <span className="text-muted-foreground">· last {formatDate(contact.last_activity_date)}</span>
             )}
           </div>
         )}
@@ -430,23 +537,16 @@ function ContactCard({
 
       {/* Action bar */}
       <div className={cn(
-        "flex items-center justify-between px-3 py-2 border-t border-border/60 rounded-b-lg",
-        "bg-muted/30 transition-opacity duration-150",
+        "flex items-center justify-between px-3 py-2 border-t border-border/60 rounded-b-lg bg-muted/30",
+        "transition-opacity duration-150",
         hovered ? "opacity-100" : "opacity-0 pointer-events-none"
       )}>
-        <Button
-          size="sm"
-          className="h-7 text-xs gap-1.5"
-          onClick={() => onLogActivity(contact)}
-        >
-          <Phone className="h-3 w-3" />
-          {contact.activity_count > 0 ? "Log Follow-up" : "Log Activity"}
-        </Button>
+        <span className="text-[11px] text-muted-foreground">Click to view timeline</span>
 
         {isAdmin && canDelete && (
           <button
             type="button"
-            onClick={() => onDelete(contact.id)}
+            onClick={(e) => { e.stopPropagation(); onDelete(contact.id) }}
             className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded"
             title="Delete contact"
           >
@@ -461,7 +561,6 @@ function ContactCard({
 // ─── Empty state — Excel format hint ──────────────────────────
 
 const TEMPLATE_COLS = ["Shipper Name", "Consignee Name", "SEA/AIR", "POL", "POD", "Contact Person", "Contact (Phone)", "Email ID"]
-
 const DUMMY_ROWS = [
   ["ABC Textiles Pvt Ltd", "Global Traders GmbH", "SEA", "JNPT", "HAMBURG", "Ramesh Kumar", "91-98765 43210", "ramesh@abctex..."],
   ["Sunshine Garments", "Fashion House Inc", "AIR", "DELHI", "NEW YORK", "Priya Singh", "91-91234 56789", "priya@sunshine..."],
@@ -486,30 +585,27 @@ function ExcelFormatHint({ onUpload }: { onUpload: () => void }) {
           <div className="flex-1" />
           <div className="h-3 w-16 rounded bg-muted-foreground/20" />
         </div>
-
         <div className="overflow-x-auto">
           <table className="w-full text-[11px] border-collapse">
             <thead>
               <tr className="bg-muted/80">
                 <th className="w-8 border-r border-b border-border px-2 py-1.5 text-center text-muted-foreground/50 font-normal">1</th>
                 {TEMPLATE_COLS.map((col) => (
-                  <th key={col} className="border-r border-b border-border px-3 py-1.5 text-left font-semibold text-foreground whitespace-nowrap">
-                    {col}
-                  </th>
+                  <th key={col} className="border-r border-b border-border px-3 py-1.5 text-left font-semibold text-foreground whitespace-nowrap">{col}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {DUMMY_ROWS.map((row, ri) => (
                 <tr key={ri} className="bg-background">
-                  <td className="border-r border-b border-border/50 px-2 py-1.5 text-center text-muted-foreground/40 bg-muted/40 font-normal">{ri + 2}</td>
+                  <td className="border-r border-b border-border/50 px-2 py-1.5 text-center text-muted-foreground/40 bg-muted/40">{ri + 2}</td>
                   {row.map((cell, ci) => (
                     <td key={ci} className="border-r border-b border-border/50 px-3 py-1.5 text-muted-foreground/60 whitespace-nowrap">{cell}</td>
                   ))}
                 </tr>
               ))}
               {[0, 1].map((i) => (
-                <tr key={`ghost-${i}`} className="bg-background">
+                <tr key={`g${i}`} className="bg-background">
                   <td className="border-r border-b border-border/30 px-2 py-1.5 text-center text-muted-foreground/20 bg-muted/20">{DUMMY_ROWS.length + 2 + i}</td>
                   {TEMPLATE_COLS.map((_, ci) => (
                     <td key={ci} className="border-r border-b border-border/20 px-3 py-1.5">
@@ -528,9 +624,7 @@ function ExcelFormatHint({ onUpload }: { onUpload: () => void }) {
           <Upload className="h-4 w-4" />
           Upload your Excel
         </Button>
-        <p className="text-[11px] text-muted-foreground mt-2">
-          Column names are flexible — SEA/AIR, Mode, Shipping Mode all work
-        </p>
+        <p className="text-[11px] text-muted-foreground mt-2">Column names are flexible — SEA/AIR, Mode, Shipping Mode all work</p>
       </div>
     </div>
   )
@@ -552,7 +646,8 @@ export default function ContactsPage() {
   const [importing,   setImporting]   = useState(false)
   const [importMsg,   setImportMsg]   = useState<string | null>(null)
 
-  const [logTarget, setLogTarget] = useState<Contact | null>(null)
+  // Client detail modal
+  const [detailContact, setDetailContact] = useState<Contact | null>(null)
 
   const [userInfo, setUserInfo] = useState<{ role: string; salesperson: string | null } | null>(null)
 
@@ -581,8 +676,6 @@ export default function ContactsPage() {
 
   useEffect(() => { fetchContacts() }, [fetchContacts])
 
-  // ── Search ────────────────────────────────────────────────────
-
   const filtered = contacts.filter((c) => {
     if (!query) return true
     const q = query.toLowerCase()
@@ -600,20 +693,15 @@ export default function ContactsPage() {
 
   const totalPages   = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const pageContacts = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
-
   function handleQueryChange(v: string) { setQuery(v); setPage(1) }
 
-  // ── Excel upload ──────────────────────────────────────────────
-
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const file = e.target.files?.[0]; if (!file) return
     e.target.value = ""
     setParsing(true); setParseError(null); setImportMsg(null)
-    const fd = new FormData()
-    fd.append("file", file)
+    const fd = new FormData(); fd.append("file", file)
     try {
-      const res  = await fetch("/api/contacts/parse", { method: "POST", body: fd })
+      const res = await fetch("/api/contacts/parse", { method: "POST", body: fd })
       const json = await res.json()
       if (!res.ok) { setParseError(json.error ?? "Parse failed"); return }
       setPreviewRows(json.contacts)
@@ -624,7 +712,6 @@ export default function ContactsPage() {
   function handlePreviewChange(idx: number, field: RowField, value: string) {
     setPreviewRows((prev) => prev ? prev.map((r, i) => i === idx ? { ...r, [field]: value } : r) : prev)
   }
-
   function handlePreviewDeleteRow(idx: number) {
     setPreviewRows((prev) => prev ? prev.filter((_, i) => i !== idx) : prev)
   }
@@ -645,19 +732,15 @@ export default function ContactsPage() {
     } finally { setImporting(false) }
   }
 
-  // ── Delete (only TBL_CONTACTS rows) ──────────────────────────
-
   async function handleDelete(id: string) {
-    if (!id.startsWith("c_")) return // safety — never delete activity-sourced cards
+    if (!id.startsWith("c_")) return
     if (!confirm("Delete this contact?")) return
     await fetch(`/api/contacts/${id.slice(2)}`, { method: "DELETE" })
     setContacts((prev) => prev.filter((c) => c.id !== id))
   }
 
-  // ── Download template ─────────────────────────────────────────
-
   function downloadTemplate() {
-    const headers = ["SHIPPER NAME", "CONSIGNEE NAME", "SEA/AIR", "POL", "POD", "CONTACT PERSON", "CONTACT", "EMAIL ID"]
+    const headers = ["SHIPPER NAME","CONSIGNEE NAME","SEA/AIR","POL","POD","CONTACT PERSON","CONTACT","EMAIL ID"]
     const examples = [
       { "SHIPPER NAME": "ABC Textiles Pvt Ltd", "CONSIGNEE NAME": "Global Traders GmbH", "SEA/AIR": "SEA", "POL": "JNPT", "POD": "HAMBURG", "CONTACT PERSON": "Ramesh Kumar", "CONTACT": "91-9876543210", "EMAIL ID": "ramesh@abctextiles.com" },
       { "SHIPPER NAME": "Sunshine Garments", "CONSIGNEE NAME": "Fashion House Inc", "SEA/AIR": "AIR", "POL": "DELHI", "POD": "NEW YORK", "CONTACT PERSON": "Priya Singh", "CONTACT": "91-9123456789", "EMAIL ID": "priya@sunshinegarments.com" },
@@ -669,59 +752,46 @@ export default function ContactsPage() {
     XLSX.writeFile(wb, "contacts_template.xlsx")
   }
 
-  const isAdmin = userInfo?.role === "admin"
-
-  // Counts for tab strip
-  const importedCount  = contacts.filter((c) => c.source === "contact").length
-  const activityCount  = contacts.filter((c) => c.source === "activity").length
+  const isAdmin       = userInfo?.role === "admin"
+  const importedCount = contacts.filter((c) => c.source === "contact").length
+  const activityCount = contacts.filter((c) => c.source === "activity").length
 
   return (
     <div className="p-4 max-w-screen-xl mx-auto space-y-5">
 
-      {/* ── Header ──────────────────────────────────────── */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Contacts</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {!loading && contacts.length > 0 && (
-              <span>
-                {importedCount > 0 && `${importedCount} imported`}
-                {importedCount > 0 && activityCount > 0 && " · "}
-                {activityCount > 0 && `${activityCount} from Activity Tracker`}
-              </span>
-            )}
-            {(loading || contacts.length === 0) && "Import from Excel · search · log activities directly"}
+            {!loading && contacts.length > 0
+              ? [importedCount > 0 && `${importedCount} imported`, activityCount > 0 && `${activityCount} from Activity Tracker`].filter(Boolean).join(" · ")
+              : "Import from Excel · click any card to see call timeline"}
           </p>
         </div>
-
         <div className="flex items-center gap-2">
           <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleFileChange} />
           <Button size="sm" variant="ghost" className="gap-1.5 text-muted-foreground" onClick={downloadTemplate}>
-            <FileDown className="h-4 w-4" />
-            Template
+            <FileDown className="h-4 w-4" />Template
           </Button>
           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setParseError(null); fileRef.current?.click() }} disabled={parsing}>
-            <Upload className="h-4 w-4" />
-            {parsing ? "Reading…" : "Upload Excel"}
+            <Upload className="h-4 w-4" />{parsing ? "Reading…" : "Upload Excel"}
           </Button>
         </div>
       </div>
 
-      {/* ── Alerts ───────────────────────────────────────── */}
+      {/* Alerts */}
       {parseError && (
         <div className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="font-medium">Import failed</p>
             <p className="text-xs mt-0.5 opacity-80">{parseError}</p>
-            <p className="text-[11px] mt-1.5 opacity-60">
-              Expected headers: Shipper Name · Consignee Name · SEA/AIR · POL · POD · Contact · Email ID
-            </p>
+            <p className="text-[11px] mt-1.5 opacity-60">Expected headers: Shipper Name · Consignee Name · SEA/AIR · POL · POD · Contact · Email ID</p>
           </div>
           <button type="button" onClick={() => setParseError(null)} className="shrink-0"><X className="h-3.5 w-3.5" /></button>
         </div>
       )}
-
       {importMsg && (
         <div className="flex items-center gap-2.5 rounded-lg border border-green-300 bg-green-50 dark:bg-green-950/30 dark:border-green-800 px-4 py-3 text-sm text-green-700 dark:text-green-400">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
@@ -730,16 +800,11 @@ export default function ContactsPage() {
         </div>
       )}
 
-      {/* ── Search ────────────────────────────────────────── */}
+      {/* Search */}
       <div className="flex items-center gap-3">
         <div className="relative max-w-sm w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-          <Input
-            placeholder="Search by name, port, email, phone…"
-            value={query}
-            onChange={(e) => handleQueryChange(e.target.value)}
-            className="pl-9"
-          />
+          <Input placeholder="Search by name, port, email, phone…" value={query} onChange={(e) => handleQueryChange(e.target.value)} className="pl-9" />
           {query && (
             <button type="button" onClick={() => handleQueryChange("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
               <X className="h-3.5 w-3.5" />
@@ -755,14 +820,14 @@ export default function ContactsPage() {
         )}
       </div>
 
-      {/* ── Grid ──────────────────────────────────────────── */}
+      {/* Grid */}
       {loading ? (
         <div className="py-16 text-center text-sm text-muted-foreground">Loading contacts…</div>
       ) : pageContacts.length === 0 ? (
         query ? (
           <div className="py-20 text-center space-y-2">
             <Search className="h-7 w-7 text-muted-foreground/40 mx-auto" />
-            <p className="text-sm font-medium text-foreground">No contacts match your search</p>
+            <p className="text-sm font-medium">No contacts match your search</p>
           </div>
         ) : (
           <ExcelFormatHint onUpload={() => { setParseError(null); fileRef.current?.click() }} />
@@ -774,7 +839,7 @@ export default function ContactsPage() {
               key={c.id}
               contact={c}
               query={query}
-              onLogActivity={setLogTarget}
+              onClick={setDetailContact}
               onDelete={handleDelete}
               isAdmin={isAdmin}
             />
@@ -782,7 +847,7 @@ export default function ContactsPage() {
         </div>
       )}
 
-      {/* ── Pagination ────────────────────────────────────── */}
+      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 pt-2">
           <button type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
@@ -797,7 +862,7 @@ export default function ContactsPage() {
         </div>
       )}
 
-      {/* ── Preview modal ─────────────────────────────────── */}
+      {/* Preview modal */}
       {previewRows && (
         <PreviewModal
           rows={previewRows}
@@ -809,12 +874,12 @@ export default function ContactsPage() {
         />
       )}
 
-      {/* ── Log Activity modal ────────────────────────────── */}
-      {logTarget && (
-        <LogActivityModal
-          contact={logTarget}
+      {/* Client detail + timeline modal */}
+      {detailContact && (
+        <ClientDetailModal
+          contact={detailContact}
           defaultSalesPerson={userInfo?.salesperson ?? undefined}
-          onClose={() => setLogTarget(null)}
+          onClose={() => setDetailContact(null)}
         />
       )}
     </div>

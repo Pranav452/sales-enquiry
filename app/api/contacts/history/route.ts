@@ -4,8 +4,8 @@ import { getPool } from "@/lib/mssql/client"
 
 /**
  * GET /api/contacts/history?client=CLIENT_NAME
- * Returns the last 5 activities logged for a given client name.
- * Used by the Log Activity modal on the contacts page to show call history.
+ * Returns ALL activities logged for a given client name, newest first.
+ * Used by the Client Detail modal on the contacts page to show full call timeline.
  */
 export async function GET(req: NextRequest) {
   const auth = await getAuthContext()
@@ -20,14 +20,19 @@ export async function GET(req: NextRequest) {
     const result = await pool.request()
       .input("client", client.trim())
       .query(`
-        SELECT TOP 5
+        SELECT
           CAST(ID AS varchar(20))                       AS id,
           CONVERT(varchar(10), ACTIVITY_DATE, 120)      AS activity_date,
-          ISNULL(ACTIVITY_TYPE, '')                     AS activity_type,
-          ISNULL(SALES_PERSON,  '')                     AS sales_person,
-          ISNULL(STATUS,        '')                     AS status,
-          ISNULL(NOTES,         '')                     AS notes,
-          ISNULL(POINTS, 0)                             AS points
+          ISNULL(ACTIVITY_TYPE,  '')                    AS activity_type,
+          ISNULL(SALES_PERSON,   '')                    AS sales_person,
+          ISNULL(STATUS,         '')                    AS status,
+          ISNULL(NOTES,          '')                    AS notes,
+          ISNULL(POINTS,         0)                     AS points,
+          ISNULL(CONTACT_PERSON, '')                    AS contact_person,
+          ISNULL(CONTACT_NUMBER, '')                    AS contact_number,
+          ISNULL([MODE],         '')                    AS mode,
+          ISNULL(POL,            '')                    AS pol,
+          ISNULL(POD,            '')                    AS pod
         FROM [dbo].[TBL_CALLS_VISITS]
         WHERE LOWER(RTRIM(LTRIM(CLIENT_NAME))) = LOWER(RTRIM(LTRIM(@client)))
         ORDER BY ACTIVITY_DATE DESC, ID DESC
