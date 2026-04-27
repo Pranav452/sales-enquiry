@@ -13,7 +13,7 @@ import {
 } from "@/lib/constants/activities"
 import { BRANCHES, MANILAL_SALES_PERSONS, LINKS_SALES_PERSONS } from "@/lib/constants/dropdowns"
 
-const ALL_SALES_PERSONS = [...LINKS_SALES_PERSONS, ...MANILAL_SALES_PERSONS].sort()
+const ALL_SALES_PERSONS = [...new Set([...LINKS_SALES_PERSONS, ...MANILAL_SALES_PERSONS])].sort()
 
 const CALL_TYPES = new Set(["COLD_CALL", "WARM_CALL"])
 
