@@ -17,7 +17,6 @@ import {
   FileDown,
   MapPin,
   User,
-  Package,
   AlertCircle,
   CheckCircle2,
   ChevronLeft,
@@ -376,6 +375,115 @@ function ContactCard({
   )
 }
 
+// ─── Empty state — Excel format hint ──────────────────────────
+
+const TEMPLATE_COLS = ["Shipper Name", "Consignee Name", "SEA/AIR", "POL", "POD", "Contact Person", "Contact (Phone)", "Email ID"]
+
+const DUMMY_ROWS = [
+  ["ABC Textiles Pvt Ltd", "Global Traders GmbH", "SEA", "JNPT", "HAMBURG", "Ramesh Kumar", "91-98765 43210", "ramesh@abctex..."],
+  ["Sunshine Garments", "Fashion House Inc", "AIR", "DELHI", "NEW YORK", "Priya Singh", "91-91234 56789", "priya@sunshine..."],
+  ["Spice Exports Ltd", "Arabian Foods LLC", "SEA", "COCHIN", "DUBAI", "Anil Menon", "91-99887 76655", "anil@spiceexp..."],
+]
+
+function ExcelFormatHint({ onUpload }: { onUpload: () => void }) {
+  return (
+    <div className="mt-2 space-y-4">
+
+      {/* Label */}
+      <div className="flex items-center gap-3">
+        <div className="h-px flex-1 bg-border" />
+        <p className="text-xs text-muted-foreground font-medium">Format your Excel like this before uploading</p>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+
+      {/* Fake spreadsheet */}
+      <div className="rounded-xl border border-border overflow-hidden shadow-sm">
+
+        {/* Fake toolbar strip */}
+        <div className="flex items-center gap-1.5 px-3 py-2 bg-muted/60 border-b border-border">
+          <div className="h-2.5 w-2.5 rounded-full bg-red-400/60" />
+          <div className="h-2.5 w-2.5 rounded-full bg-yellow-400/60" />
+          <div className="h-2.5 w-2.5 rounded-full bg-green-400/60" />
+          <div className="ml-2 h-4 w-32 rounded bg-background/70 border border-border/60" />
+          <div className="flex-1" />
+          <div className="h-3 w-16 rounded bg-muted-foreground/20" />
+        </div>
+
+        {/* Spreadsheet grid */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-[11px] border-collapse">
+
+            {/* Row number col + header row */}
+            <thead>
+              <tr className="bg-muted/80">
+                {/* Row number gutter */}
+                <th className="w-8 border-r border-b border-border px-2 py-1.5 text-center text-muted-foreground/50 font-normal">
+                  1
+                </th>
+                {TEMPLATE_COLS.map((col) => (
+                  <th
+                    key={col}
+                    className="border-r border-b border-border px-3 py-1.5 text-left font-semibold text-foreground whitespace-nowrap"
+                  >
+                    {col}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+
+            {/* Dummy data rows */}
+            <tbody>
+              {DUMMY_ROWS.map((row, ri) => (
+                <tr key={ri} className="bg-background hover:bg-muted/20 transition-colors">
+                  <td className="border-r border-b border-border/50 px-2 py-1.5 text-center text-muted-foreground/40 bg-muted/40 font-normal">
+                    {ri + 2}
+                  </td>
+                  {row.map((cell, ci) => (
+                    <td
+                      key={ci}
+                      className="border-r border-b border-border/50 px-3 py-1.5 text-muted-foreground/60 whitespace-nowrap"
+                    >
+                      {cell}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+
+              {/* Ghost rows */}
+              {[0, 1].map((i) => (
+                <tr key={`ghost-${i}`} className="bg-background">
+                  <td className="border-r border-b border-border/30 px-2 py-1.5 text-center text-muted-foreground/20 bg-muted/20">
+                    {DUMMY_ROWS.length + 2 + i}
+                  </td>
+                  {TEMPLATE_COLS.map((_, ci) => (
+                    <td key={ci} className="border-r border-b border-border/20 px-3 py-1.5">
+                      <div className={cn(
+                        "h-2.5 rounded-full bg-muted-foreground/10",
+                        ci === 0 ? "w-28" : ci === 1 ? "w-24" : ci === 7 ? "w-32" : "w-16"
+                      )} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* CTA */}
+      <div className="text-center pb-4">
+        <Button size="sm" variant="outline" className="gap-2" onClick={onUpload}>
+          <Upload className="h-4 w-4" />
+          Upload your Excel
+        </Button>
+        <p className="text-[11px] text-muted-foreground mt-2">
+          Column names are flexible — SEA/AIR, Mode, Shipping Mode all work
+        </p>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main page ─────────────────────────────────────────────────
 
 export default function ContactsPage() {
@@ -674,17 +782,14 @@ export default function ContactsPage() {
       {loading ? (
         <div className="py-16 text-center text-sm text-muted-foreground">Loading contacts…</div>
       ) : pageContacts.length === 0 ? (
-        <div className="py-20 text-center space-y-3">
-          <Package className="h-8 w-8 text-muted-foreground/40 mx-auto" />
-          <p className="text-sm font-medium text-foreground">
-            {query ? "No contacts match your search" : "No contacts yet"}
-          </p>
-          {!query && (
-            <p className="text-xs text-muted-foreground">
-              Upload an Excel file to import your contacts directory
-            </p>
-          )}
-        </div>
+        query ? (
+          <div className="py-20 text-center space-y-2">
+            <Search className="h-7 w-7 text-muted-foreground/40 mx-auto" />
+            <p className="text-sm font-medium text-foreground">No contacts match your search</p>
+          </div>
+        ) : (
+          <ExcelFormatHint onUpload={() => { setParseError(null); fileRef.current?.click() }} />
+        )
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {pageContacts.map((c) => (
