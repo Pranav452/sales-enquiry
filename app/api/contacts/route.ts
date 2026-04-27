@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getAuthContext } from "@/lib/api-auth"
 import { getPool } from "@/lib/mssql/client"
+import sql from "mssql"
 
 type ContactRow = {
   shipper_name:   string
@@ -14,25 +15,54 @@ type ContactRow = {
 }
 
 const SELECT_COLS = `
-  CAST(ID AS varchar(20))                       AS id,
-  ISNULL(SHIPPER_NAME,   '')                    AS shipper_name,
-  ISNULL(CONSIGNEE_NAME, '')                    AS consignee_name,
-  ISNULL([MODE],         '')                    AS mode,
-  ISNULL(POL,            '')                    AS pol,
-  ISNULL(POD,            '')                    AS pod,
-  ISNULL(CONTACT_PERSON, '')                    AS contact_person,
-  ISNULL(CONTACT_NUMBER, '')                    AS contact_number,
-  ISNULL(EMAIL,          '')                    AS email,
-  ISNULL(CREATED_BY,     '')                    AS created_by,
-  CONVERT(varchar(10), CREATED_AT, 120)         AS created_at
+  CAST(ID AS varchar(20))               AS id,
+  ISNULL(SHIPPER_NAME,   '')            AS shipper_name,
+  ISNULL(CONSIGNEE_NAME, '')            AS consignee_name,
+  ISNULL([MODE],         '')            AS mode,
+  ISNULL(POL,            '')            AS pol,
+  ISNULL(POD,            '')            AS pod,
+  ISNULL(CONTACT_PERSON, '')            AS contact_person,
+  ISNULL(CONTACT_NUMBER, '')            AS contact_number,
+  ISNULL(EMAIL,          '')            AS email,
+  ISNULL(CREATED_BY,     '')            AS created_by,
+  CONVERT(varchar(10), CREATED_AT, 120) AS created_at
 `
+
+// Auto-create TBL_CONTACTS if it doesn't exist yet.
+// This means no manual SQL migration is needed.
+async function ensureTable(pool: sql.ConnectionPool) {
+  await pool.request().query(`
+    IF NOT EXISTS (
+      SELECT 1 FROM INFORMATION_SCHEMA.TABLES
+      WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'TBL_CONTACTS'
+    )
+    BEGIN
+      CREATE TABLE [dbo].[TBL_CONTACTS] (
+        [ID]              int           IDENTITY(1,1) PRIMARY KEY,
+        [SHIPPER_NAME]    varchar(200)  NULL,
+        [CONSIGNEE_NAME]  varchar(200)  NULL,
+        [MODE]            varchar(20)   NULL,
+        [POL]             varchar(100)  NULL,
+        [POD]             varchar(100)  NULL,
+        [CONTACT_PERSON]  varchar(100)  NULL,
+        [CONTACT_NUMBER]  varchar(50)   NULL,
+        [EMAIL]           varchar(200)  NULL,
+        [CREATED_BY]      varchar(100)  NULL,
+        [CREATED_AT]      datetime      NOT NULL DEFAULT GETUTCDATE(),
+        [UPDATED_AT]      datetime      NOT NULL DEFAULT GETUTCDATE()
+      )
+    END
+  `)
+}
 
 export async function GET(req: NextRequest) {
   const auth = await getAuthContext()
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   try {
-    const pool   = await getPool(auth.company)
+    const pool = await getPool(auth.company)
+    await ensureTable(pool)
+
     const result = await pool.request().query(`
       SELECT ${SELECT_COLS}
       FROM   [dbo].[TBL_CONTACTS]
@@ -40,8 +70,9 @@ export async function GET(req: NextRequest) {
     `)
     return NextResponse.json(result.recordset)
   } catch (err) {
-    console.error("[contacts GET]", err)
-    return NextResponse.json({ error: "Failed to fetch contacts" }, { status: 500 })
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error("[contacts GET]", msg)
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
 
@@ -51,14 +82,15 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    // Accept either a single contact object or an array (bulk from Excel import)
     const rows: ContactRow[] = Array.isArray(body) ? body : [body]
 
     if (!rows.length) {
       return NextResponse.json({ error: "No contacts provided" }, { status: 400 })
     }
 
-    const pool     = await getPool(auth.company)
+    const pool = await getPool(auth.company)
+    await ensureTable(pool)
+
     const inserted: string[] = []
 
     for (const row of rows) {
@@ -90,7 +122,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ inserted: inserted.length, ids: inserted }, { status: 201 })
   } catch (err) {
-    console.error("[contacts POST]", err)
-    return NextResponse.json({ error: "Failed to save contacts" }, { status: 500 })
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error("[contacts POST]", msg)
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
