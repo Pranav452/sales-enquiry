@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Pencil } from "lucide-react"
+import { Pencil, PhoneForwarded } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   ACTIVITY_TYPE_MAP,
@@ -37,8 +37,9 @@ export interface Activity {
 const PAGE_SIZE = 20
 
 interface Props {
-  onEdit?: (a: Activity) => void
-  refresh?: number  // bump to reload
+  onEdit?:      (a: Activity) => void
+  onFollowUp?:  (a: Activity) => void  // pre-fills form with WARM_CALL + same client data
+  refresh?:     number                 // bump to reload
 }
 
 function TypeBadge({ type }: { type: string | null }) {
@@ -115,7 +116,7 @@ function FilterSelect({
   )
 }
 
-export function ActivityList({ onEdit, refresh = 0 }: Props) {
+export function ActivityList({ onEdit, onFollowUp, refresh = 0 }: Props) {
   const [rows, setRows]       = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch]   = useState("")
@@ -203,7 +204,7 @@ export function ActivityList({ onEdit, refresh = 0 }: Props) {
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-border">
-              {["Date", "Type", "Client", "Contact", "Mode / Route", "Sales Person", "Branch", "Status", "Reminder", "Notes", "XP", ""].map((h) => (
+              {["Date", "Type", "Client", "Contact", "Mode / Route", "Sales Person", "Branch", "Status", "Reminder", "Notes", "XP", "Actions"].map((h) => (
                 <th key={h} className="px-3 py-3 text-left font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -248,18 +249,28 @@ export function ActivityList({ onEdit, refresh = 0 }: Props) {
                     {r.points != null ? `+${r.points}` : "—"}
                   </td>
                   <td className="px-2 py-2.5 whitespace-nowrap">
-                    <button
-                      type="button"
-                      title="Edit activity"
-                      onClick={(e) => { e.stopPropagation(); onEdit?.(r) }}
-                      className={cn(
-                        "h-6 w-6 flex items-center justify-center rounded transition-all",
-                        "opacity-0 group-hover:opacity-100",
-                        "text-muted-foreground hover:text-foreground hover:bg-accent-foreground/10"
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {/* Edit */}
+                      <button
+                        type="button"
+                        title="Edit activity"
+                        onClick={(e) => { e.stopPropagation(); onEdit?.(r) }}
+                        className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent-foreground/10 transition-colors"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      {/* Log follow-up — quick warm call for same client */}
+                      {onFollowUp && r.client_name && (
+                        <button
+                          type="button"
+                          title="Log follow-up call (Warm Call, same client)"
+                          onClick={(e) => { e.stopPropagation(); onFollowUp(r) }}
+                          className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors"
+                        >
+                          <PhoneForwarded className="h-3.5 w-3.5" />
+                        </button>
                       )}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
+                    </div>
                   </td>
                 </tr>
               ))

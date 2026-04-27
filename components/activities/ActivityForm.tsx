@@ -225,6 +225,27 @@ export function ActivityForm({ editingId, defaultSalesPerson, defaultBranch, def
           {typeDef && (
             <p className="text-[11px] text-muted-foreground mt-0.5">{typeDef.description}</p>
           )}
+          {/* Contextual guidance per type */}
+          {form.activity_type === "COLD_CALL" && (
+            <p className="text-[11px] text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 rounded px-2 py-1.5 mt-0.5">
+              Use this only for the <strong>first-ever contact</strong> with a new client.
+            </p>
+          )}
+          {form.activity_type === "WARM_CALL" && (
+            <p className="text-[11px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded px-2 py-1.5 mt-0.5">
+              Log a <strong>new Warm Call for every follow-up</strong> — you earn 1 XP each time, no matter how many calls it takes to secure the client.
+            </p>
+          )}
+          {form.activity_type === "CLIENT_VISIT" && (
+            <p className="text-[11px] text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/30 rounded px-2 py-1.5 mt-0.5">
+              Log this when you <strong>meet the client in person</strong>. Each visit earns 2 XP.
+            </p>
+          )}
+          {form.activity_type === "VISIT_SECURED" && (
+            <p className="text-[11px] text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/30 rounded px-2 py-1.5 mt-0.5">
+              Log this when a visit <strong>results in a confirmed shipment or booking</strong>. This is your highest-value activity at 3 XP.
+            </p>
+          )}
         </div>
 
         {/* Point preview card */}

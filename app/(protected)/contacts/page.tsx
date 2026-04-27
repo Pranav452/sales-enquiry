@@ -22,22 +22,38 @@ import {
   ChevronLeft,
   ChevronRight,
   Pencil,
+  History,
+  PhoneCall,
 } from "lucide-react"
+import { ACTIVITY_TYPE_MAP } from "@/lib/constants/activities"
 
 // ─── Types ─────────────────────────────────────────────────────
 
 interface Contact {
-  id:             string
-  shipper_name:   string
-  consignee_name: string
-  mode:           string
-  pol:            string
-  pod:            string
-  contact_person: string
-  contact_number: string
-  email:          string
-  created_by:     string
-  created_at:     string
+  id:                  string
+  shipper_name:        string
+  consignee_name:      string
+  mode:                string
+  pol:                 string
+  pod:                 string
+  contact_person:      string
+  contact_number:      string
+  email:               string
+  source:              "contact" | "activity"
+  activity_count:      number
+  last_activity_date:  string | null
+  created_by:          string
+  created_at:          string
+}
+
+interface ActivityHistoryItem {
+  id:            string
+  activity_date: string
+  activity_type: string
+  sales_person:  string
+  status:        string
+  notes:         string
+  points:        number
 }
 
 interface ParsedRow {
@@ -83,15 +99,15 @@ function highlight(text: string, query: string) {
   )
 }
 
+function formatDate(d: string | null) {
+  if (!d) return ""
+  return new Date(d + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+}
+
 // ─── Editable preview modal ────────────────────────────────────
 
 function PreviewModal({
-  rows,
-  onChange,
-  onDeleteRow,
-  onConfirm,
-  onCancel,
-  saving,
+  rows, onChange, onDeleteRow, onConfirm, onCancel, saving,
 }: {
   rows:        ParsedRow[]
   onChange:    (idx: number, field: RowField, value: string) => void
@@ -103,8 +119,6 @@ function PreviewModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-6xl max-h-[85vh] flex flex-col">
-
-        {/* Header */}
         <div className="flex items-start justify-between px-5 py-4 border-b border-border flex-shrink-0">
           <div>
             <h2 className="text-sm font-semibold text-foreground">Preview &amp; Edit Extracted Contacts</h2>
@@ -112,16 +126,11 @@ function PreviewModal({
               {rows.length} contact{rows.length !== 1 ? "s" : ""} found — click any cell to edit before importing
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onCancel}
-            className="text-muted-foreground hover:text-foreground transition-colors mt-0.5"
-          >
+          <button type="button" onClick={onCancel} className="text-muted-foreground hover:text-foreground transition-colors mt-0.5">
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        {/* Editable table */}
         <div className="overflow-auto flex-1">
           <table className="w-full text-xs border-collapse">
             <thead className="sticky top-0 z-10 bg-muted/80 border-b border-border">
@@ -137,13 +146,7 @@ function PreviewModal({
             </thead>
             <tbody>
               {rows.map((row, i) => (
-                <tr
-                  key={i}
-                  className={cn(
-                    "border-b border-border/40 group",
-                    i % 2 === 0 ? "bg-background" : "bg-muted/20"
-                  )}
-                >
+                <tr key={i} className={cn("border-b border-border/40 group", i % 2 === 0 ? "bg-background" : "bg-muted/20")}>
                   <td className="px-3 py-1 text-muted-foreground text-[11px] align-middle">{i + 1}</td>
                   {PREVIEW_COLS.map((col) => (
                     <td key={col.key} className="px-1 py-1 align-middle">
@@ -154,8 +157,7 @@ function PreviewModal({
                         className={cn(
                           "w-full h-7 px-2 rounded border border-transparent bg-transparent text-xs",
                           "hover:border-border focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30",
-                          "transition-colors placeholder:text-muted-foreground/50",
-                          col.width
+                          "transition-colors", col.width
                         )}
                         placeholder="—"
                       />
@@ -166,7 +168,6 @@ function PreviewModal({
                       type="button"
                       onClick={() => onDeleteRow(i)}
                       className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-1 rounded"
-                      title="Remove row"
                     >
                       <Trash2 className="h-3 w-3" />
                     </button>
@@ -177,16 +178,13 @@ function PreviewModal({
           </table>
         </div>
 
-        {/* Footer */}
         <div className="flex items-center justify-between px-5 py-3.5 border-t border-border flex-shrink-0">
           <p className="text-xs text-muted-foreground flex items-center gap-1.5">
             <Pencil className="h-3 w-3" />
             Click any cell to edit · hover row to delete
           </p>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={onCancel} disabled={saving}>
-              Cancel
-            </Button>
+            <Button variant="outline" size="sm" onClick={onCancel} disabled={saving}>Cancel</Button>
             <Button size="sm" onClick={onConfirm} disabled={saving || rows.length === 0}>
               {saving ? "Importing…" : `Import ${rows.length} contact${rows.length !== 1 ? "s" : ""}`}
             </Button>
@@ -197,54 +195,126 @@ function PreviewModal({
   )
 }
 
-// ─── Log Activity modal ────────────────────────────────────────
+// ─── Log Activity modal with call history ──────────────────────
 
 function LogActivityModal({
   contact,
   defaultSalesPerson,
   onClose,
 }: {
-  contact:             Contact
-  defaultSalesPerson:  string | undefined
-  onClose:             () => void
+  contact:            Contact
+  defaultSalesPerson: string | undefined
+  onClose:            () => void
 }) {
+  const [history, setHistory]   = useState<ActivityHistoryItem[]>([])
+  const [histLoading, setHistLoading] = useState(true)
+  const [showHistory, setShowHistory] = useState(true)
+
+  // Pre-select WARM_CALL if this client has been contacted before
+  const defaultType = contact.activity_count > 0 ? "WARM_CALL" : undefined
+
+  useEffect(() => {
+    if (!contact.shipper_name) { setHistLoading(false); return }
+    fetch(`/api/contacts/history?client=${encodeURIComponent(contact.shipper_name)}`)
+      .then((r) => r.json())
+      .then((d) => Array.isArray(d) ? setHistory(d) : setHistory([]))
+      .catch(() => setHistory([]))
+      .finally(() => setHistLoading(false))
+  }, [contact.shipper_name])
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+      <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col">
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0">
           <div>
             <h2 className="text-sm font-semibold text-foreground">Log Activity</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {contact.shipper_name || contact.consignee_name || "Contact"} — details pre-filled from contacts
+              {contact.shipper_name || contact.consignee_name || "Contact"}
+              {contact.activity_count > 0 && (
+                <span className="ml-1.5 text-amber-600 dark:text-amber-400 font-medium">
+                  · {contact.activity_count} previous call{contact.activity_count !== 1 ? "s" : ""}
+                </span>
+              )}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
+          <button type="button" onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        {/* Form */}
-        <div className="overflow-y-auto flex-1 p-5">
-          <ActivityForm
-            defaultSalesPerson={defaultSalesPerson}
-            defaultValues={{
-              client_name:    contact.shipper_name    || "",
-              contact_person: contact.contact_person  || "",
-              contact_number: contact.contact_number  || "",
-              email:          contact.email           || "",
-              mode:           contact.mode            || "",
-              pol:            contact.pol             || "",
-              pod:            contact.pod             || "",
-            }}
-            onSuccess={onClose}
-            onCancel={onClose}
-          />
+        <div className="overflow-y-auto flex-1">
+
+          {/* ── Call history strip ─────────────────────────── */}
+          {!histLoading && history.length > 0 && (
+            <div className="border-b border-border bg-muted/30">
+              <button
+                type="button"
+                onClick={() => setShowHistory((v) => !v)}
+                className="w-full flex items-center justify-between px-5 py-2.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <span className="flex items-center gap-1.5">
+                  <History className="h-3.5 w-3.5" />
+                  Call History ({history.length} recent)
+                </span>
+                <span>{showHistory ? "▲" : "▼"}</span>
+              </button>
+
+              {showHistory && (
+                <div className="px-5 pb-3 space-y-1.5">
+                  {history.map((h) => {
+                    const typeDef = ACTIVITY_TYPE_MAP[h.activity_type]
+                    return (
+                      <div key={h.id} className="flex items-start gap-3 text-xs">
+                        <span className="text-muted-foreground w-16 shrink-0 pt-0.5">
+                          {formatDate(h.activity_date)}
+                        </span>
+                        <span className={cn(
+                          "px-1.5 py-0.5 rounded text-[10px] font-semibold shrink-0",
+                          typeDef?.color ?? "bg-muted",
+                          typeDef?.textColor ?? "text-foreground"
+                        )}>
+                          {typeDef?.label ?? h.activity_type}
+                        </span>
+                        <span className="text-muted-foreground truncate flex-1">
+                          {h.status}{h.notes ? ` · ${h.notes}` : ""}
+                        </span>
+                        <span className="text-muted-foreground/60 shrink-0">+{h.points} XP</span>
+                      </div>
+                    )
+                  })}
+
+                  {/* Guidance based on history */}
+                  <div className="mt-2 pt-2 border-t border-border/40 text-[11px] text-amber-600 dark:text-amber-400">
+                    {contact.activity_count > 0
+                      ? "Log a Warm Call below for each follow-up — you earn 1 XP every time."
+                      : "This is your first contact with this client — log a Cold Call."
+                    }
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Activity form ──────────────────────────────── */}
+          <div className="p-5">
+            <ActivityForm
+              defaultSalesPerson={defaultSalesPerson}
+              defaultValues={{
+                client_name:    contact.shipper_name    || "",
+                contact_person: contact.contact_person  || "",
+                contact_number: contact.contact_number  || "",
+                email:          contact.email           || "",
+                mode:           contact.mode            || "",
+                pol:            contact.pol             || "",
+                pod:            contact.pod             || "",
+                ...(defaultType ? { activity_type: defaultType } : {}),
+              }}
+              onSuccess={onClose}
+              onCancel={onClose}
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -254,11 +324,7 @@ function LogActivityModal({
 // ─── Contact card ──────────────────────────────────────────────
 
 function ContactCard({
-  contact,
-  query,
-  onLogActivity,
-  onDelete,
-  isAdmin,
+  contact, query, onLogActivity, onDelete, isAdmin,
 }: {
   contact:       Contact
   query:         string
@@ -267,6 +333,7 @@ function ContactCard({
   isAdmin:       boolean
 }) {
   const [hovered, setHovered] = useState(false)
+  const canDelete = contact.source === "contact" // activity-sourced cards live in the activity log
 
   return (
     <div
@@ -279,7 +346,16 @@ function ContactCard({
     >
       <div className="p-4 flex-1">
 
-        {/* Names + mode badge */}
+        {/* Source badge */}
+        {contact.source === "activity" && (
+          <div className="flex items-center gap-1 mb-2">
+            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
+              From Activity Tracker
+            </span>
+          </div>
+        )}
+
+        {/* Names + mode */}
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="min-w-0 flex-1">
             {contact.shipper_name ? (
@@ -308,7 +384,7 @@ function ContactCard({
 
         {/* Route */}
         {(contact.pol || contact.pod) ? (
-          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-2.5">
+          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-2">
             <MapPin className="h-3 w-3 shrink-0" />
             <span>{contact.pol || "—"}</span>
             <span className="text-border">→</span>
@@ -317,7 +393,7 @@ function ContactCard({
         ) : null}
 
         {/* Contact details */}
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           {contact.contact_person ? (
             <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
               <User className="h-3 w-3 shrink-0" />
@@ -330,22 +406,29 @@ function ContactCard({
               <span className="truncate">{highlight(contact.contact_number, query)}</span>
             </div>
           ) : null}
-          {contact.email ? (
-            <div
-              className={cn(
-                "flex items-center gap-2 text-[11px] text-muted-foreground overflow-hidden",
-                "max-h-0 opacity-0 transition-all duration-200",
-                hovered && "max-h-10 opacity-100"
-              )}
-            >
+          {contact.email && hovered ? (
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
               <Mail className="h-3 w-3 shrink-0" />
               <span className="truncate">{highlight(contact.email, query)}</span>
             </div>
           ) : null}
         </div>
+
+        {/* Activity count */}
+        {contact.activity_count > 0 && (
+          <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <PhoneCall className="h-3 w-3 shrink-0 text-amber-500" />
+            <span className="text-amber-600 dark:text-amber-400 font-medium">
+              {contact.activity_count} call{contact.activity_count !== 1 ? "s" : ""}
+            </span>
+            {contact.last_activity_date && (
+              <span>· last {formatDate(contact.last_activity_date)}</span>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Action bar — slides in on hover */}
+      {/* Action bar */}
       <div className={cn(
         "flex items-center justify-between px-3 py-2 border-t border-border/60 rounded-b-lg",
         "bg-muted/30 transition-opacity duration-150",
@@ -357,10 +440,10 @@ function ContactCard({
           onClick={() => onLogActivity(contact)}
         >
           <Phone className="h-3 w-3" />
-          Log Activity
+          {contact.activity_count > 0 ? "Log Follow-up" : "Log Activity"}
         </Button>
 
-        {isAdmin && (
+        {isAdmin && canDelete && (
           <button
             type="button"
             onClick={() => onDelete(contact.id)}
@@ -388,18 +471,13 @@ const DUMMY_ROWS = [
 function ExcelFormatHint({ onUpload }: { onUpload: () => void }) {
   return (
     <div className="mt-2 space-y-4">
-
-      {/* Label */}
       <div className="flex items-center gap-3">
         <div className="h-px flex-1 bg-border" />
         <p className="text-xs text-muted-foreground font-medium">Format your Excel like this before uploading</p>
         <div className="h-px flex-1 bg-border" />
       </div>
 
-      {/* Fake spreadsheet */}
       <div className="rounded-xl border border-border overflow-hidden shadow-sm">
-
-        {/* Fake toolbar strip */}
         <div className="flex items-center gap-1.5 px-3 py-2 bg-muted/60 border-b border-border">
           <div className="h-2.5 w-2.5 rounded-full bg-red-400/60" />
           <div className="h-2.5 w-2.5 rounded-full bg-yellow-400/60" />
@@ -409,58 +487,33 @@ function ExcelFormatHint({ onUpload }: { onUpload: () => void }) {
           <div className="h-3 w-16 rounded bg-muted-foreground/20" />
         </div>
 
-        {/* Spreadsheet grid */}
         <div className="overflow-x-auto">
           <table className="w-full text-[11px] border-collapse">
-
-            {/* Row number col + header row */}
             <thead>
               <tr className="bg-muted/80">
-                {/* Row number gutter */}
-                <th className="w-8 border-r border-b border-border px-2 py-1.5 text-center text-muted-foreground/50 font-normal">
-                  1
-                </th>
+                <th className="w-8 border-r border-b border-border px-2 py-1.5 text-center text-muted-foreground/50 font-normal">1</th>
                 {TEMPLATE_COLS.map((col) => (
-                  <th
-                    key={col}
-                    className="border-r border-b border-border px-3 py-1.5 text-left font-semibold text-foreground whitespace-nowrap"
-                  >
+                  <th key={col} className="border-r border-b border-border px-3 py-1.5 text-left font-semibold text-foreground whitespace-nowrap">
                     {col}
                   </th>
                 ))}
               </tr>
             </thead>
-
-            {/* Dummy data rows */}
             <tbody>
               {DUMMY_ROWS.map((row, ri) => (
-                <tr key={ri} className="bg-background hover:bg-muted/20 transition-colors">
-                  <td className="border-r border-b border-border/50 px-2 py-1.5 text-center text-muted-foreground/40 bg-muted/40 font-normal">
-                    {ri + 2}
-                  </td>
+                <tr key={ri} className="bg-background">
+                  <td className="border-r border-b border-border/50 px-2 py-1.5 text-center text-muted-foreground/40 bg-muted/40 font-normal">{ri + 2}</td>
                   {row.map((cell, ci) => (
-                    <td
-                      key={ci}
-                      className="border-r border-b border-border/50 px-3 py-1.5 text-muted-foreground/60 whitespace-nowrap"
-                    >
-                      {cell}
-                    </td>
+                    <td key={ci} className="border-r border-b border-border/50 px-3 py-1.5 text-muted-foreground/60 whitespace-nowrap">{cell}</td>
                   ))}
                 </tr>
               ))}
-
-              {/* Ghost rows */}
               {[0, 1].map((i) => (
                 <tr key={`ghost-${i}`} className="bg-background">
-                  <td className="border-r border-b border-border/30 px-2 py-1.5 text-center text-muted-foreground/20 bg-muted/20">
-                    {DUMMY_ROWS.length + 2 + i}
-                  </td>
+                  <td className="border-r border-b border-border/30 px-2 py-1.5 text-center text-muted-foreground/20 bg-muted/20">{DUMMY_ROWS.length + 2 + i}</td>
                   {TEMPLATE_COLS.map((_, ci) => (
                     <td key={ci} className="border-r border-b border-border/20 px-3 py-1.5">
-                      <div className={cn(
-                        "h-2.5 rounded-full bg-muted-foreground/10",
-                        ci === 0 ? "w-28" : ci === 1 ? "w-24" : ci === 7 ? "w-32" : "w-16"
-                      )} />
+                      <div className={cn("h-2.5 rounded-full bg-muted-foreground/10", ci === 0 ? "w-28" : ci === 1 ? "w-24" : ci === 7 ? "w-32" : "w-16")} />
                     </td>
                   ))}
                 </tr>
@@ -470,7 +523,6 @@ function ExcelFormatHint({ onUpload }: { onUpload: () => void }) {
         </div>
       </div>
 
-      {/* CTA */}
       <div className="text-center pb-4">
         <Button size="sm" variant="outline" className="gap-2" onClick={onUpload}>
           <Upload className="h-4 w-4" />
@@ -494,17 +546,14 @@ export default function ContactsPage() {
   const [query,       setQuery]       = useState("")
   const [page,        setPage]        = useState(1)
 
-  // Excel import state
   const [parsing,     setParsing]     = useState(false)
   const [parseError,  setParseError]  = useState<string | null>(null)
   const [previewRows, setPreviewRows] = useState<ParsedRow[] | null>(null)
   const [importing,   setImporting]   = useState(false)
   const [importMsg,   setImportMsg]   = useState<string | null>(null)
 
-  // Activity modal
   const [logTarget, setLogTarget] = useState<Contact | null>(null)
 
-  // User info
   const [userInfo, setUserInfo] = useState<{ role: string; salesperson: string | null } | null>(null)
 
   useEffect(() => {
@@ -560,31 +609,20 @@ export default function ContactsPage() {
     const file = e.target.files?.[0]
     if (!file) return
     e.target.value = ""
-
-    setParsing(true)
-    setParseError(null)
-    setImportMsg(null)
-
+    setParsing(true); setParseError(null); setImportMsg(null)
     const fd = new FormData()
     fd.append("file", file)
-
     try {
       const res  = await fetch("/api/contacts/parse", { method: "POST", body: fd })
       const json = await res.json()
       if (!res.ok) { setParseError(json.error ?? "Parse failed"); return }
       setPreviewRows(json.contacts)
-    } catch {
-      setParseError("Failed to read file")
-    } finally {
-      setParsing(false)
-    }
+    } catch { setParseError("Failed to read file") }
+    finally   { setParsing(false) }
   }
 
-  // Editable preview handlers
   function handlePreviewChange(idx: number, field: RowField, value: string) {
-    setPreviewRows((prev) =>
-      prev ? prev.map((r, i) => i === idx ? { ...r, [field]: value } : r) : prev
-    )
+    setPreviewRows((prev) => prev ? prev.map((r, i) => i === idx ? { ...r, [field]: value } : r) : prev)
   }
 
   function handlePreviewDeleteRow(idx: number) {
@@ -596,86 +634,46 @@ export default function ContactsPage() {
     setImporting(true)
     try {
       const res  = await fetch("/api/contacts", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(previewRows),
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(previewRows),
       })
       const json = await res.json()
       if (!res.ok) { setParseError(json.error ?? "Import failed"); setPreviewRows(null); return }
       setPreviewRows(null)
       setImportMsg(`${json.inserted} contact${json.inserted !== 1 ? "s" : ""} imported successfully.`)
       fetchContacts()
-    } finally {
-      setImporting(false)
-    }
+    } finally { setImporting(false) }
   }
 
-  // ── Delete ────────────────────────────────────────────────────
+  // ── Delete (only TBL_CONTACTS rows) ──────────────────────────
 
   async function handleDelete(id: string) {
+    if (!id.startsWith("c_")) return // safety — never delete activity-sourced cards
     if (!confirm("Delete this contact?")) return
-    await fetch(`/api/contacts/${id}`, { method: "DELETE" })
+    await fetch(`/api/contacts/${id.slice(2)}`, { method: "DELETE" })
     setContacts((prev) => prev.filter((c) => c.id !== id))
   }
 
-  const isAdmin = userInfo?.role === "admin"
-
-  // ── Download blank template ───────────────────────────────────
+  // ── Download template ─────────────────────────────────────────
 
   function downloadTemplate() {
-    const headers = [
-      "SHIPPER NAME",
-      "CONSIGNEE NAME",
-      "SEA/AIR",
-      "POL",
-      "POD",
-      "CONTACT PERSON",
-      "CONTACT",
-      "EMAIL ID",
-    ]
-
+    const headers = ["SHIPPER NAME", "CONSIGNEE NAME", "SEA/AIR", "POL", "POD", "CONTACT PERSON", "CONTACT", "EMAIL ID"]
     const examples = [
-      {
-        "SHIPPER NAME":    "ABC Textiles Pvt Ltd",
-        "CONSIGNEE NAME":  "Global Traders GmbH",
-        "SEA/AIR":         "SEA",
-        "POL":             "JNPT",
-        "POD":             "HAMBURG",
-        "CONTACT PERSON":  "Ramesh Kumar",
-        "CONTACT":         "91-9876543210",
-        "EMAIL ID":        "ramesh@abctextiles.com",
-      },
-      {
-        "SHIPPER NAME":    "Sunshine Garments",
-        "CONSIGNEE NAME":  "Fashion House Inc",
-        "SEA/AIR":         "AIR",
-        "POL":             "DELHI",
-        "POD":             "NEW YORK",
-        "CONTACT PERSON":  "Priya Singh",
-        "CONTACT":         "91-9123456789",
-        "EMAIL ID":        "priya@sunshinegarments.com",
-      },
-      {
-        "SHIPPER NAME":    "Spice Exports Ltd",
-        "CONSIGNEE NAME":  "Arabian Foods LLC",
-        "SEA/AIR":         "SEA",
-        "POL":             "COCHIN",
-        "POD":             "DUBAI",
-        "CONTACT PERSON":  "Anil Menon",
-        "CONTACT":         "91-9988776655",
-        "EMAIL ID":        "anil@spiceexports.com",
-      },
+      { "SHIPPER NAME": "ABC Textiles Pvt Ltd", "CONSIGNEE NAME": "Global Traders GmbH", "SEA/AIR": "SEA", "POL": "JNPT", "POD": "HAMBURG", "CONTACT PERSON": "Ramesh Kumar", "CONTACT": "91-9876543210", "EMAIL ID": "ramesh@abctextiles.com" },
+      { "SHIPPER NAME": "Sunshine Garments", "CONSIGNEE NAME": "Fashion House Inc", "SEA/AIR": "AIR", "POL": "DELHI", "POD": "NEW YORK", "CONTACT PERSON": "Priya Singh", "CONTACT": "91-9123456789", "EMAIL ID": "priya@sunshinegarments.com" },
     ]
-
     const ws = XLSX.utils.json_to_sheet(examples, { header: headers })
-
-    // Style the header row width
     ws["!cols"] = headers.map((h) => ({ wch: Math.max(h.length + 4, 20) }))
-
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, "Contacts")
     XLSX.writeFile(wb, "contacts_template.xlsx")
   }
+
+  const isAdmin = userInfo?.role === "admin"
+
+  // Counts for tab strip
+  const importedCount  = contacts.filter((c) => c.source === "contact").length
+  const activityCount  = contacts.filter((c) => c.source === "activity").length
 
   return (
     <div className="p-4 max-w-screen-xl mx-auto space-y-5">
@@ -685,42 +683,31 @@ export default function ContactsPage() {
         <div>
           <h1 className="text-xl font-semibold text-foreground">Contacts</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Import from Excel · search · log activities directly
+            {!loading && contacts.length > 0 && (
+              <span>
+                {importedCount > 0 && `${importedCount} imported`}
+                {importedCount > 0 && activityCount > 0 && " · "}
+                {activityCount > 0 && `${activityCount} from Activity Tracker`}
+              </span>
+            )}
+            {(loading || contacts.length === 0) && "Import from Excel · search · log activities directly"}
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".xlsx,.xls,.csv"
-            className="hidden"
-            onChange={handleFileChange}
-          />
-          <Button
-            size="sm"
-            variant="ghost"
-            className="gap-1.5 text-muted-foreground"
-            onClick={downloadTemplate}
-            title="Download a blank Excel template showing the required column format"
-          >
+          <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleFileChange} />
+          <Button size="sm" variant="ghost" className="gap-1.5 text-muted-foreground" onClick={downloadTemplate}>
             <FileDown className="h-4 w-4" />
-            Download Template
+            Template
           </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1.5"
-            onClick={() => { setParseError(null); fileRef.current?.click() }}
-            disabled={parsing}
-          >
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setParseError(null); fileRef.current?.click() }} disabled={parsing}>
             <Upload className="h-4 w-4" />
             {parsing ? "Reading…" : "Upload Excel"}
           </Button>
         </div>
       </div>
 
-      {/* ── Parse error ──────────────────────────────────── */}
+      {/* ── Alerts ───────────────────────────────────────── */}
       {parseError && (
         <div className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
@@ -728,24 +715,18 @@ export default function ContactsPage() {
             <p className="font-medium">Import failed</p>
             <p className="text-xs mt-0.5 opacity-80">{parseError}</p>
             <p className="text-[11px] mt-1.5 opacity-60">
-              Expected column headers (case-insensitive):
-              Shipper Name · Consignee Name · SEA/AIR · POL · POD · Contact · Email ID
+              Expected headers: Shipper Name · Consignee Name · SEA/AIR · POL · POD · Contact · Email ID
             </p>
           </div>
-          <button type="button" onClick={() => setParseError(null)} className="shrink-0">
-            <X className="h-3.5 w-3.5" />
-          </button>
+          <button type="button" onClick={() => setParseError(null)} className="shrink-0"><X className="h-3.5 w-3.5" /></button>
         </div>
       )}
 
-      {/* ── Import success ────────────────────────────────── */}
       {importMsg && (
         <div className="flex items-center gap-2.5 rounded-lg border border-green-300 bg-green-50 dark:bg-green-950/30 dark:border-green-800 px-4 py-3 text-sm text-green-700 dark:text-green-400">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
           <span className="flex-1">{importMsg}</span>
-          <button type="button" onClick={() => setImportMsg(null)}>
-            <X className="h-3.5 w-3.5" />
-          </button>
+          <button type="button" onClick={() => setImportMsg(null)}><X className="h-3.5 w-3.5" /></button>
         </div>
       )}
 
@@ -760,11 +741,7 @@ export default function ContactsPage() {
             className="pl-9"
           />
           {query && (
-            <button
-              type="button"
-              onClick={() => handleQueryChange("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
+            <button type="button" onClick={() => handleQueryChange("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
               <X className="h-3.5 w-3.5" />
             </button>
           )}
@@ -808,29 +785,19 @@ export default function ContactsPage() {
       {/* ── Pagination ────────────────────────────────────── */}
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 pt-2">
-          <button
-            type="button"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="p-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground disabled:opacity-40 transition-colors"
-          >
+          <button type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
+            className="p-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground disabled:opacity-40 transition-colors">
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <span className="text-xs text-muted-foreground">
-            Page {page} of {totalPages}
-          </span>
-          <button
-            type="button"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            className="p-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground disabled:opacity-40 transition-colors"
-          >
+          <span className="text-xs text-muted-foreground">Page {page} of {totalPages}</span>
+          <button type="button" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+            className="p-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground disabled:opacity-40 transition-colors">
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
       )}
 
-      {/* ── Preview / edit modal ──────────────────────────── */}
+      {/* ── Preview modal ─────────────────────────────────── */}
       {previewRows && (
         <PreviewModal
           rows={previewRows}

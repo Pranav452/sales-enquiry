@@ -14,22 +14,7 @@ type ContactRow = {
   email:          string
 }
 
-const SELECT_COLS = `
-  CAST(ID AS varchar(20))               AS id,
-  ISNULL(SHIPPER_NAME,   '')            AS shipper_name,
-  ISNULL(CONSIGNEE_NAME, '')            AS consignee_name,
-  ISNULL([MODE],         '')            AS mode,
-  ISNULL(POL,            '')            AS pol,
-  ISNULL(POD,            '')            AS pod,
-  ISNULL(CONTACT_PERSON, '')            AS contact_person,
-  ISNULL(CONTACT_NUMBER, '')            AS contact_number,
-  ISNULL(EMAIL,          '')            AS email,
-  ISNULL(CREATED_BY,     '')            AS created_by,
-  CONVERT(varchar(10), CREATED_AT, 120) AS created_at
-`
-
-// Auto-create TBL_CONTACTS if it doesn't exist yet.
-// This means no manual SQL migration is needed.
+// Auto-create TBL_CONTACTS if it doesn't exist yet — no manual migration needed.
 async function ensureTable(pool: sql.ConnectionPool) {
   await pool.request().query(`
     IF NOT EXISTS (
@@ -63,11 +48,72 @@ export async function GET(req: NextRequest) {
     const pool = await getPool(auth.company)
     await ensureTable(pool)
 
+    // UNION: manually-saved contacts + activity-tracker clients (distinct, not already in TBL_CONTACTS)
+    // Both sets enriched with activity_count + last_activity_date from TBL_CALLS_VISITS.
     const result = await pool.request().query(`
-      SELECT ${SELECT_COLS}
-      FROM   [dbo].[TBL_CONTACTS]
-      ORDER  BY CREATED_AT DESC
+      SELECT *
+      FROM (
+
+        -- ── Part 1: contacts saved via Excel import ───────────────
+        SELECT
+          'c_' + CAST(c.ID AS varchar(20))          AS id,
+          ISNULL(c.SHIPPER_NAME,   '')               AS shipper_name,
+          ISNULL(c.CONSIGNEE_NAME, '')               AS consignee_name,
+          ISNULL(c.[MODE],         '')               AS mode,
+          ISNULL(c.POL,            '')               AS pol,
+          ISNULL(c.POD,            '')               AS pod,
+          ISNULL(c.CONTACT_PERSON, '')               AS contact_person,
+          ISNULL(c.CONTACT_NUMBER, '')               AS contact_number,
+          ISNULL(c.EMAIL,          '')               AS email,
+          'contact'                                  AS source,
+          ISNULL(a.cnt, 0)                           AS activity_count,
+          a.last_date                                AS last_activity_date,
+          ISNULL(c.CREATED_BY, '')                   AS created_by,
+          CONVERT(varchar(10), c.CREATED_AT, 120)    AS created_at
+        FROM [dbo].[TBL_CONTACTS] c
+        LEFT JOIN (
+          SELECT
+            LOWER(RTRIM(LTRIM(CLIENT_NAME)))             AS cname,
+            COUNT(*)                                     AS cnt,
+            CONVERT(varchar(10), MAX(ACTIVITY_DATE), 120) AS last_date
+          FROM [dbo].[TBL_CALLS_VISITS]
+          WHERE CLIENT_NAME IS NOT NULL AND CLIENT_NAME != ''
+          GROUP BY LOWER(RTRIM(LTRIM(CLIENT_NAME)))
+        ) a ON LOWER(RTRIM(LTRIM(c.SHIPPER_NAME))) = a.cname
+
+        UNION ALL
+
+        -- ── Part 2: clients from activity tracker not yet in contacts ─
+        SELECT
+          'a_' + CAST(
+            ROW_NUMBER() OVER (ORDER BY MAX(cv.CREATED_AT) DESC)
+          AS varchar(20))                                AS id,
+          MAX(cv.CLIENT_NAME)                            AS shipper_name,
+          ''                                             AS consignee_name,
+          ISNULL(MAX(cv.[MODE]), '')                     AS mode,
+          ISNULL(MAX(cv.POL),    '')                     AS pol,
+          ISNULL(MAX(cv.POD),    '')                     AS pod,
+          ISNULL(MAX(cv.CONTACT_PERSON), '')             AS contact_person,
+          ISNULL(MAX(cv.CONTACT_NUMBER), '')             AS contact_number,
+          ISNULL(MAX(cv.EMAIL),          '')             AS email,
+          'activity'                                     AS source,
+          COUNT(*)                                       AS activity_count,
+          CONVERT(varchar(10), MAX(cv.ACTIVITY_DATE), 120) AS last_activity_date,
+          ISNULL(MAX(cv.CREATED_BY), '')                 AS created_by,
+          CONVERT(varchar(10), MIN(cv.CREATED_AT), 120)  AS created_at
+        FROM [dbo].[TBL_CALLS_VISITS] cv
+        WHERE cv.CLIENT_NAME IS NOT NULL AND cv.CLIENT_NAME != ''
+          AND LOWER(RTRIM(LTRIM(cv.CLIENT_NAME))) NOT IN (
+            SELECT LOWER(RTRIM(LTRIM(ISNULL(SHIPPER_NAME, ''))))
+            FROM [dbo].[TBL_CONTACTS]
+            WHERE SHIPPER_NAME IS NOT NULL AND SHIPPER_NAME != ''
+          )
+        GROUP BY LOWER(RTRIM(LTRIM(cv.CLIENT_NAME)))
+
+      ) combined
+      ORDER BY created_at DESC
     `)
+
     return NextResponse.json(result.recordset)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)

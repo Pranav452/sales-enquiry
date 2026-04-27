@@ -45,6 +45,7 @@ export default function ActivitiesPage() {
   const [userInfo, setUserInfo]         = useState<UserInfo | null>(null)
   const [showForm, setShowForm]         = useState(false)
   const [editingActivity, setEditing]   = useState<Activity | null>(null)
+  const [followUpDefaults, setFollowUpDefaults] = useState<Record<string, string> | null>(null)
   const [refresh, setRefresh]           = useState(0)
   const [toast, setToast]               = useState<{ points: number; type: string } | null>(null)
   const [showLeaderboard, setShowLeaderboard] = useState(true)
@@ -103,7 +104,7 @@ export default function ActivitiesPage() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-sm font-semibold">
-                {editingActivity ? "Edit Activity" : "Log New Activity"}
+                {editingActivity ? "Edit Activity" : followUpDefaults ? "Log Follow-up Call" : "Log New Activity"}
               </h2>
               {editingActivity?.client_name && (
                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -113,10 +114,15 @@ export default function ActivitiesPage() {
                     : ""}
                 </p>
               )}
+              {!editingActivity && followUpDefaults?.client_name && (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {followUpDefaults.client_name} · pre-filled from previous call
+                </p>
+              )}
             </div>
             <button
               type="button"
-              onClick={() => { setShowForm(false); setEditing(null) }}
+              onClick={() => { setShowForm(false); setEditing(null); setFollowUpDefaults(null) }}
               className="text-muted-foreground hover:text-foreground transition-colors"
             >
               <X className="h-4 w-4" />
@@ -125,8 +131,12 @@ export default function ActivitiesPage() {
           <ActivityFormWithType
             editingId={editingActivity?.id}
             defaultSalesPerson={userInfo?.salesperson ?? undefined}
-            onSuccess={handleFormSuccess}
-            onCancel={() => { setShowForm(false); setEditing(null) }}
+            defaultValues={!editingActivity && followUpDefaults ? followUpDefaults : undefined}
+            onSuccess={(id, pts, isEdit, type) => {
+              setFollowUpDefaults(null)
+              handleFormSuccess(id, pts, isEdit, type)
+            }}
+            onCancel={() => { setShowForm(false); setEditing(null); setFollowUpDefaults(null) }}
           />
         </div>
       )}
@@ -182,6 +192,24 @@ export default function ActivitiesPage() {
             setShowForm(false)
             window.scrollTo({ top: 0, behavior: "smooth" })
           }}
+          onFollowUp={(a) => {
+            // Open a new blank form pre-filled with same client data + WARM_CALL
+            setEditing(null)
+            setShowForm(true)
+            // Store the prefill in state so ActivityFormWithType can pass it down
+            setFollowUpDefaults({
+              client_name:    a.client_name    ?? "",
+              contact_person: a.contact_person ?? "",
+              contact_number: a.contact_number ?? "",
+              email:          a.email          ?? "",
+              mode:           a.mode           ?? "",
+              pol:            a.pol            ?? "",
+              pod:            a.pod            ?? "",
+              branch:         a.branch         ?? "",
+              activity_type:  "WARM_CALL",
+            })
+            window.scrollTo({ top: 0, behavior: "smooth" })
+          }}
           refresh={refresh}
         />
       </div>
@@ -202,25 +230,27 @@ export default function ActivitiesPage() {
 function ActivityFormWithType({
   editingId,
   defaultSalesPerson,
+  defaultValues,
   onSuccess,
   onCancel,
 }: {
-  editingId?: string
+  editingId?:          string
   defaultSalesPerson?: string
-  onSuccess: (id: string, points: number, isEdit: boolean, type?: string) => void
-  onCancel?: () => void
+  defaultValues?:      Record<string, string> | null
+  onSuccess:           (id: string, points: number, isEdit: boolean, type?: string) => void
+  onCancel?:           () => void
 }) {
-  const [selectedType, setSelectedType] = useState("")
+  const [selectedType, setSelectedType] = useState(defaultValues?.activity_type ?? "")
 
   return (
     <div onClick={(e) => {
-      // Capture activity type selection from form buttons
       const btn = (e.target as HTMLElement).closest("button[data-type]")
       if (btn) setSelectedType(btn.getAttribute("data-type") ?? "")
     }}>
       <ActivityForm
         editingId={editingId}
         defaultSalesPerson={defaultSalesPerson}
+        defaultValues={defaultValues ?? undefined}
         onSuccess={(id, pts, isEdit) => onSuccess(id, pts, isEdit, selectedType)}
         onCancel={onCancel}
       />

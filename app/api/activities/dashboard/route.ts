@@ -13,9 +13,10 @@ export async function GET(req: NextRequest) {
   const type   = req.nextUrl.searchParams.get("type")   ?? "stats"
   const period = req.nextUrl.searchParams.get("period") ?? "30"  // days
 
-  // Leaderboard endpoint — all roles can call it (response is scoped server-side)
+  // Leaderboard + personal — accessible to all roles (data is scoped server-side)
   // All other dashboard endpoints — admin only
-  if (type !== "leaderboard" && auth.role !== "admin") {
+  const PUBLIC_TYPES = new Set(["leaderboard", "personal"])
+  if (!PUBLIC_TYPES.has(type) && auth.role !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
