@@ -20,43 +20,57 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Pencil,
 } from "lucide-react"
 
 // ─── Types ─────────────────────────────────────────────────────
 
 interface Contact {
-  id: string
-  shipper_name: string | null
-  consignee_name: string | null
-  mode: string | null
-  pol: string | null
-  pod: string | null
-  contact_person: string | null
-  contact_number: string | null
-  email: string | null
-  created_by: string | null
-  created_at: string | null
+  id:             string
+  shipper_name:   string
+  consignee_name: string
+  mode:           string
+  pol:            string
+  pod:            string
+  contact_person: string
+  contact_number: string
+  email:          string
+  created_by:     string
+  created_at:     string
 }
 
 interface ParsedRow {
-  shipper_name: string
+  shipper_name:   string
   consignee_name: string
-  mode: string
-  pol: string
-  pod: string
+  mode:           string
+  pol:            string
+  pod:            string
   contact_person: string
   contact_number: string
-  email: string
+  email:          string
 }
 
-// ─── Helper ────────────────────────────────────────────────────
+type RowField = keyof ParsedRow
+
+// ─── Helpers ───────────────────────────────────────────────────
 
 const PAGE_SIZE = 20
 
+const PREVIEW_COLS: { key: RowField; label: string; width: string }[] = [
+  { key: "shipper_name",   label: "Shipper",        width: "min-w-[160px]" },
+  { key: "consignee_name", label: "Consignee",      width: "min-w-[160px]" },
+  { key: "mode",           label: "Mode",           width: "min-w-[80px]"  },
+  { key: "pol",            label: "POL",            width: "min-w-[90px]"  },
+  { key: "pod",            label: "POD",            width: "min-w-[90px]"  },
+  { key: "contact_person", label: "Contact Person", width: "min-w-[130px]" },
+  { key: "contact_number", label: "Phone",          width: "min-w-[140px]" },
+  { key: "email",          label: "Email",          width: "min-w-[180px]" },
+]
+
 function highlight(text: string, query: string) {
-  if (!query || !text) return text
+  if (!query || !text) return <>{text}</>
   const idx = text.toLowerCase().indexOf(query.toLowerCase())
-  if (idx === -1) return text
+  if (idx === -1) return <>{text}</>
   return (
     <>
       {text.slice(0, idx)}
@@ -68,63 +82,94 @@ function highlight(text: string, query: string) {
   )
 }
 
-// ─── Preview modal ─────────────────────────────────────────────
+// ─── Editable preview modal ────────────────────────────────────
 
 function PreviewModal({
   rows,
+  onChange,
+  onDeleteRow,
   onConfirm,
   onCancel,
   saving,
 }: {
-  rows: ParsedRow[]
-  onConfirm: () => void
-  onCancel: () => void
-  saving: boolean
+  rows:        ParsedRow[]
+  onChange:    (idx: number, field: RowField, value: string) => void
+  onDeleteRow: (idx: number) => void
+  onConfirm:   () => void
+  onCancel:    () => void
+  saving:      boolean
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-5xl max-h-[80vh] flex flex-col">
+      <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-6xl max-h-[85vh] flex flex-col">
+
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0">
+        <div className="flex items-start justify-between px-5 py-4 border-b border-border flex-shrink-0">
           <div>
-            <h2 className="text-sm font-semibold text-foreground">Preview Extracted Contacts</h2>
+            <h2 className="text-sm font-semibold text-foreground">Preview &amp; Edit Extracted Contacts</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {rows.length} contact{rows.length !== 1 ? "s" : ""} found — review before importing
+              {rows.length} contact{rows.length !== 1 ? "s" : ""} found — click any cell to edit before importing
             </p>
           </div>
           <button
             type="button"
             onClick={onCancel}
-            className="text-muted-foreground hover:text-foreground transition-colors"
+            className="text-muted-foreground hover:text-foreground transition-colors mt-0.5"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        {/* Table */}
+        {/* Editable table */}
         <div className="overflow-auto flex-1">
-          <table className="w-full text-xs">
-            <thead className="sticky top-0 bg-muted/60 border-b border-border">
+          <table className="w-full text-xs border-collapse">
+            <thead className="sticky top-0 z-10 bg-muted/80 border-b border-border">
               <tr>
-                {["#", "Shipper", "Consignee", "Mode", "POL", "POD", "Contact Person", "Phone", "Email"].map((h) => (
-                  <th key={h} className="px-3 py-2.5 text-left font-semibold text-muted-foreground whitespace-nowrap">
-                    {h}
+                <th className="px-3 py-2.5 text-left font-semibold text-muted-foreground w-8">#</th>
+                {PREVIEW_COLS.map((c) => (
+                  <th key={c.key} className={cn("px-2 py-2.5 text-left font-semibold text-muted-foreground whitespace-nowrap", c.width)}>
+                    {c.label}
                   </th>
                 ))}
+                <th className="px-2 py-2.5 w-8" />
               </tr>
             </thead>
             <tbody>
-              {rows.map((r, i) => (
-                <tr key={i} className={cn("border-b border-border/40", i % 2 === 0 ? "bg-background" : "bg-muted/20")}>
-                  <td className="px-3 py-2 text-muted-foreground">{i + 1}</td>
-                  <td className="px-3 py-2 font-medium max-w-[160px] truncate">{r.shipper_name || "—"}</td>
-                  <td className="px-3 py-2 max-w-[160px] truncate">{r.consignee_name || "—"}</td>
-                  <td className="px-3 py-2">{r.mode || "—"}</td>
-                  <td className="px-3 py-2">{r.pol || "—"}</td>
-                  <td className="px-3 py-2">{r.pod || "—"}</td>
-                  <td className="px-3 py-2">{r.contact_person || "—"}</td>
-                  <td className="px-3 py-2">{r.contact_number || "—"}</td>
-                  <td className="px-3 py-2 max-w-[180px] truncate">{r.email || "—"}</td>
+              {rows.map((row, i) => (
+                <tr
+                  key={i}
+                  className={cn(
+                    "border-b border-border/40 group",
+                    i % 2 === 0 ? "bg-background" : "bg-muted/20"
+                  )}
+                >
+                  <td className="px-3 py-1 text-muted-foreground text-[11px] align-middle">{i + 1}</td>
+                  {PREVIEW_COLS.map((col) => (
+                    <td key={col.key} className="px-1 py-1 align-middle">
+                      <input
+                        type="text"
+                        value={row[col.key]}
+                        onChange={(e) => onChange(i, col.key, e.target.value)}
+                        className={cn(
+                          "w-full h-7 px-2 rounded border border-transparent bg-transparent text-xs",
+                          "hover:border-border focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30",
+                          "transition-colors placeholder:text-muted-foreground/50",
+                          col.width
+                        )}
+                        placeholder="—"
+                      />
+                    </td>
+                  ))}
+                  <td className="px-1 py-1 align-middle">
+                    <button
+                      type="button"
+                      onClick={() => onDeleteRow(i)}
+                      className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-1 rounded"
+                      title="Remove row"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -132,13 +177,19 @@ function PreviewModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-5 py-3.5 border-t border-border flex-shrink-0">
-          <Button variant="outline" size="sm" onClick={onCancel} disabled={saving}>
-            Cancel
-          </Button>
-          <Button size="sm" onClick={onConfirm} disabled={saving}>
-            {saving ? "Importing…" : `Import ${rows.length} contact${rows.length !== 1 ? "s" : ""}`}
-          </Button>
+        <div className="flex items-center justify-between px-5 py-3.5 border-t border-border flex-shrink-0">
+          <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+            <Pencil className="h-3 w-3" />
+            Click any cell to edit · hover row to delete
+          </p>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={onCancel} disabled={saving}>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={onConfirm} disabled={saving || rows.length === 0}>
+              {saving ? "Importing…" : `Import ${rows.length} contact${rows.length !== 1 ? "s" : ""}`}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
@@ -151,22 +202,21 @@ function LogActivityModal({
   contact,
   defaultSalesPerson,
   onClose,
-  onSuccess,
 }: {
-  contact: Contact
-  defaultSalesPerson: string | undefined
-  onClose: () => void
-  onSuccess: () => void
+  contact:             Contact
+  defaultSalesPerson:  string | undefined
+  onClose:             () => void
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0">
           <div>
             <h2 className="text-sm font-semibold text-foreground">Log Activity</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {contact.shipper_name || contact.consignee_name || "Contact"} — pre-filled from contacts
+              {contact.shipper_name || contact.consignee_name || "Contact"} — details pre-filled from contacts
             </p>
           </div>
           <button
@@ -183,15 +233,15 @@ function LogActivityModal({
           <ActivityForm
             defaultSalesPerson={defaultSalesPerson}
             defaultValues={{
-              client_name:    contact.shipper_name ?? "",
-              contact_person: contact.contact_person ?? "",
-              contact_number: contact.contact_number ?? "",
-              email:          contact.email ?? "",
-              mode:           contact.mode ?? "",
-              pol:            contact.pol ?? "",
-              pod:            contact.pod ?? "",
+              client_name:    contact.shipper_name    || "",
+              contact_person: contact.contact_person  || "",
+              contact_number: contact.contact_number  || "",
+              email:          contact.email           || "",
+              mode:           contact.mode            || "",
+              pol:            contact.pol             || "",
+              pod:            contact.pod             || "",
             }}
-            onSuccess={() => { onSuccess(); onClose() }}
+            onSuccess={onClose}
             onCancel={onClose}
           />
         </div>
@@ -209,120 +259,99 @@ function ContactCard({
   onDelete,
   isAdmin,
 }: {
-  contact: Contact
-  query: string
+  contact:       Contact
+  query:         string
   onLogActivity: (c: Contact) => void
-  onDelete: (id: string) => void
-  isAdmin: boolean
+  onDelete:      (id: string) => void
+  isAdmin:       boolean
 }) {
   const [hovered, setHovered] = useState(false)
 
   return (
     <div
       className={cn(
-        "relative rounded-lg border border-border bg-card transition-all duration-150",
+        "rounded-lg border border-border bg-card transition-all duration-150 flex flex-col",
         "hover:border-primary/40 hover:shadow-sm"
       )}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <div className="p-4">
-        {/* Names row */}
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="min-w-0">
-            {contact.shipper_name && (
-              <p className="text-sm font-semibold text-foreground truncate">
+      <div className="p-4 flex-1">
+
+        {/* Names + mode badge */}
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="min-w-0 flex-1">
+            {contact.shipper_name ? (
+              <p className="text-sm font-semibold text-foreground truncate leading-snug">
                 {highlight(contact.shipper_name, query)}
               </p>
-            )}
-            {contact.consignee_name && (
-              <p className="text-xs text-muted-foreground truncate mt-0.5">
-                <span className="text-[10px] font-medium uppercase tracking-wide mr-1">Consignee</span>
+            ) : null}
+            {contact.consignee_name ? (
+              <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                <span className="font-medium uppercase tracking-wide text-[10px]">Consignee · </span>
                 {highlight(contact.consignee_name, query)}
               </p>
-            )}
+            ) : null}
           </div>
-
-          {/* Mode badge */}
-          {contact.mode && (
+          {contact.mode ? (
             <span className={cn(
-              "text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full shrink-0",
-              contact.mode.toLowerCase().includes("air")
+              "text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full shrink-0 mt-0.5",
+              contact.mode === "AIR"
                 ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
                 : "bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300"
             )}>
               {contact.mode}
             </span>
-          )}
+          ) : null}
         </div>
 
         {/* Route */}
-        {(contact.pol || contact.pod) && (
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-3">
+        {(contact.pol || contact.pod) ? (
+          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-2.5">
             <MapPin className="h-3 w-3 shrink-0" />
             <span>{contact.pol || "—"}</span>
             <span className="text-border">→</span>
             <span>{contact.pod || "—"}</span>
           </div>
-        )}
+        ) : null}
 
-        {/* Contact details — always visible summary, expanded on hover */}
-        <div className={cn(
-          "grid gap-1.5 overflow-hidden transition-all duration-150",
-          hovered ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-        )}>
-          <div className="overflow-hidden min-h-0">
-            <div className="space-y-1.5 pt-2 border-t border-border/60">
-              {contact.contact_person && (
-                <div className="flex items-center gap-2 text-xs">
-                  <User className="h-3 w-3 text-muted-foreground shrink-0" />
-                  <span>{highlight(contact.contact_person, query)}</span>
-                </div>
-              )}
-              {contact.contact_number && (
-                <div className="flex items-center gap-2 text-xs">
-                  <Phone className="h-3 w-3 text-muted-foreground shrink-0" />
-                  <span>{highlight(contact.contact_number, query)}</span>
-                </div>
-              )}
-              {contact.email && (
-                <div className="flex items-center gap-2 text-xs">
-                  <Mail className="h-3 w-3 text-muted-foreground shrink-0" />
-                  <span className="truncate">{highlight(contact.email, query)}</span>
-                </div>
-              )}
+        {/* Contact details */}
+        <div className="space-y-1.5">
+          {contact.contact_person ? (
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <User className="h-3 w-3 shrink-0" />
+              <span className="truncate">{highlight(contact.contact_person, query)}</span>
             </div>
-          </div>
+          ) : null}
+          {contact.contact_number ? (
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <Phone className="h-3 w-3 shrink-0" />
+              <span className="truncate">{highlight(contact.contact_number, query)}</span>
+            </div>
+          ) : null}
+          {contact.email ? (
+            <div
+              className={cn(
+                "flex items-center gap-2 text-[11px] text-muted-foreground overflow-hidden",
+                "max-h-0 opacity-0 transition-all duration-200",
+                hovered && "max-h-10 opacity-100"
+              )}
+            >
+              <Mail className="h-3 w-3 shrink-0" />
+              <span className="truncate">{highlight(contact.email, query)}</span>
+            </div>
+          ) : null}
         </div>
-
-        {/* Compact contact hints when not hovered */}
-        {!hovered && (contact.contact_person || contact.contact_number || contact.email) && (
-          <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-            {contact.contact_person && (
-              <span className="flex items-center gap-1">
-                <User className="h-3 w-3" />
-                {contact.contact_person}
-              </span>
-            )}
-            {contact.contact_number && (
-              <span className="flex items-center gap-1">
-                <Phone className="h-3 w-3" />
-                {contact.contact_number}
-              </span>
-            )}
-          </div>
-        )}
       </div>
 
-      {/* Action bar — visible on hover */}
+      {/* Action bar — slides in on hover */}
       <div className={cn(
-        "flex items-center justify-between px-4 py-2.5 border-t border-border/60 rounded-b-lg",
-        "transition-opacity duration-150 bg-muted/30",
+        "flex items-center justify-between px-3 py-2 border-t border-border/60 rounded-b-lg",
+        "bg-muted/30 transition-opacity duration-150",
         hovered ? "opacity-100" : "opacity-0 pointer-events-none"
       )}>
         <Button
           size="sm"
-          variant="default"
           className="h-7 text-xs gap-1.5"
           onClick={() => onLogActivity(contact)}
         >
@@ -335,6 +364,7 @@ function ContactCard({
             type="button"
             onClick={() => onDelete(contact.id)}
             className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded"
+            title="Delete contact"
           >
             <Trash2 className="h-3.5 w-3.5" />
           </button>
@@ -349,20 +379,20 @@ function ContactCard({
 export default function ContactsPage() {
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const [contacts,      setContacts]      = useState<Contact[]>([])
-  const [loading,       setLoading]       = useState(true)
-  const [query,         setQuery]         = useState("")
-  const [page,          setPage]          = useState(1)
+  const [contacts,    setContacts]    = useState<Contact[]>([])
+  const [loading,     setLoading]     = useState(true)
+  const [query,       setQuery]       = useState("")
+  const [page,        setPage]        = useState(1)
 
   // Excel import state
-  const [parsing,       setParsing]       = useState(false)
-  const [parseError,    setParseError]    = useState<string | null>(null)
-  const [previewRows,   setPreviewRows]   = useState<ParsedRow[] | null>(null)
-  const [importing,     setImporting]     = useState(false)
-  const [importMsg,     setImportMsg]     = useState<string | null>(null)
+  const [parsing,     setParsing]     = useState(false)
+  const [parseError,  setParseError]  = useState<string | null>(null)
+  const [previewRows, setPreviewRows] = useState<ParsedRow[] | null>(null)
+  const [importing,   setImporting]   = useState(false)
+  const [importMsg,   setImportMsg]   = useState<string | null>(null)
 
   // Activity modal
-  const [logTarget,     setLogTarget]     = useState<Contact | null>(null)
+  const [logTarget, setLogTarget] = useState<Contact | null>(null)
 
   // User info
   const [userInfo, setUserInfo] = useState<{ role: string; salesperson: string | null } | null>(null)
@@ -392,31 +422,30 @@ export default function ContactsPage() {
 
   useEffect(() => { fetchContacts() }, [fetchContacts])
 
-  // ── Search filter ─────────────────────────────────────────────
+  // ── Search ────────────────────────────────────────────────────
+
   const filtered = contacts.filter((c) => {
     if (!query) return true
     const q = query.toLowerCase()
     return (
-      c.shipper_name?.toLowerCase().includes(q) ||
+      c.shipper_name?.toLowerCase().includes(q)   ||
       c.consignee_name?.toLowerCase().includes(q) ||
-      c.mode?.toLowerCase().includes(q) ||
-      c.pol?.toLowerCase().includes(q) ||
-      c.pod?.toLowerCase().includes(q) ||
+      c.mode?.toLowerCase().includes(q)           ||
+      c.pol?.toLowerCase().includes(q)            ||
+      c.pod?.toLowerCase().includes(q)            ||
       c.contact_person?.toLowerCase().includes(q) ||
       c.contact_number?.toLowerCase().includes(q) ||
       c.email?.toLowerCase().includes(q)
     )
   })
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const totalPages   = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const pageContacts = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
-  function handleQueryChange(v: string) {
-    setQuery(v)
-    setPage(1)
-  }
+  function handleQueryChange(v: string) { setQuery(v); setPage(1) }
 
   // ── Excel upload ──────────────────────────────────────────────
+
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -430,7 +459,7 @@ export default function ContactsPage() {
     fd.append("file", file)
 
     try {
-      const res = await fetch("/api/contacts/parse", { method: "POST", body: fd })
+      const res  = await fetch("/api/contacts/parse", { method: "POST", body: fd })
       const json = await res.json()
       if (!res.ok) { setParseError(json.error ?? "Parse failed"); return }
       setPreviewRows(json.contacts)
@@ -441,17 +470,28 @@ export default function ContactsPage() {
     }
   }
 
+  // Editable preview handlers
+  function handlePreviewChange(idx: number, field: RowField, value: string) {
+    setPreviewRows((prev) =>
+      prev ? prev.map((r, i) => i === idx ? { ...r, [field]: value } : r) : prev
+    )
+  }
+
+  function handlePreviewDeleteRow(idx: number) {
+    setPreviewRows((prev) => prev ? prev.filter((_, i) => i !== idx) : prev)
+  }
+
   async function handleImportConfirm() {
-    if (!previewRows) return
+    if (!previewRows?.length) return
     setImporting(true)
     try {
-      const res = await fetch("/api/contacts", {
-        method: "POST",
+      const res  = await fetch("/api/contacts", {
+        method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(previewRows),
+        body:    JSON.stringify(previewRows),
       })
       const json = await res.json()
-      if (!res.ok) { setParseError(json.error ?? "Import failed"); return }
+      if (!res.ok) { setParseError(json.error ?? "Import failed"); setPreviewRows(null); return }
       setPreviewRows(null)
       setImportMsg(`${json.inserted} contact${json.inserted !== 1 ? "s" : ""} imported successfully.`)
       fetchContacts()
@@ -461,6 +501,7 @@ export default function ContactsPage() {
   }
 
   // ── Delete ────────────────────────────────────────────────────
+
   async function handleDelete(id: string) {
     if (!confirm("Delete this contact?")) return
     await fetch(`/api/contacts/${id}`, { method: "DELETE" })
@@ -493,7 +534,7 @@ export default function ContactsPage() {
             size="sm"
             variant="outline"
             className="gap-1.5"
-            onClick={() => fileRef.current?.click()}
+            onClick={() => { setParseError(null); fileRef.current?.click() }}
             disabled={parsing}
           >
             <Upload className="h-4 w-4" />
@@ -506,14 +547,15 @@ export default function ContactsPage() {
       {parseError && (
         <div className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-          <div>
+          <div className="flex-1">
             <p className="font-medium">Import failed</p>
             <p className="text-xs mt-0.5 opacity-80">{parseError}</p>
-            <p className="text-xs mt-1 opacity-70">
-              Make sure your Excel has columns like: Shipper, Consignee, Mode, POL, POD, Contact Person, Phone, Email
+            <p className="text-[11px] mt-1.5 opacity-60">
+              Expected column headers (case-insensitive):
+              Shipper Name · Consignee Name · SEA/AIR · POL · POD · Contact · Email ID
             </p>
           </div>
-          <button type="button" onClick={() => setParseError(null)} className="ml-auto shrink-0">
+          <button type="button" onClick={() => setParseError(null)} className="shrink-0">
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -523,41 +565,41 @@ export default function ContactsPage() {
       {importMsg && (
         <div className="flex items-center gap-2.5 rounded-lg border border-green-300 bg-green-50 dark:bg-green-950/30 dark:border-green-800 px-4 py-3 text-sm text-green-700 dark:text-green-400">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
-          <span>{importMsg}</span>
-          <button type="button" onClick={() => setImportMsg(null)} className="ml-auto">
+          <span className="flex-1">{importMsg}</span>
+          <button type="button" onClick={() => setImportMsg(null)}>
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
       )}
 
       {/* ── Search ────────────────────────────────────────── */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-        <Input
-          placeholder="Search contacts…"
-          value={query}
-          onChange={(e) => handleQueryChange(e.target.value)}
-          className="pl-9"
-        />
-        {query && (
-          <button
-            type="button"
-            onClick={() => handleQueryChange("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
+      <div className="flex items-center gap-3">
+        <div className="relative max-w-sm w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input
+            placeholder="Search by name, port, email, phone…"
+            value={query}
+            onChange={(e) => handleQueryChange(e.target.value)}
+            className="pl-9"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => handleQueryChange("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+        {!loading && (
+          <span className="text-xs text-muted-foreground whitespace-nowrap">
+            {filtered.length === contacts.length
+              ? `${contacts.length} contact${contacts.length !== 1 ? "s" : ""}`
+              : `${filtered.length} of ${contacts.length}`}
+          </span>
         )}
       </div>
-
-      {/* ── Contact count ─────────────────────────────────── */}
-      {!loading && (
-        <p className="text-xs text-muted-foreground">
-          {filtered.length === contacts.length
-            ? `${contacts.length} contact${contacts.length !== 1 ? "s" : ""}`
-            : `${filtered.length} of ${contacts.length} contacts`}
-        </p>
-      )}
 
       {/* ── Grid ──────────────────────────────────────────── */}
       {loading ? (
@@ -614,10 +656,12 @@ export default function ContactsPage() {
         </div>
       )}
 
-      {/* ── Preview modal ─────────────────────────────────── */}
+      {/* ── Preview / edit modal ──────────────────────────── */}
       {previewRows && (
         <PreviewModal
           rows={previewRows}
+          onChange={handlePreviewChange}
+          onDeleteRow={handlePreviewDeleteRow}
           onConfirm={handleImportConfirm}
           onCancel={() => setPreviewRows(null)}
           saving={importing}
@@ -630,7 +674,6 @@ export default function ContactsPage() {
           contact={logTarget}
           defaultSalesPerson={userInfo?.salesperson ?? undefined}
           onClose={() => setLogTarget(null)}
-          onSuccess={() => setLogTarget(null)}
         />
       )}
     </div>
