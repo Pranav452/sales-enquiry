@@ -785,7 +785,9 @@ export default function ContactsPage() {
       const json = await res.json()
       if (!res.ok) { setParseError(json.error ?? "Import failed"); setPreviewRows(null); return }
       setPreviewRows(null)
-      setImportMsg(`${json.inserted} contact${json.inserted !== 1 ? "s" : ""} imported successfully.`)
+      const parts = [`${json.inserted} contact${json.inserted !== 1 ? "s" : ""} imported`]
+      if (json.skipped > 0) parts.push(`${json.skipped} skipped (already exist)`)
+      setImportMsg(parts.join(" · ") + ".")
       fetchContacts()
     } finally { setImporting(false) }
   }

@@ -20,7 +20,7 @@ export async function PATCH(req: NextRequest) {
   try {
     const pool = await getPool(auth.company)
 
-    // Auto-create flags table if not present
+    // Auto-create flags table if not present (single statement for MSSQL 2008 compat)
     await pool.request().query(`
       IF NOT EXISTS (
         SELECT 1 FROM INFORMATION_SCHEMA.TABLES
@@ -35,6 +35,7 @@ export async function PATCH(req: NextRequest) {
         )
       END
     `)
+
 
     // MERGE upsert
     await pool.request()
