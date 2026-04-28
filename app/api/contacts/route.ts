@@ -162,7 +162,7 @@ export async function GET(req: NextRequest) {
           CONVERT(varchar(10), MAX(cv.ACTIVITY_DATE), 120)  AS last_activity_date,
           ISNULL(MAX(cv.CREATED_BY), '')                    AS created_by,
           CONVERT(varchar(10), MIN(cv.CREATED_AT), 120)     AS created_at,
-          ISNULL(MAX(f2.IS_DEAD_LEAD), 0)                   AS is_dead_lead
+          ISNULL(MAX(CAST(f2.IS_DEAD_LEAD AS tinyint)), 0)    AS is_dead_lead
         FROM [dbo].[TBL_CALLS_VISITS] cv
         LEFT JOIN [dbo].[TBL_CONTACT_FLAGS] f2
           ON LOWER(RTRIM(LTRIM(cv.CLIENT_NAME))) = f2.CLIENT_NAME_LOWER
