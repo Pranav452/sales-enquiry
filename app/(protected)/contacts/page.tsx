@@ -12,7 +12,7 @@ import {
   Upload, Search, X, Trash2, Phone, Mail, FileDown,
   MapPin, User, AlertCircle, CheckCircle2, ChevronLeft,
   ChevronRight, Pencil, PhoneCall, PhoneForwarded, Users,
-  Trophy, PhoneIncoming,
+  Trophy, PhoneIncoming, Skull, RotateCcw,
 } from "lucide-react"
 import { ACTIVITY_TYPE_MAP, ACTIVITY_STATUSES } from "@/lib/constants/activities"
 
@@ -33,6 +33,7 @@ interface Contact {
   last_activity_date:  string | null
   created_by:          string
   created_at:          string
+  is_dead_lead:        boolean | number
 }
 
 interface ActivityHistoryItem {
@@ -430,31 +431,44 @@ function ClientDetailModal({
 // ─── Contact card ──────────────────────────────────────────────
 
 function ContactCard({
-  contact, query, onClick, onDelete, isAdmin,
+  contact, query, onClick, onDelete, onToggleDeadLead,
+  isAdmin,
 }: {
-  contact:  Contact
-  query:    string
-  onClick:  (c: Contact) => void
-  onDelete: (id: string) => void
-  isAdmin:  boolean
+  contact:           Contact
+  query:             string
+  onClick:           (c: Contact) => void
+  onDelete:          (id: string) => void
+  onToggleDeadLead:  (c: Contact) => void
+  isAdmin:           boolean
 }) {
   const [hovered, setHovered] = useState(false)
   const canDelete = contact.source === "contact"
+  const isDead    = !!contact.is_dead_lead
 
   return (
     <div
       className={cn(
-        "rounded-lg border border-border bg-card transition-all duration-150 flex flex-col cursor-pointer",
-        "hover:border-primary/40 hover:shadow-sm"
+        "rounded-lg border bg-card transition-all duration-150 flex flex-col cursor-pointer",
+        isDead
+          ? "border-red-300 bg-red-50/60 dark:border-red-800 dark:bg-red-950/20 opacity-75 hover:opacity-100"
+          : "border-border hover:border-primary/40 hover:shadow-sm"
       )}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={() => onClick(contact)}
+      onClick={() => !isDead && onClick(contact)}
     >
       <div className="p-4 flex-1">
 
+        {/* Dead lead banner */}
+        {isDead && (
+          <div className="flex items-center gap-1.5 mb-2.5 text-[11px] font-medium text-red-600 dark:text-red-400">
+            <Skull className="h-3.5 w-3.5 shrink-0" />
+            Dead Lead — not pursuing
+          </div>
+        )}
+
         {/* Source badge */}
-        {contact.source === "activity" && (
+        {contact.source === "activity" && !isDead && (
           <div className="mb-2">
             <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
               From Activity Tracker
@@ -466,7 +480,10 @@ function ContactCard({
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="min-w-0 flex-1">
             {contact.shipper_name && (
-              <p className="text-sm font-semibold text-foreground truncate leading-snug">
+              <p className={cn(
+                "text-sm font-semibold truncate leading-snug",
+                isDead ? "text-muted-foreground line-through" : "text-foreground"
+              )}>
                 {highlight(contact.shipper_name, query)}
               </p>
             )}
@@ -477,7 +494,7 @@ function ContactCard({
               </p>
             )}
           </div>
-          {contact.mode && (
+          {contact.mode && !isDead && (
             <span className={cn(
               "text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full shrink-0 mt-0.5",
               contact.mode === "AIR"
@@ -489,69 +506,102 @@ function ContactCard({
           )}
         </div>
 
-        {/* Route */}
-        {(contact.pol || contact.pod) && (
-          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-2">
-            <MapPin className="h-3 w-3 shrink-0" />
-            <span>{contact.pol || "—"}</span>
-            <span className="text-border">→</span>
-            <span>{contact.pod || "—"}</span>
-          </div>
-        )}
-
-        {/* Contact detail */}
-        <div className="space-y-1">
-          {contact.contact_person && (
-            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-              <User className="h-3 w-3 shrink-0" />
-              <span className="truncate">{highlight(contact.contact_person, query)}</span>
-            </div>
-          )}
-          {contact.contact_number && (
-            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-              <Phone className="h-3 w-3 shrink-0" />
-              <span className="truncate">{highlight(contact.contact_number, query)}</span>
-            </div>
-          )}
-          {contact.email && hovered && (
-            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-              <Mail className="h-3 w-3 shrink-0" />
-              <span className="truncate">{highlight(contact.email, query)}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Call count */}
-        {contact.activity_count > 0 && (
-          <div className="mt-2.5 flex items-center gap-1.5 text-[11px]">
-            <PhoneCall className="h-3 w-3 text-amber-500 shrink-0" />
-            <span className="text-amber-600 dark:text-amber-400 font-medium">
-              {contact.activity_count} call{contact.activity_count !== 1 ? "s" : ""}
-            </span>
-            {contact.last_activity_date && (
-              <span className="text-muted-foreground">· last {formatDate(contact.last_activity_date)}</span>
+        {!isDead && (
+          <>
+            {/* Route */}
+            {(contact.pol || contact.pod) && (
+              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-2">
+                <MapPin className="h-3 w-3 shrink-0" />
+                <span>{contact.pol || "—"}</span>
+                <span className="text-border">→</span>
+                <span>{contact.pod || "—"}</span>
+              </div>
             )}
-          </div>
+
+            {/* Contact detail */}
+            <div className="space-y-1">
+              {contact.contact_person && (
+                <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                  <User className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{highlight(contact.contact_person, query)}</span>
+                </div>
+              )}
+              {contact.contact_number && (
+                <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                  <Phone className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{highlight(contact.contact_number, query)}</span>
+                </div>
+              )}
+              {contact.email && hovered && (
+                <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                  <Mail className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{highlight(contact.email, query)}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Call count */}
+            {contact.activity_count > 0 && (
+              <div className="mt-2.5 flex items-center gap-1.5 text-[11px]">
+                <PhoneCall className="h-3 w-3 text-amber-500 shrink-0" />
+                <span className="text-amber-600 dark:text-amber-400 font-medium">
+                  {contact.activity_count} call{contact.activity_count !== 1 ? "s" : ""}
+                </span>
+                {contact.last_activity_date && (
+                  <span className="text-muted-foreground">· last {formatDate(contact.last_activity_date)}</span>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
 
       {/* Action bar */}
       <div className={cn(
-        "flex items-center justify-between px-3 py-2 border-t border-border/60 rounded-b-lg bg-muted/30",
-        "transition-opacity duration-150",
-        hovered ? "opacity-100" : "opacity-0 pointer-events-none"
+        "flex items-center justify-between px-3 py-2 border-t rounded-b-lg transition-opacity duration-150",
+        isDead
+          ? "border-red-200 dark:border-red-800/50 bg-red-100/40 dark:bg-red-950/30 opacity-100"
+          : "border-border/60 bg-muted/30",
+        !isDead && !hovered ? "opacity-0 pointer-events-none" : ""
       )}>
-        <span className="text-[11px] text-muted-foreground">Click to view timeline</span>
-
-        {isAdmin && canDelete && (
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onDelete(contact.id) }}
-            className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded"
-            title="Delete contact"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
+        {isDead ? (
+          /* Dead lead — show restore button prominently */
+          <div className="flex items-center justify-between w-full">
+            <span className="text-[11px] text-red-500 dark:text-red-400">Marked as dead lead</span>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onToggleDeadLead(contact) }}
+              className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors px-2 py-0.5 rounded border border-border hover:border-foreground/30"
+            >
+              <RotateCcw className="h-3 w-3" /> Restore
+            </button>
+          </div>
+        ) : (
+          <>
+            <span className="text-[11px] text-muted-foreground">Click to view timeline</span>
+            <div className="flex items-center gap-1">
+              {/* Mark as dead lead */}
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onToggleDeadLead(contact) }}
+                className="text-muted-foreground hover:text-red-500 transition-colors p-1 rounded"
+                title="Mark as dead lead"
+              >
+                <Skull className="h-3.5 w-3.5" />
+              </button>
+              {/* Delete — admin only, contact-source only */}
+              {isAdmin && canDelete && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onDelete(contact.id) }}
+                  className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded"
+                  title="Delete contact"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          </>
         )}
       </div>
     </div>
@@ -649,6 +699,9 @@ export default function ContactsPage() {
   // Client detail modal
   const [detailContact, setDetailContact] = useState<Contact | null>(null)
 
+  // Dead lead filter: "active" | "dead" | "all"
+  const [deadFilter, setDeadFilter] = useState<"active" | "dead" | "all">("active")
+
   const [userInfo, setUserInfo] = useState<{ role: string; salesperson: string | null } | null>(null)
 
   useEffect(() => {
@@ -677,6 +730,11 @@ export default function ContactsPage() {
   useEffect(() => { fetchContacts() }, [fetchContacts])
 
   const filtered = contacts.filter((c) => {
+    // Dead lead filter
+    const dead = !!c.is_dead_lead
+    if (deadFilter === "active" && dead)  return false
+    if (deadFilter === "dead"   && !dead) return false
+    // Text search
     if (!query) return true
     const q = query.toLowerCase()
     return (
@@ -730,6 +788,26 @@ export default function ContactsPage() {
       setImportMsg(`${json.inserted} contact${json.inserted !== 1 ? "s" : ""} imported successfully.`)
       fetchContacts()
     } finally { setImporting(false) }
+  }
+
+  async function handleToggleDeadLead(contact: Contact) {
+    const newVal = !contact.is_dead_lead
+    // Optimistically update local state
+    setContacts((prev) =>
+      prev.map((c) => c.id === contact.id ? { ...c, is_dead_lead: newVal } : c)
+    )
+    try {
+      await fetch("/api/contacts/dead-lead", {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ client_name: contact.shipper_name || contact.consignee_name, is_dead_lead: newVal }),
+      })
+    } catch {
+      // Revert on failure
+      setContacts((prev) =>
+        prev.map((c) => c.id === contact.id ? { ...c, is_dead_lead: !newVal } : c)
+      )
+    }
   }
 
   async function handleDelete(id: string) {
@@ -800,8 +878,8 @@ export default function ContactsPage() {
         </div>
       )}
 
-      {/* Search */}
-      <div className="flex items-center gap-3">
+      {/* Search + dead lead filter */}
+      <div className="flex flex-wrap items-center gap-3">
         <div className="relative max-w-sm w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input placeholder="Search by name, port, email, phone…" value={query} onChange={(e) => handleQueryChange(e.target.value)} className="pl-9" />
@@ -811,6 +889,28 @@ export default function ContactsPage() {
             </button>
           )}
         </div>
+
+        {/* Filter tabs */}
+        <div className="flex items-center rounded-lg border border-border overflow-hidden text-xs">
+          {(["active", "dead", "all"] as const).map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => { setDeadFilter(f); setPage(1) }}
+              className={cn(
+                "px-3 py-1.5 capitalize transition-colors",
+                deadFilter === f
+                  ? f === "dead"
+                    ? "bg-red-500 text-white font-medium"
+                    : "bg-primary text-primary-foreground font-medium"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              )}
+            >
+              {f === "active" ? "Active" : f === "dead" ? "Dead Leads" : "All"}
+            </button>
+          ))}
+        </div>
+
         {!loading && (
           <span className="text-xs text-muted-foreground whitespace-nowrap">
             {filtered.length === contacts.length
@@ -841,6 +941,7 @@ export default function ContactsPage() {
               query={query}
               onClick={setDetailContact}
               onDelete={handleDelete}
+              onToggleDeadLead={handleToggleDeadLead}
               isAdmin={isAdmin}
             />
           ))}
