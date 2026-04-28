@@ -556,18 +556,16 @@ function ContactCard({
         )}
       </div>
 
-      {/* Action bar */}
+      {/* Action bar — always visible */}
       <div className={cn(
-        "flex items-center justify-between px-3 py-2 border-t rounded-b-lg transition-opacity duration-150",
+        "flex items-center justify-between px-3 py-2 border-t rounded-b-lg",
         isDead
-          ? "border-red-200 dark:border-red-800/50 bg-red-100/40 dark:bg-red-950/30 opacity-100"
-          : "border-border/60 bg-muted/30",
-        !isDead && !hovered ? "opacity-0 pointer-events-none" : ""
+          ? "border-red-200 dark:border-red-800/50 bg-red-100/40 dark:bg-red-950/30"
+          : "border-border/60 bg-muted/30"
       )}>
         {isDead ? (
-          /* Dead lead — show restore button prominently */
           <div className="flex items-center justify-between w-full">
-            <span className="text-[11px] text-red-500 dark:text-red-400">Marked as dead lead</span>
+            <span className="text-[11px] text-red-500 dark:text-red-400">Dead lead</span>
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onToggleDeadLead(contact) }}
@@ -577,17 +575,18 @@ function ContactCard({
             </button>
           </div>
         ) : (
-          <>
+          <div className="flex items-center justify-between w-full">
             <span className="text-[11px] text-muted-foreground">Click to view timeline</span>
-            <div className="flex items-center gap-1">
-              {/* Mark as dead lead */}
+            <div className="flex items-center gap-0.5">
+              {/* Mark as dead lead — always visible */}
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onToggleDeadLead(contact) }}
-                className="text-muted-foreground hover:text-red-500 transition-colors p-1 rounded"
+                className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-red-500 transition-colors px-1.5 py-0.5 rounded hover:bg-red-50 dark:hover:bg-red-950/30"
                 title="Mark as dead lead"
               >
-                <Skull className="h-3.5 w-3.5" />
+                <Skull className="h-3 w-3" />
+                <span>Dead lead</span>
               </button>
               {/* Delete — admin only, contact-source only */}
               {isAdmin && canDelete && (
@@ -601,7 +600,7 @@ function ContactCard({
                 </button>
               )}
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>

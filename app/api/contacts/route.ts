@@ -14,7 +14,8 @@ type ContactRow = {
   email:          string
 }
 
-// Auto-create TBL_CONTACTS — split into separate queries for MSSQL 2008 compatibility
+// Split into separate .query() calls — MSSQL 2008 R2 can fail on multiple
+// IF NOT EXISTS blocks in a single statement.
 async function ensureTable(pool: sql.ConnectionPool) {
   await pool.request().query(`
     IF NOT EXISTS (
@@ -67,110 +68,115 @@ export async function GET(req: NextRequest) {
 
     const request = pool.request()
 
-    let contactsWhere    = ""
-    let activitiesWhere  = "WHERE cv.CLIENT_NAME IS NOT NULL AND cv.CLIENT_NAME != ''"
-    let activitiesNotIn  = `
-      SELECT LOWER(RTRIM(LTRIM(ISNULL(SHIPPER_NAME, ''))))
-      FROM [dbo].[TBL_CONTACTS]
-      WHERE SHIPPER_NAME IS NOT NULL AND SHIPPER_NAME != ''
-    `
+    // ── Role-based WHERE fragments ───────────────────────────────────────────
+    // TBL_CONTACTS.CREATED_BY was stored as email; match BOTH email + userId
+    // to cover any format variation in older rows.
+    // TBL_CALLS_VISITS.CREATED_BY stores the Supabase UUID.
+    let part1Where       = ""   // appended after the JOINs in Part 1
+    let part2WhereExtra  = ""   // appended inside Part 2 WHERE
+    let part2NotInExtra  = ""   // extra condition inside the NOT IN sub-SELECT
 
     if (!isAdmin) {
-      // TBL_CONTACTS.CREATED_BY was historically stored as email.
-      // Match on BOTH email and userId to cover any format variation.
       request.input("userEmail", auth.email)
       request.input("userId",    auth.userId)
 
-      contactsWhere = `
-        WHERE (c.CREATED_BY = @userEmail OR c.CREATED_BY = @userId)
-      `
-      activitiesWhere = `
-        WHERE cv.CLIENT_NAME IS NOT NULL AND cv.CLIENT_NAME != ''
-          AND cv.CREATED_BY = @userId
-      `
-      activitiesNotIn = `
-        SELECT LOWER(RTRIM(LTRIM(ISNULL(SHIPPER_NAME, ''))))
-        FROM [dbo].[TBL_CONTACTS]
-        WHERE SHIPPER_NAME IS NOT NULL AND SHIPPER_NAME != ''
-          AND (CREATED_BY = @userEmail OR CREATED_BY = @userId)
-      `
+      part1Where      = "AND (c.CREATED_BY = @userEmail OR c.CREATED_BY = @userId)"
+      part2WhereExtra = "AND cv.CREATED_BY = @userId"
+      part2NotInExtra = "AND (CREATED_BY = @userEmail OR CREATED_BY = @userId)"
     }
 
+    // ── Main query ───────────────────────────────────────────────────────────
+    // Part 1 is wrapped in a subquery so ROW_NUMBER can be filtered before
+    // the UNION — avoids MSSQL 2008 issues with windowed cols in outer WHERE.
     const result = await request.query(`
-      SELECT *
+
+      SELECT
+        id, shipper_name, consignee_name, mode, pol, pod,
+        contact_person, contact_number, email,
+        source, activity_count, last_activity_date,
+        created_by, created_at, is_dead_lead
       FROM (
 
-        -- ── Part 1: contacts saved via Excel import ──────────────
-        -- Deduplicate via ROW_NUMBER: if the same shipper was uploaded more than
-        -- once (e.g. same sheet re-imported), only keep the latest row.
+        -- ── Part 1: deduplicated Excel-imported contacts ──────────────────
         SELECT
-          'c_' + CAST(c.ID AS varchar(20))            AS id,
-          ISNULL(c.SHIPPER_NAME,   '')                 AS shipper_name,
-          ISNULL(c.CONSIGNEE_NAME, '')                 AS consignee_name,
-          ISNULL(c.[MODE],         '')                 AS mode,
-          ISNULL(c.POL,            '')                 AS pol,
-          ISNULL(c.POD,            '')                 AS pod,
-          ISNULL(c.CONTACT_PERSON, '')                 AS contact_person,
-          ISNULL(c.CONTACT_NUMBER, '')                 AS contact_number,
-          ISNULL(c.EMAIL,          '')                 AS email,
-          'contact'                                    AS source,
-          ISNULL(a.cnt, 0)                             AS activity_count,
-          a.last_date                                  AS last_activity_date,
-          ISNULL(c.CREATED_BY, '')                     AS created_by,
-          CONVERT(varchar(10), c.CREATED_AT, 120)      AS created_at,
-          ISNULL(f.IS_DEAD_LEAD, 0)                    AS is_dead_lead,
-          ROW_NUMBER() OVER (
-            PARTITION BY LOWER(RTRIM(LTRIM(ISNULL(c.SHIPPER_NAME,'')))),
-                         ISNULL(c.CREATED_BY,'')
-            ORDER BY c.ID DESC
-          ) AS rn
-        FROM [dbo].[TBL_CONTACTS] c
-        LEFT JOIN (
+          id, shipper_name, consignee_name, mode, pol, pod,
+          contact_person, contact_number, email,
+          source, activity_count, last_activity_date,
+          created_by, created_at, is_dead_lead
+        FROM (
           SELECT
-            LOWER(RTRIM(LTRIM(CLIENT_NAME)))               AS cname,
-            COUNT(*)                                       AS cnt,
-            CONVERT(varchar(10), MAX(ACTIVITY_DATE), 120)  AS last_date
-          FROM [dbo].[TBL_CALLS_VISITS]
-          WHERE CLIENT_NAME IS NOT NULL AND CLIENT_NAME != ''
-          GROUP BY LOWER(RTRIM(LTRIM(CLIENT_NAME)))
-        ) a ON LOWER(RTRIM(LTRIM(c.SHIPPER_NAME))) = a.cname
-        LEFT JOIN [dbo].[TBL_CONTACT_FLAGS] f
-          ON LOWER(RTRIM(LTRIM(c.SHIPPER_NAME))) = f.CLIENT_NAME_LOWER
-        ${contactsWhere}
+            'c_' + CAST(c.ID AS varchar(20))             AS id,
+            ISNULL(c.SHIPPER_NAME,   '')                  AS shipper_name,
+            ISNULL(c.CONSIGNEE_NAME, '')                  AS consignee_name,
+            ISNULL(c.[MODE],         '')                  AS mode,
+            ISNULL(c.POL,            '')                  AS pol,
+            ISNULL(c.POD,            '')                  AS pod,
+            ISNULL(c.CONTACT_PERSON, '')                  AS contact_person,
+            ISNULL(c.CONTACT_NUMBER, '')                  AS contact_number,
+            ISNULL(c.EMAIL,          '')                  AS email,
+            'contact'                                     AS source,
+            ISNULL(act.cnt, 0)                            AS activity_count,
+            act.last_date                                 AS last_activity_date,
+            ISNULL(c.CREATED_BY, '')                      AS created_by,
+            CONVERT(varchar(10), c.CREATED_AT, 120)       AS created_at,
+            ISNULL(f.IS_DEAD_LEAD, 0)                     AS is_dead_lead,
+            ROW_NUMBER() OVER (
+              PARTITION BY LOWER(RTRIM(LTRIM(ISNULL(c.SHIPPER_NAME, '')))),
+                           ISNULL(c.CREATED_BY, '')
+              ORDER BY c.ID DESC
+            ) AS rn
+          FROM [dbo].[TBL_CONTACTS] c
+          LEFT JOIN (
+            SELECT
+              LOWER(RTRIM(LTRIM(CLIENT_NAME)))               AS cname,
+              COUNT(*)                                       AS cnt,
+              CONVERT(varchar(10), MAX(ACTIVITY_DATE), 120)  AS last_date
+            FROM [dbo].[TBL_CALLS_VISITS]
+            WHERE CLIENT_NAME IS NOT NULL AND CLIENT_NAME != ''
+            GROUP BY LOWER(RTRIM(LTRIM(CLIENT_NAME)))
+          ) act ON LOWER(RTRIM(LTRIM(c.SHIPPER_NAME))) = act.cname
+          LEFT JOIN [dbo].[TBL_CONTACT_FLAGS] f
+            ON LOWER(RTRIM(LTRIM(c.SHIPPER_NAME))) = f.CLIENT_NAME_LOWER
+          WHERE c.SHIPPER_NAME IS NOT NULL AND c.SHIPPER_NAME != ''
+            ${part1Where}
+        ) deduped
+        WHERE rn = 1
 
         UNION ALL
 
-        -- ── Part 2: activity-tracker clients not yet in contacts ──
+        -- ── Part 2: activity-tracker clients not in TBL_CONTACTS ─────────
         SELECT
           'a_' + CAST(
             ROW_NUMBER() OVER (ORDER BY MAX(cv.CREATED_AT) DESC)
-          AS varchar(20))                                  AS id,
-          MAX(cv.CLIENT_NAME)                              AS shipper_name,
-          ''                                               AS consignee_name,
-          ISNULL(MAX(cv.[MODE]), '')                       AS mode,
-          ISNULL(MAX(cv.POL),    '')                       AS pol,
-          ISNULL(MAX(cv.POD),    '')                       AS pod,
-          ISNULL(MAX(cv.CONTACT_PERSON), '')               AS contact_person,
-          ISNULL(MAX(cv.CONTACT_NUMBER), '')               AS contact_number,
-          ISNULL(MAX(cv.EMAIL),          '')               AS email,
-          'activity'                                       AS source,
-          COUNT(*)                                         AS activity_count,
-          CONVERT(varchar(10), MAX(cv.ACTIVITY_DATE), 120) AS last_activity_date,
-          ISNULL(MAX(cv.CREATED_BY), '')                   AS created_by,
-          CONVERT(varchar(10), MIN(cv.CREATED_AT), 120)    AS created_at,
-          ISNULL(MAX(f2.IS_DEAD_LEAD), 0)                  AS is_dead_lead,
-          NULL                                             AS rn
+          AS varchar(20))                                   AS id,
+          MAX(cv.CLIENT_NAME)                               AS shipper_name,
+          ''                                                AS consignee_name,
+          ISNULL(MAX(cv.[MODE]), '')                        AS mode,
+          ISNULL(MAX(cv.POL),    '')                        AS pol,
+          ISNULL(MAX(cv.POD),    '')                        AS pod,
+          ISNULL(MAX(cv.CONTACT_PERSON), '')                AS contact_person,
+          ISNULL(MAX(cv.CONTACT_NUMBER), '')                AS contact_number,
+          ISNULL(MAX(cv.EMAIL),          '')                AS email,
+          'activity'                                        AS source,
+          COUNT(*)                                          AS activity_count,
+          CONVERT(varchar(10), MAX(cv.ACTIVITY_DATE), 120)  AS last_activity_date,
+          ISNULL(MAX(cv.CREATED_BY), '')                    AS created_by,
+          CONVERT(varchar(10), MIN(cv.CREATED_AT), 120)     AS created_at,
+          ISNULL(MAX(f2.IS_DEAD_LEAD), 0)                   AS is_dead_lead
         FROM [dbo].[TBL_CALLS_VISITS] cv
         LEFT JOIN [dbo].[TBL_CONTACT_FLAGS] f2
           ON LOWER(RTRIM(LTRIM(cv.CLIENT_NAME))) = f2.CLIENT_NAME_LOWER
-        ${activitiesWhere}
+        WHERE cv.CLIENT_NAME IS NOT NULL AND cv.CLIENT_NAME != ''
+          ${part2WhereExtra}
           AND LOWER(RTRIM(LTRIM(cv.CLIENT_NAME))) NOT IN (
-            ${activitiesNotIn}
+            SELECT LOWER(RTRIM(LTRIM(ISNULL(SHIPPER_NAME, ''))))
+            FROM [dbo].[TBL_CONTACTS]
+            WHERE SHIPPER_NAME IS NOT NULL AND SHIPPER_NAME != ''
+              ${part2NotInExtra}
           )
         GROUP BY LOWER(RTRIM(LTRIM(cv.CLIENT_NAME)))
 
       ) combined
-      WHERE combined.rn IS NULL OR combined.rn = 1
       ORDER BY is_dead_lead ASC, created_at DESC
     `)
 
@@ -204,7 +210,7 @@ export async function POST(req: NextRequest) {
       const shipperNorm = (row.shipper_name ?? "").trim().toLowerCase()
       if (!shipperNorm) { skipped++; continue }
 
-      // ── Dedup: skip if same shipper name already exists for this user ──
+      // Skip if same shipper name already exists for this user (dedup on import)
       const existing = await pool.request()
         .input("sname",  shipperNorm)
         .input("owner1", auth.email)
@@ -217,7 +223,6 @@ export async function POST(req: NextRequest) {
 
       if (existing.recordset.length > 0) { skipped++; continue }
 
-      // ── Insert ────────────────────────────────────────────────────────
       await pool.request()
         .input("shipper_name",   (row.shipper_name   ?? "").slice(0, 200) || null)
         .input("consignee_name", (row.consignee_name ?? "").slice(0, 200) || null)
