@@ -131,7 +131,7 @@ export function SlackingReport() {
               <select
                 value={threshold}
                 onChange={(e) => setThreshold(Number(e.target.value))}
-                className="h-7 rounded-md border border-input bg-[hsl(var(--input-bg))] px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                className="h-7 rounded-md border border-input bg-background text-foreground px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
               >
                 <option value={1}>1+ days</option>
                 <option value={3}>3+ days</option>
