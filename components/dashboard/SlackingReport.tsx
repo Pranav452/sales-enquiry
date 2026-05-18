@@ -22,13 +22,13 @@ interface OverdueItem {
 function urgency(days: number) {
   if (days >= 8)
     return {
-      row: "bg-red-50/60 dark:bg-red-950/20",
+      row: "",
       badge: "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300 ring-1 ring-red-400/30",
       label: "Critical",
     }
   if (days >= 4)
     return {
-      row: "bg-amber-50/60 dark:bg-amber-950/20",
+      row: "",
       badge: "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300 ring-1 ring-amber-400/30",
       label: "Warning",
     }
@@ -131,7 +131,7 @@ export function SlackingReport() {
               <select
                 value={threshold}
                 onChange={(e) => setThreshold(Number(e.target.value))}
-                className="h-7 rounded-md border border-input bg-background text-foreground px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                className="h-7 rounded-md border border-input bg-white text-slate-800 dark:bg-slate-800 dark:text-slate-100 px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
               >
                 <option value={1}>1+ days</option>
                 <option value={3}>3+ days</option>
