@@ -1,0 +1,1 @@
+C:\Users\Manilal\AppData\Local\Programs\Python\Python312\python.exe: can't open file 'C:\\development-manilal\\sales\\development-manilalsalesscriptsgen_msc_may2026.py': [Errno 2] No such file or directory
