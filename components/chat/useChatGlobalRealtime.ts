@@ -106,6 +106,19 @@ export function useChatGlobalRealtime(activeRoomIds: string[]) {
               }
             })
 
+            // Show OS notification when tab is hidden and room is not active
+            if (!isActiveRoom && typeof document !== 'undefined' && document.hidden) {
+              const room    = rooms.find((r) => r.id === newMsg.room_id)
+              const roomName = room?.name || 'Chat'
+              navigator.serviceWorker?.controller?.postMessage({
+                type:  'SHOW_NOTIFICATION',
+                title: senderName ? `${senderName} in ${roomName}` : roomName,
+                body:  (newMsg.content || '').slice(0, 120),
+                url:   '/chat',
+                tag:   `chat-${newMsg.room_id}`,
+              })
+            }
+
             // Re-sort by last message time (most recent at top)
             return [...updated].sort((a, b) => {
               const tA = (a.last_message as { created_at: string } | null)?.created_at ?? a.created_at

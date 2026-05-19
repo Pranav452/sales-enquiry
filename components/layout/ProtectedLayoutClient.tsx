@@ -33,6 +33,7 @@ import { ACTIVITY_TYPE_MAP } from "@/lib/constants/activities"
 import { useChatDock } from "@/lib/store/chatDock"
 import { useChatGlobalRealtime } from "@/components/chat/useChatGlobalRealtime"
 import { ChatDock } from "@/components/chat/ChatDock"
+import { usePushNotifications } from "@/lib/hooks/usePushNotifications"
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -343,6 +344,9 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
 
   const { reminders, unreadRooms, totalCount, loading, dismissReminder } =
     useNotifications(userId)
+
+  // ── Web Push registration ───────────────────────────────────
+  usePushNotifications(userId)
 
   // ── Chat dock: global realtime subscription ─────────────────
   const { items: dockItems, openChat } = useChatDock()

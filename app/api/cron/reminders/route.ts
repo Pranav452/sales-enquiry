@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js"
 import { getPool } from "@/lib/mssql/client"
 import { transporter } from "@/lib/email/mailer"
 import { getAuthContext } from "@/lib/api-auth"
+import { sendPushToUsers } from "@/lib/webpush/vapid"
 
 // ─── Types ────────────────────────────────────────────────────
 interface ReminderRow {
@@ -17,6 +18,7 @@ interface ReminderRow {
 }
 
 interface UserProfile {
+  id:           string
   email:        string
   role:         string
   salesperson:  string | null
@@ -36,7 +38,7 @@ async function getUserProfiles(): Promise<UserProfile[]> {
   try {
     const { data, error } = await supabaseAdmin()
       .from("user_profiles")
-      .select("email, role, salesperson, full_name")
+      .select("id, email, role, salesperson, full_name")
     if (error || !data) return []
     return data as UserProfile[]
   } catch {
@@ -299,16 +301,21 @@ export async function GET(req: NextRequest) {
   }
 
   // Build lookup maps from user_profiles
-  // salesperson field (e.g. "SHRADDHA") → email
-  const salesPersonEmailMap = new Map<string, string>()
-  const adminEmails: string[] = []
+  // salesperson field (e.g. "SHRADDHA") → email + user id
+  const salesPersonEmailMap  = new Map<string, string>()
+  const salesPersonUserIdMap = new Map<string, string>()
+  const adminEmails:   string[] = []
+  const adminUserIds:  string[] = []
 
   for (const p of profiles) {
     if (p.role === "admin" && p.email) {
       adminEmails.push(p.email)
+      if (p.id) adminUserIds.push(p.id)
     }
     if (p.salesperson && p.email) {
-      salesPersonEmailMap.set(p.salesperson.toUpperCase().trim(), p.email)
+      const key = p.salesperson.toUpperCase().trim()
+      salesPersonEmailMap.set(key, p.email)
+      if (p.id) salesPersonUserIdMap.set(key, p.id)
     }
   }
 
@@ -359,6 +366,37 @@ export async function GET(req: NextRequest) {
       results.push({ email: adminEmail, type: "admin-digest", count: all.length, ok: false })
       console.error(`[cron/reminders] Failed to send admin digest to ${adminEmail}:`, err)
     }
+  }
+
+  // ── Send push notifications ────────────────────────────────
+  try {
+    // Personal push to each sales person
+    const salesUserIds: string[] = []
+    for (const [personKey, rows] of grouped.entries()) {
+      const userId = salesPersonUserIdMap.get(personKey)
+      const email  = salesPersonEmailMap.get(personKey)
+      if (!userId || !email || adminUserIds.includes(userId)) continue
+      salesUserIds.push(userId)
+      await sendPushToUsers([userId], {
+        title: `🔔 ${rows.length} Reminder${rows.length !== 1 ? "s" : ""} Due`,
+        body:  rows.map((r) => r.client_name ?? "—").slice(0, 3).join(", ") +
+               (rows.length > 3 ? ` +${rows.length - 3} more` : ""),
+        url:   "/activities",
+        tag:   "reminders",
+      })
+    }
+
+    // Admin push — full count
+    if (adminUserIds.length > 0) {
+      await sendPushToUsers(adminUserIds, {
+        title: `📋 ${all.length} Reminder${all.length !== 1 ? "s" : ""} Due Today`,
+        body:  `${grouped.size} salesperson${grouped.size !== 1 ? "s" : ""} have pending reminders`,
+        url:   "/activities",
+        tag:   "reminders-admin",
+      })
+    }
+  } catch (pushErr) {
+    console.error("[cron/reminders] push failed:", pushErr)
   }
 
   return NextResponse.json({

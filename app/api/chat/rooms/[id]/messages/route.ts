@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { getAuthContext } from "@/lib/api-auth"
 import { createClient } from "@/lib/supabase/server"
+import { sendPushToUsers } from "@/lib/webpush/vapid"
 
 // ─── GET /api/chat/rooms/[id]/messages ───────────────────────────────────────
 export async function GET(
@@ -125,5 +126,34 @@ export async function POST(
     .eq("id", auth.userId)
     .single()
 
-  return NextResponse.json({ ...msg, sender_name: profile?.full_name ?? null })
+  const senderName = profile?.full_name ?? "Someone"
+
+  // Push to all other room members (fire-and-forget, don't block response)
+  supabase
+    .from("chat_members")
+    .select("user_id")
+    .eq("room_id", roomId)
+    .neq("user_id", auth.userId)
+    .then(({ data: otherMembers }) => {
+      const otherIds = (otherMembers ?? []).map((m) => m.user_id)
+      if (otherIds.length === 0) return
+
+      // Fetch room name
+      supabase
+        .from("chat_rooms")
+        .select("name, type")
+        .eq("id", roomId)
+        .single()
+        .then(({ data: room }) => {
+          const roomLabel = room?.name || (room?.type === "direct" ? senderName : "Chat")
+          sendPushToUsers(otherIds, {
+            title: `${senderName} in ${roomLabel}`,
+            body:  content.trim().slice(0, 120),
+            url:   `/chat?room=${roomId}`,
+            tag:   `chat-${roomId}`,
+          }).catch(() => {})
+        })
+    })
+
+  return NextResponse.json({ ...msg, sender_name: senderName })
 }

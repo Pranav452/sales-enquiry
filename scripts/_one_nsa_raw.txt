@@ -1,0 +1,689 @@
+COMPILED EA+WA+RS MRG (MAY 2026)													
+		1. Lanes with HEA Surcharge : HEA is not applicable for cargo weight + tare at 17.71 tons or below. In case of excess weight (above 17.71 tons), please check with ONE for correct pricing before booking.													
+		2.  War Risk Surcharge : USD 55 per TEU 													
+		3. PSF for ex CHN  to JEA will be effective on September 1 ,2019 due to MOT/SSE Filing Regulations (Effective:  Jul 17th for all trades, except USA and China. August 1st for USA and China)													
+		4. AMA/AMS for import India: postponed until further notice													
+		Effective:   Aug 8, 2019  for ex TWN													
+		From/To: Oman, United Arab Emirates, Qatar, Bahrain, Saudi Arabia (Dammam + Jubail), Kuwait, Iraq  except Jeddah													
+												May  2026 MRG		 RATE STRUCTURE	
+POR COUNTRY	POR DESCRIPTION	POR	POL CODE	POD COUNTRY	POD	POD CODE	SERVICE SCOPE	ROUTE	POD	Dest Mode	20'D	40'D	HCD		Validity
+West & North India	Nhava Sheva	INNSA	INNSA	Bruniea	Muara	BNMUA	IWE	(PS3) -> SGSIN -> (FDR)			871	1636	1649	Rates are Inclusive of ISL,OBS,PSF,SLF **Subject to THL,THD,CMC,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Indonesia	PANJANG TERMINAL	IDPNJ	IWE	(PS3)-SGSIN-(JID)	IDJKT	B	859	1601	1601	Rates are Inclusive of ISL,OBS,PSF,SLF **Subject to THL,THD,CFE,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	S.PRC (Guangdong)	Qinzhou	CNQZH	IWE	(CIP)	HKHKG	B	156	365	365	Rates are Inclusive of ISL,OBS,PSF,SLF **Subject to THL,THD,AMA,AMS,DOC,DOF,EIR and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Indonesia	CIKARANG	IDCKR	IWE	(PS3)-SGSIN-(JID)	IDJKT	T	740	905	905	Rates are Inclusive of ISL,OBS,PSF,SLF **Subject to THL,THD,CFE,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Indonesia	PALEMBANG	IDPLM	IWE	(NCI)-SGSIN-(SPL)	IDPLM		265	575	575	Rates are Inclusive of ISL,OBS,PSF,SLF **Subject to THL,THD,CFE,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Japan	HIROSHIMA	JPHIJ	IWE	(PS3)-SGSIN-(FP1)	JPUKB	B	485	306	306	Rates are Inclusive of ISL,OBS,PSF,SLF,YAS **Subject to THL,THD,AMA,AMS,DOC,DOF,CMD and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Japan	OITA, OITA	JPOIT	IWE	(PS3)-SGSIN-(FP1)	JPUKB	B	380	950	950	Rates are Inclusive of ISL,OBS,PSF,SLF,YAS **Subject to THL,THD,AMA,AMS,DOC,DOF,CMD and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	C.PRC	Chongqing	CNCKG	IWE	(CIP)	HKHKG	R	685	485	485	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,AMA,AMS,DOC,DOF,EIR and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	S.PRC (Guangdong)	Guangzhou 	CNCAN	IWE	(CIP)	HKHKG	B	585	805	805	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,AMA,AMS,DOC,DOF,EIR and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Vietnam	Haiphong	VNHPH	IWE	(PS3) -> SGSIN -> (CCX)			99	100	100	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,DOC,DOF,VVN,CCC,CMC,CCC and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Japan	Hakata	JPHKT	IWE	(PS3)-SGSIN-(FP1)-JPUKB-(JK2)			490	815	815	Rates are Inclusive of ISL,PSF,SLF,OBS,YAS **Subject to THL,THD,AMA,AMS,DOC,DOF,CMD and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Japan	Niigata	JPKIJ	IWE	(PS3) -> SGSIN -> (MD2) -> KRPUS(ITT) -> KRPUS -> (BNX)			332	375	375	Rates are Inclusive of ISL,PSF,SLF,OBS,YAS **Subject to THL,THD,AMA,AMS,DOC,DOF,CMD and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Cambodia	Phnom Penh	KHPNH	IWE	(PS3)-VNCMP-(9VA)			265	670	670	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Japan	Shimizu	JPSMZ	IWE	(PS3) -> SGSIN -> (JID)			345	220	220	Rates are Inclusive of ISL,PSF,SLF,OBS,YAS **Subject to THL,THD,AMA,AMS,DOC,DOF,CMD and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Japan	Tomakomai	JPTMK	IWE	(PS3) -> SGSIN -> (MD3) -> KRPUS(ITT) -> KRPUS -> (HAS)			358	495	495	Rates are Inclusive of ISL,PSF,SLF,OBS,YAS **Subject to THL,THD,AMA,AMS,DOC,DOF,CMD and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Thailand	Bangkok (BMT/PAT)	THBKK	IWE	(JTI)	THLCH	B	49	50	50	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,CCC,CMC,DOC,DOF,RCR and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	S.PRC (Guangdong)	Beijiao	CNYQS	IWE	(CIP)	HKHKG	B	25	50	50	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,AMA,AMS,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Indonesia	Belawan	IDBLW	IWE	(PS3)-SGSIN-(BMX)	IDBLW		249	577	577	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Bangladesh	Chittagong	BDCGP	IWE	(CIP) -> LKCMB -> (BA2)			850	1000	1000	Rates are Inclusive of ISL,PSF,SLF,OBS,THD,CGD **Subject to THL,DOC,XDD,AMS and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Sri Lanka	Colombo	LKCMB	IWE	(NCI)	LKCMB		319	413	413	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	N.PRC	Dalian	CNDLC	IWE	(PS3)-SGSIN-(MD2)-KRPUS-(GS2)			260	300	300	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,AMA,AMS,DOC,DOF,EIR and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Vietnam	Danang	VNDAD	IWE	(NCI)-SGSIN-(NV2)	VNDAD		435	470	470	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,DOC,DOF,VVN and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Bangladesh	Dhaka	BDDAC	IWE	(CIP) -> LKCMB -> (BA2)			1635	2615	2150	Rates are Inclusive of ISL,PSF,SLF,OBS,THD,CGD **Subject to THL,DOC,XDD and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	S.PRC (Fujian)	Fuzhou	CNFOC	IWE	(CIP)	HKHKG	B	290	240	240	Rates are Inclusive of ISL,PSF,SLF,OBS,PCO **Subject to THL,THD,AMA,AMS,DOC,DOF,EIR,PSE and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	S.PRC (Guangdong)	Gaolan	CNGON	IWE	(CIP)	HKHKG	B	206	445	445	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,AMA,AMS,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Philippines	General Santos	PHGES	IWE	(PS3)-SGSIN-(PH3)	PHGES		395	8624	8623	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,EIS,DOC,DOF,CCC and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	S.PRC (Guangdong)	Gongyi	CNGGY	IWE	(CIP)	HKHKG	B	100	150	150	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,AMA,AMS,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Vietnam	Ho Chi Minh	VNSGN	IWE	(PS3)	VNCMP	B	15	30	30	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,DOC,DOF,VVN and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Hong Kong	Hong Kong	HKHKG	IWE	(CIP)	HKHKG		5	5	5	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	S.PRC (Guangdong)	Huangpu	CNHUA	IWE	(CIP)	HKHKG	B	25	50	50	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,AMA,AMS,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Indonesia	Jakarta	IDJKT	IWE	(PS3)-SGSIN-(JID)	IDJKT		79	125	125	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	S.PRC (Guangdong)	Jiangmen	CNJMN	IWE	(CIP)	HKHKG	B	100	75	75	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,AMA,AMS,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Taiwan	Kaohsiung	TWKHH	IWE	(NCI)	TWKHH		110	255	255	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Taiwan	Keelung	TWKEL	IWE	(NCI)	TWKHH	T	495	680	680	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Japan	Kobe	JPUKB	IWE	(PS3)-SGSIN-(FP1)	JPUKB		25	50	50	Rates are Inclusive of ISL,PSF,SLF,OBS,YAS **Subject to THL,THD,AMA,AMS,DOC,DOF,CMD and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Thailand	Laem Chabang	THLCH	IWE	(JTI)	THLCH		20	30	30	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,CCC,CMC,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Thailand	Lat Krabang	THLKR	IWE	(JTI)	THLCH	T	25	35	35	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,CCC,CMC,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Philippines	Manila	PHMNL	IWE	(PS3)-SGSIN-(PHX)	PHMNL		249	365	365	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,EIS,DOC,DOF,CCC and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Japan	Matsuyama	JPMYJ	IWE	(PS3)-SGSIN-(FP1)	JPUKB	B	465	480	480	Rates are Inclusive of ISL,PSF,SLF,OBS,YAS **Subject to THL,THD,AMA,AMS,DOC,DOF,CMD and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Japan	Mizushima	JPMIZ	IWE	(PS3)-SGSIN-(JID)	JPUKB	B	365	775	775	Rates are Inclusive of ISL,PSF,SLF,OBS,YAS **Subject to THL,THD,AMA,AMS,DOC,DOF,CMD and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Japan	Moji	JPMOJ	IWE	(PS3)-SGSIN-(FP1)	JPUKB	B	200	530	530	Rates are Inclusive of ISL,PSF,SLF,OBS,YAS **Subject to THL,THD,AMA,AMS,DOC,DOF,CMD and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Japan	Nagoya	JPNGO	IWE	(PS3)-SGSIN-(JSM)	JPNGO		172	50	50	Rates are Inclusive of ISL,PSF,SLF,OBS,YAS **Subject to THL,THD,AMA,AMS,DOC,DOF,CMD and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	S.PRC (Guangdong)	Nansha	CNNSA	IWE	(CIP)	HKHKG	B	75	135	135	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,AMA,AMS,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	C.PRC	Nantong	CNNTG	IWE	(CIP)	CNSHA	B	217	50	50	Rates are Inclusive of ISL,PSF,SLF,OBS,PCO **Subject to THL,THD,AMA,AMS,DOC,DOF,EIR,PSE and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	C.PRC	Ningbo	CNNGB	IWE	(CIP)	CNNGB		5	5	5	Rates are Inclusive of ISL,PSF,SLF,OBS,PCO **Subject to THL,THD,AMA,AMS,DOC,DOF,EIR and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Japan	Osaka	JPOSA	IWE	(PS3)-SGSIN-(FP1)	JPUKB	T	250	420	420	Rates are Inclusive of ISL,PSF,SLF,OBS,YAS **Subject to THL,THD,AMA,AMS,DOC,DOF,CMD and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Malaysia	Pasir Gudang	MYPGU	IWE	(PS3)-SGSIN-(PG2)	MYPGU		100	100	100	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,CCC,DPC,EDI,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Malaysia	Penang	MYPEN	IWE	(PS3)-SGSIN-(PF1)	MYPEN		115	150	150	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,CCC,DPC,EDI,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Malaysia	Port Klang	MYPKG	IWE	(NCI)	MYPKG		5	10	10	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,CCC,DPC,EDI,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Korea	Pusan	KRPUS	IWE	(NPI)	KRPUS		5	10	10	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,CCC,CSC,DOC,DOF,WHA,LSF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	N.PRC	Qingdao	CNTAO	IWE	(NCI)	CNTAO		5	5	5	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,AMA,AMS,DOC,DOF,EIR and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	S.PRC (Guangdong)	Rongqi	CNROQ	IWE	(CIP)	HKHKG	B	50	185	185	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,AMA,AMS,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	S.PRC (Guangdong)	Sanshan	CNSHG	IWE	(CIP)	HKHKG	B	200	225	225	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,AMA,AMS,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Indonesia	Semarang	IDSRG	IWE	(PS3)-SGSIN-(SRG)	IDSRG		195	250	250	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Japan	Sendai	JPSDJ	IWE	(PS3)-SGSIN-(JSM)	JPTYO	B	690	659	660	Rates are Inclusive of ISL,PSF,SLF,OBS,YAS **Subject to THL,THD,AMA,AMS,DOC,DOF,CMD and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	C.PRC	Shanghai	CNSHA	IWE	(CIP)	CNSHA		5	5	5	Rates are Inclusive of ISL,PSF,SLF,OBS,PCO **Subject to THL,THD,AMA,AMS,DOC,DOF,EIR and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	S.PRC (Shenzhen)	Shekou	CNSHK	IWE	(CIP)	HKHKG	B	235	260	260	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,AMA,AMS,DOC,DOF,EIR and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Japan	Shibushi	JPSBS	IWE	(PS3)-SGSIN-(FP1)	JPUKB	B	510	745	745	Rates are Inclusive of ISL,PSF,SLF,OBS,YAS **Subject to THL,THD,AMA,AMS,DOC,DOF,CMD and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Cambodia	Sihanoukville	KHKOS	IWE	(PS3)-SGSIN-(SIH)	KHKOS		274	200	200	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Singapore	Singapore	SGSIN	IWE	(NCI)	SGSIN		5	10	10	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,CMC,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Thailand	Songkhla	THSGZ	IWE	(PS3)-SGSIN-(SGZ)	THSGZ		145	125	125	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,CCC,CMC,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Philippines	Subic	PHSFS	IWE	(PS3)-SGSIN-(PHX)	PHSFS		323	533	533	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,EIS,DOC,DOF,CCC and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Indonesia	Surabaya	IDSUB	IWE	(PS3)-SGSIN-(SSX)	IDSUB		163	160	160	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,CFE,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Taiwan	Taichung	TWTXG	IWE	(NCI)	TWKHH	T	210	525	525	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Taiwan	Taoyuan	TWTYN	IWE	(NCI)	TWKHH	T	300	590	590	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Japan	Tokyo	JPTYO	IWE	(PS3)-SGSIN-(JSM)	JPTYO		220	220	220	Rates are Inclusive of ISL,PSF,SLF,OBS,YAS **Subject to THL,THD,AMA,AMS,DOC,DOF,CMD and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	C.PRC	Wuhan	CNWUH	IWE	(CIP)	CNSHA	B	80	300	25	Rates are Inclusive of ISL,PSF,SLF,OBS,PCO **Subject to THL,THD,AMA,AMS,DOC,DOF,EIR,PSE and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	S.PRC (Guangdong)	Xiaolan	CNXIL	IWE	(CIP)	HKHKG	B	15	25	25	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,AMA,AMS,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	N.PRC	Xingang	CNTXG	IWE	(NCI)	CNTXG		5	5	5	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,AMA,AMS,DOC,DOF,EIR and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	S.PRC (Shenzhen)	Yantian	CNYTN	IWE	(CIP)	HKHKG	B	215	265	265	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,AMA,AMS,DOC,DOF,EIR and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Japan	Yokkaichi	JPYKK	IWE	(NCI)-SGSIN-(JID)	JPYKK		218	50	50	Rates are Inclusive of ISL,PSF,SLF,OBS,YAS **Subject to THL,THD,AMA,AMS,DOC,DOF,CMD and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Japan	Yokohama	JPYOK	IWE	(PS3)-SGSIN-(JSM)	JPYOK		135	50	50	Rates are Inclusive of ISL,PSF,SLF,OBS,YAS **Subject to THL,THD,AMA,AMS,DOC,DOF,CMD and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	C.PRC	Zhangjiagang	CNZJG	IWE	(CIP)	CNSHA	B	55	200	200	Rates are Inclusive of ISL,PSF,SLF,OBS,PCO **Subject to THL,THD,AMA,AMS,DOC,DOF,EIR,PSE and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	S.PRC (Guangdong)	Zhongshan	CNZSN	IWE	(CIP)	HKHKG	B	15	25	25	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,AMA,AMS,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	S.PRC (Guangdong)	Zhuhai	CNZUH	IWE	(CIP)	HKHKG	B	15	25	25	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,AMA,AMS,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Egypt	Sokhna	EGSOK	IWE	(RGI)	EGSOK		1400	1800	1800	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,DOC,EST,AMA and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	N.PRC	Lianyungang	CNLYG	IWE	(CIP)	CNSHA	B	197	146	146	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,AMA,AMS,DOC,DOF,EIR and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	S.PRC (Fujian)	Xiamen	CNXMN	IWE	(CIP)	HKHKG	B	195	260	259	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,AMA,AMS,DOC,DOF,EIR and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Vietnam	Ho Chi Minh (Cai Mep)	VNCMP	IWE	(PS3)	VNCMP		5	5	5	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,DOC,DOF,VVN and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Myanmar	Yangon	MMRGN	IWE	(NCI)-SGSIN-(SMM)	MMRGN		459	538	538	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,DOC and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Saudi Arabia	Jeddah	SAJED	IWE	(RGI)	SAJED		1250	1650	1650	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,DOC,FED,OCR,XDD and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Malaysia	Kuching 	MYKCH	IWE	(PS3) -> SGSIN -> (FDR)			720	1285	1285	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,CCC,DPC,EDI,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Maldives	Male	MVMLE	IWE	(WIN) -> LKCMB(ITT) -> LKCMB -> (FDR)			1367	2160	2160	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,LIO,DOC,DOF,EIR and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Indonesia	Balikpapan	IDBPN	IWE	(PS3)-SGSIN-(JID)	IDJKT	B	750	1375	1375	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Malaysia	Kota Kinabalu	MYBKI	IWE	(PS3)-SGSIN-(FDR)	MYBKI		791	1323	1323	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,CCC,DPC,EDI,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Kuwait	Shuaiba	KWSAA	IWE	(IGS)-AEJEA-(UGS)						Rates are Inclusive of ISL,PSF,SLF,OBS,WRC,EIS **Subject to THL,THD,CVC,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	United Arab Emirates	AJMAN	AEAJM	IWE	(IGS)-AEJEA-(9UW)						Rates are Inclusive of ISL,PSF,SLF,OBS,WRC **Subject to THL,THD,CVC,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Saudi Arabia	Dammam	SADMM	IWE	(IG4)						Rates are Inclusive of ISL,PSF,SLF,OBS,WRC **Subject to THL,DOC,DOF,OCR and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	United Arab Emirates	Jebel Ali	AEJEA	IWE	(RGI)						Rates are Inclusive of ISL,PSF,SLF,OBS,WRC **Subject to THL,CVC,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Saudi Arabia	Riyadh	SARUH	IWE	(IG4)						Rates are Inclusive of ISL,PSF,SLF,OBS,WRC **Subject to ARD,THL,DOC,XDD,OCR and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Bahrain	Bahrain	BHBAH	IWE	(IGS)-AEJEA-(UGS)						Rates are Inclusive of ISL,PSF,SLF,OBS,WRC **Subject to THL,CVC,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Kuwait	Shuwaikh	KWSWK	IWE	(IGS)-AEJEA-(FDR)						Rates are Inclusive of ISL,PSF,SLF,OBS,WRC,EIS **Subject to THL,CVC,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Oman	Sohar	OMSOH	IWE	(IGS)						Rates are Inclusive of ISL,PSF,SLF,OBS,WRC **Subject to THL,CVC,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Qatar	Hamad	QAHMD	IWE	(IG4)						Rates are Inclusive of ISL,PSF,SLF,OBS,WRC **Subject to THL,CVC,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Iraq	Umm Qasr	IQUQR	IWE	(IG2)						Rates are Inclusive of ISL,PSF,SLF,OBS,WRC **Subject to THL,CVC,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Japan	Hachinohe	JPHHE	IWE	(PS3) -> SGSIN -> (MD3) -> KRPUS -> (FDR)			1002	1503	1503	Rates are Inclusive of ISL,OBS,PSF,SLF,YAS **Subject to THL,THD,AMA,AMS,DOC,DOF,CMD and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Korea	Incheon	KRINC	IWE	(PS3)-SGSIN-(KC2)	KRINC		25	5	5	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,CCC,CSC,DOC,DOF,WHA,LSF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Korea	Kwangyang	KRKAN	IWE	(CIP)-CNSHA-(PS6)	KRKAN		10089	141	141	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,CCC,CSC,DOC,DOF,WHA,LSF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Philippines	CEBU	PHCEB	IWE	(PS3)-SGSIN-(PH2)	PHCEB		285	365	365	Rates are Inclusive of ISL,PSF,SLF,OBS **Subject to THL,THD,EIS,DOC,DOF,CCC and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	United Arab Emirates	ABU DHABI	AEAUH	IWE	(RGI)-AEJEA-(GS2)						Rates are Inclusive of ISL,PSF,SLF,OBS,WRC **Subject to THL,THD,CVC,DOC,DOF and all other applicable charges at both ends.	May 2026
+West & North India	Nhava Sheva	INNSA	INNSA	Philippines	Batangas	PHBTG	IWE	(PS3) -> SGSIN -> (FDR)			700	500	500	Rates are Inclusive of PSF,SLF,OBS ** Subject to ARO.THL,THD,EIS,DOC,DOF,CCC and all other applicable charges at both ends.	May 2026
+															
+															
+- Bookings on Feeder space via SIN is subject to approval hence pls reserve before placing the booking.															
+- Freight is under prepaid terms * Based on current service offerings															
+- Subj to space and equipment availability with standard days freetime at POL and 14 days freetime detention at destination for Dry															
+- Above Rates NOT applicable for LOT SHIPMENTS OF Onion, Soya,Agri products & Raw Cotton															
+- CY/CY non haz rates (flexitanks not accepted; bulk commodity in loose stuffing is not accepted)															
+* ONE EIS on collect basis for Manila North shipment USD 402 / 803 per 20’ / 40’ for all type of container (Dry/ Reefer/ DG/ Special equipment)															
+* EFS USD 60 / 120 per 20’ / 40’  For Dry unit (Effective from 01-05-2026)															
+															
+There is no offer for the Middle East due to restricted service for the following PODs															
+Jebel Ali, Dammam, Riyadh, Sharjah, Bahrain, SHUAIBA, AJMAN, Shuwaikh, Sohar, Hamad, Umm Qasr, Abu Dhabi, Ajman.															
+															
+WEST ASIA HAZ PREMIUM ADD-ON 															
+Category	Scope		20'	40'	Category			Scope		20'	40'				
+SIN T/S	PSA GROUP 1/1D		$538	$753	DG PREMIUM (apply Both Direct			IMO Class 1		$150	$300				
+	PSA GROUP 2		$538	$753	and T/s Except SIN T/s)			IMO Class 2		$150	$300				
+	PSA GROUP 1S		$430	$591				IMO Class 3		$150	$300				
+	PSA GROUP 2S		$269	$538				IMO Class 4		$150	$300				
+	PSA GROUP 2A		$430	$591				IMO Class 5		$150	$300				
+	PSA GROUP 2B		$269	$538				IMO Class 6		$150	$300				
+	PSA GROUP 2F		$269	$538				IMO Class 8		$150	$300				
+	PSA GROUP 3		$0	$0				IMO Class 9		$150	$300				
+For via SIN: PSA + HAZ CHARGE (USD150/TEU)															
+															
+Free days at the POD will be provided as per the tariff below, based on MRG rates; any additional free days will be chargeable.															
+COUNTRY CODE	COUNTRY	TYPE	INBOUND	DMIF/DTIC+DTIC addition = Total F/T											
+JP	JAPAN	DUAL	DMIF/DTIC	6+4+4 = 14 days (i.e. DMIF 6 & DTIC 8)											
+TW	TAIWAN	DUAL	DMIF/DTIC	7+3+4 = 14 days (i.e. DMIF 7 & DTIC 7)											
+HK	HONG KONG	DUAL	DMIF/DTIC	3+5+6 = 14 days (i.e. DMIF 3 & DTIC 11)											
+SG	SINGAPORE	DUAL	DMIF/DTIC	3+5+6 = 14 days (i.e. DMIF 3 & DTIC 11)											
+MY	MALAYSIA	DUAL	DMIF/DTIC	5+5+4 = 14 days (i.e. DMIF 5 & DTIC 9)											
+TH	THAILAND	DUAL	DMIF/DTIC	7+7 = 14 days (i.e. DMIF 7 & DTIC 7)											
+KH	CAMBODIA	DUAL	DMIF/DTIC	7+7 = 14 days (i.e. DMIF 7 & DTIC 7)											
+VN	VIETNAM	DUAL	DMIF/DTIC	7+3+4 = 14 days (i.e. DMIF 7 & DTIC 7)											
+PH	PHILIPPINES	COMBINED	CTIC	14 days											
+ID	INDONESIA	COMBINED	CTIC	14 days											
+IN	INDIA	COMBINED	CTIC	14 days											
+KR	KOREA	COMBINED	CTIC	14 days											
+MM	MYANMAR	COMBINED	CTIC	14 days											
+CN	China	COMBINED	CTIC	14 days											
+PK	PAKISTAN	COMBINED	CTIC	14 days											
+BH	BAHRAIN	COMBINED	CTIC	14 days											
+AE	UAE 	COMBINED	CTIC	14 days											
+OM	SOHAR	COMBINED	CTIC	14 days											
+QA	HAMAD	COMBINED	CTIC	14 days											
+IQ	UMM QASR	COMBINED	CTIC	14 days											
+JO	CHINA	COMBINED	CTIC	14 days											
+SA	SAUDI	COMBINED	CTIC	14 days											
+EG	EGYPT	COMBINED	CTIC	14 days											
+LK	SRI LANKA	COMBINED	CTIC	14 days											
+KW	KUWAIT	COMBINED	CTIC	14 days											
+BD	Bangladesh	COMBINED	CTIC	14 days											
+MV	Maldives	COMBINED	CTIC	14 days											
+															
+Effective 1st April 2026 – 30th June 2026															
+ONE Bunker Surcharge (OBS) for East Asia Trade / West Asia Trade																																		
+Effective Date	Expiry Date	Service Scope	POR	POR Description	POD	DEL	DEL Description	Cargo/Container Type	T/S Port	Cur.	OFT 20	OFT 40	OFT HC	Include Surcharge					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		BEANR	ANTWERP	Dry General		USD	1,325	1,060	1,060	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		BEANR	ANTWERP	Dry General		USD	1,325	1,060	1,060	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		DEHAM	HAMBURG, HH	Dry General		USD	1,325	1,060	1,060	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		DEHAM	HAMBURG, HH	Dry General		USD	1,325	1,060	1,060	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		DKAAL	AALBORG	Dry General		USD	1,750	1,635	1,635	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		DKAAL	AALBORG	Dry General		USD	1,750	1,635	1,635	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		DKAAR	AARHUS	Dry General		USD	1,525	1,260	1,260	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		DKAAR	AARHUS	Dry General		USD	1,525	1,260	1,260	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		DKCPH	COPENHAGEN	Dry General		USD	1,525	1,260	1,260	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		DKCPH	COPENHAGEN	Dry General		USD	1,525	1,260	1,260	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		DKFRC	FREDERICIA	Dry General	DEHAM	USD	1,525	1,260	1,260	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		DKFRC	FREDERICIA	Dry General	DEHAM	USD	1,525	1,260	1,260	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		EETLL	TALLINN	Dry General		USD	1,575	1,360	1,360	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		EETLL	TALLINN	Dry General		USD	1,575	1,360	1,360	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		ESBIO	BILBAO	Dry General		USD	1,895	1,785	1,785	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		ESBIO	BILBAO	Dry General		USD	1,895	1,785	1,785	CAF,CSS,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		ESGIJ	GIJON	Dry General		USD	1,895	1,785	1,785	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		ESGIJ	GIJON	Dry General		USD	1,895	1,785	1,785	CAF,CSS,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		ESVGO	VIGO	Dry General		USD	1,895	1,785	1,785	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		ESVGO	VIGO	Dry General		USD	1,895	1,785	1,785	CAF,CSS,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		FIHEL	HELSINKI	Dry General		USD	1,475	1,260	1,260	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		FIHEL	HELSINKI	Dry General		USD	1,475	1,260	1,260	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		FIKTK	KOTKA	Dry General		USD	1,475	1,260	1,260	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		FIKTK	KOTKA	Dry General		USD	1,475	1,260	1,260	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		FIOUL	OULU	Dry General		USD	2,685	3,260	2,660	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		FIOUL	OULU	Dry General		USD	2,685	3,260	2,660	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		FIRAU	RAUMA	Dry General		USD	1,475	1,260	1,260	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		FIRAU	RAUMA	Dry General		USD	1,475	1,260	1,260	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		FRLEH	LE HAVRE, SEINE-MARITIME	Dry General		USD	1,375	1,160	1,160	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		FRLEH	LE HAVRE, SEINE-MARITIME	Dry General		USD	1,375	1,160	1,160	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		GBBEL	BELFAST, BELFAST	Dry General		USD	2,025	1,510	1,510	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		GBBEL	BELFAST, BELFAST	Dry General		USD	2,025	1,510	1,510	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		GBCOT	COATBRIDGE, NORTH LANARKSHIRE	Dry General		USD	1,925	1,640	1,640	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		GBCOT	COATBRIDGE, NORTH LANARKSHIRE	Dry General		USD	1,925	1,640	1,640	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		GBGRG	GRANGEMOUTH, FALKIRK	Dry General		USD	1,825	1,740	1,740	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		GBGRG	GRANGEMOUTH, FALKIRK	Dry General		USD	1,825	1,740	1,740	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		GBIMM	IMMINGHAM, LINCOLNSHIRE	Dry General	NLRTM	USD	1,825	1,860	1,860	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		GBIMM	IMMINGHAM, LINCOLNSHIRE	Dry General	NLRTM	USD	1,825	1,860	1,860	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		GBSOU	SOUTHAMPTON, HAMPSHIRE	Dry General		USD	1,325	1,060	1,060	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		GBSOU	SOUTHAMPTON, HAMPSHIRE	Dry General		USD	1,325	1,060	1,060	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		GBSSH	SOUTH SHIELDS, TYNE AND WEAR	Dry General		USD	1,795	1,940	1,940	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		GBSSH	SOUTH SHIELDS, TYNE AND WEAR	Dry General		USD	1,795	1,940	1,940	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		GBTEE	TEESPORT, NORTH YORKSHIRE	Dry General		USD	1,825	1,740	1,740	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		GBTEE	TEESPORT, NORTH YORKSHIRE	Dry General		USD	1,825	1,740	1,740	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		IEDUB	DUBLIN	Dry General		USD	1,725	1,510	1,510	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		IEDUB	DUBLIN	Dry General		USD	1,725	1,510	1,510	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		IEORK	CORK	Dry General		USD	1,725	1,510	1,510	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		IEORK	CORK	Dry General		USD	1,725	1,510	1,510	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		LTKLJ	KLAIPEDA	Dry General		USD	1,575	1,360	1,360	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		LTKLJ	KLAIPEDA	Dry General		USD	1,575	1,360	1,360	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		LVRIX	RIGA	Dry General		USD	1,575	1,360	1,360	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		LVRIX	RIGA	Dry General		USD	1,575	1,360	1,360	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		NLRTM	ROTTERDAM	Dry General		USD	1,325	1,060	1,060	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		NLRTM	ROTTERDAM	Dry General		USD	1,325	1,060	1,060	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		NOBGO	BERGEN	Dry General		USD	2,125	2,560	2,560	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		NOBGO	BERGEN	Dry General		USD	2,125	2,560	2,560	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		NOFRK	FREDRIKSTAD	Dry General		USD	2,050	2,060	2,060	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		NOFRK	FREDRIKSTAD	Dry General		USD	2,050	2,060	2,060	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		NOKRS	KRISTIANSAND S.	Dry General		USD	2,075	2,260	2,260	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		NOKRS	KRISTIANSAND S.	Dry General		USD	2,075	2,260	2,260	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		NOLAR	LARVIK	Dry General		USD	2,025	2,185	2,185	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		NOLAR	LARVIK	Dry General		USD	2,025	2,185	2,185	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		NOOSL	OSLO	Dry General		USD	2,275	2,060	2,060	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		NOOSL	OSLO	Dry General		USD	2,275	2,060	2,060	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		PLGDN	GDANSK	Dry General		USD	1,375	1,160	1,160	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		PLGDN	GDANSK	Dry General		USD	1,375	1,160	1,160	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		PLGDY	GDYNIA	Dry General		USD	1,375	1,160	1,160	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		PLGDY	GDYNIA	Dry General		USD	1,375	1,160	1,160	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA	NLRTM	PTLEI	LEIXOES	Dry General		USD	1,475	1,360	1,360	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA	NLRTM	PTLEI	LEIXOES	Dry General		USD	1,475	1,360	1,360	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA	NLRTM	PTLIS	LISBON	Dry General		USD	1,475	1,360	1,360	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA	NLRTM	PTLIS	LISBON	Dry General		USD	1,475	1,360	1,360	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		SEAHU	AAHUS	Dry General		USD	1,825	1,610	1,610	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		SEAHU	AAHUS	Dry General		USD	1,825	1,610	1,610	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		SEGOT	GOTHENBURG	Dry General		USD	1,375	1,160	1,160	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		SEGOT	GOTHENBURG	Dry General		USD	1,375	1,160	1,160	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		SEGVX	GAVLE	Dry General		USD	1,625	1,610	1,510	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		SEGVX	GAVLE	Dry General		USD	1,625	1,610	1,510	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		SEHEL	HELSINGBORG	Dry General		USD	1,525	1,310	1,310	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		SEHEL	HELSINGBORG	Dry General		USD	1,525	1,310	1,310	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		SENRK	NORRKOPING	Dry General		USD	2,575	2,710	2,710	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		SENRK	NORRKOPING	Dry General		USD	2,575	2,710	2,710	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		SESOE	SODERTALJE	Dry General		USD	1,775	1,760	1,760	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		SESOE	SODERTALJE	Dry General		USD	1,775	1,760	1,760	CAF,CSS,HEA,MBS					
+2026-05-07	2026-05-15	WEW	INNSA	NHAVA SHEVA		SESTO	STOCKHOLM	Dry General		USD	2,525	2,760	2,760	CAF,CSS,HEA,MBS					
+2026-05-16	2026-05-31	WEW	INNSA	NHAVA SHEVA		SESTO	STOCKHOLM	Dry General		USD	2,525	2,760	2,760	CAF,CSS,HEA,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		ALDRZ	DURRES	Dry General		USD	1,800	1,800	1,800	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		ALDRZ	DURRES	Dry General		USD	1,800	1,800	1,800	CAF,CSS,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		BGBOJ	BOURGAS	Dry General		USD	2,145	2,285	2,285	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		BGBOJ	BOURGAS	Dry General		USD	2,145	2,285	2,285	CAF,CSS,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		BGVAR	VARNA	Dry General		USD	2,710	2,400	2,400	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		BGVAR	VARNA	Dry General		USD	2,710	2,400	2,400	CAF,CSS,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		EGALY	ALEXANDRIA, EGYPT	Dry General		USD	1,745	1,485	1,485	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		EGALY	ALEXANDRIA, EGYPT	Dry General		USD	1,745	1,485	1,485	CAF,CSS,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		EGDAM	DAMIETTA, EGYPT	Dry General		USD	1,645	1,285	1,285	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		EGDAM	DAMIETTA, EGYPT	Dry General		USD	1,645	1,285	1,285	CAF,CSS,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		ESALG	ALGECIRAS	Dry General		USD	1,645	1,285	1,285	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		ESALG	ALGECIRAS	Dry General		USD	1,645	1,285	1,285	CAF,CSS,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		ESBCN	BARCELONA	Dry General		USD	1,645	1,285	1,285	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		ESBCN	BARCELONA	Dry General		USD	1,645	1,285	1,285	CAF,CSS,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		ESVLC	VALENCIA	Dry General		USD	1,645	1,285	1,285	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		ESVLC	VALENCIA	Dry General		USD	1,645	1,285	1,285	CAF,CSS,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		FRFOS	FOS-SUR-MER, BOUCHES DU RHONE	Dry General		USD	1,645	1,285	1,285	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		FRFOS	FOS-SUR-MER, BOUCHES DU RHONE	Dry General		USD	1,645	1,285	1,285	CAF,CSS,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		GRPIR	PIRAEUS	Dry General		USD	1,645	1,285	1,285	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		GRPIR	PIRAEUS	Dry General		USD	1,645	1,285	1,285	CAF,CSS,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		GRSKG	THESSALONIKI	Dry General		USD	1,745	1,485	1,485	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		GRSKG	THESSALONIKI	Dry General		USD	1,745	1,485	1,485	CAF,CSS,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		HRRJK	RIJEKA	Dry General		USD	2,095	2,185	2,185	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		HRRJK	RIJEKA	Dry General		USD	2,095	2,185	2,185	CAF,CSS,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		ILASH	ASHDOD	Dry General		USD	1,845	1,685	1,685	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		ILASH	ASHDOD	Dry General		USD	1,845	1,685	1,685	CAF,CSS,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		ILHFA	HAIFA	Dry General		USD	1,845	1,685	1,685	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		ILHFA	HAIFA	Dry General		USD	1,845	1,685	1,685	CAF,CSS,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		ITAOI	ANCONA	Dry General		USD	1,695	1,385	1,385	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		ITAOI	ANCONA	Dry General		USD	1,695	1,385	1,385	CAF,CSS,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		ITGOA	GENOA	Dry General		USD	1,645	1,285	1,285	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		ITGOA	GENOA	Dry General		USD	1,645	1,285	1,285	CAF,CSS,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		ITLIV	LIVORNO	Dry General		USD	1,845	1,685	1,685	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		ITLIV	LIVORNO	Dry General		USD	1,845	1,685	1,685	CAF,CSS,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		ITRAN	RAVENNA	Dry General		USD	2,045	1,985	1,985	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		ITRAN	RAVENNA	Dry General		USD	2,045	1,985	1,985	CAF,CSS,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		ITSPE	LA SPEZIA	Dry General		USD	1,645	1,285	1,285	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		ITSPE	LA SPEZIA	Dry General		USD	1,645	1,285	1,285	CAF,CSS,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		ITTRS	TRIESTE	Dry General		USD	2,095	2,085	2,085	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		ITTRS	TRIESTE	Dry General		USD	2,095	2,085	2,085	CAF,CSS,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		ITVCE	VENICE	Dry General		USD	1,745	1,485	1,485	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		ITVCE	VENICE	Dry General		USD	1,745	1,485	1,485	CAF,CSS,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		LBBEY	BEIRUT	Dry General		USD	1,795	1,585	1,585	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		LBBEY	BEIRUT	Dry General		USD	1,795	1,585	1,585	CAF,CSS,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		MACAS	CASABLANCA	Dry General		USD	3,440	4,540	4,540	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		MACAS	CASABLANCA	Dry General		USD	3,440	4,540	4,540	CAF,CSS,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		MATNG	TANGIER	Dry General		USD	2,940	3,540	3,540	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		MATNG	TANGIER	Dry General		USD	2,940	3,540	3,540	CAF,CSS,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		ROCND	CONSTANTA	Dry General		USD	2,145	2,285	2,285	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		ROCND	CONSTANTA	Dry General		USD	2,145	2,285	2,285	CAF,CSS,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		SIKOP	KOPER	Dry General		USD	1,695	1,385	1,385	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		SIKOP	KOPER	Dry General		USD	1,695	1,385	1,385	CAF,CSS,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		TRALI	ALIAGA	Dry General		USD	1,695	1,385	1,385	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		TRALI	ALIAGA	Dry General		USD	1,695	1,385	1,385	CAF,CSS,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		TRGEM	GEMLIK	Dry General		USD	1,895	1,785	1,785	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		TRGEM	GEMLIK	Dry General		USD	1,895	1,785	1,785	CAF,CSS,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		TRISK	ISKENDERUN	Dry General		USD	1,745	1,485	1,485	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		TRISK	ISKENDERUN	Dry General		USD	1,745	1,485	1,485	CAF,CSS,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		TRIST	ISTANBUL	Dry General		USD	1,695	1,385	1,385	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		TRIST	ISTANBUL	Dry General		USD	1,695	1,385	1,385	CAF,CSS,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		TRIZT	IZMIT	Dry General		USD	1,695	1,385	1,385	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		TRIZT	IZMIT	Dry General		USD	1,695	1,385	1,385	CAF,CSS,MBS					
+2026-05-01	2026-05-15	WMW	INNSA	NHAVA SHEVA		TRMER	MERSIN	Dry General		USD	1,695	1,385	1,385	CAF,CSS,MBS					
+2026-05-16	2026-05-31	WMW	INNSA	NHAVA SHEVA		TRMER	MERSIN	Dry General		USD	1,695	1,385	1,385	CAF,CSS,MBS					
+																			
+																			
+																			
+WEW=EUROPE / WMW=MED																			
+DG SURCHARGE = USD 200/TEU																			
+Subject OBS(For Europe: OBS USD117/Teu , For MED: OBS USD 119/Teu)/SCT(APPLICABLE IF VESSEL ROUTING FROM SUEZ), EES(For Europe:  USD 95/Teu , For MED: USD 182/Teu),ESD  and all other tariff surcharges 																			
+* EFS USD 120 / 240 per 20’ / 40’  For Dry unit (Effective from 01-05-2026)																			
+Subject to HEA for 20 DV: USD 300/UNIT for EU (Net Weight >= 16 MT) 																			
+Subject to HEA for  20 DV: USD 300/UNIT for MED (Net Weight >= 16 MT)  &  20 DV: USD 600/UNIT for MED (Net Weight >= 18 MT) 																			
+Subject to Food Grade Premium (FGP) = USD 100/container for Food Grade container only												f							
+Standard freetime detention at POD for Dry																																	
+Effective Date	Expiry Date	Service Scope	POR	POR Description	DEL	DEL Description	Cargo/Container Type	T/S Port	Service Lane	Cur.	OFT 20	OFT 40	OFT HC	Include Surcharge
+2026-05-01	2026-05-14	AUS	INNSA	NHAVA SHEVA	AUADL	ADELAIDE, SA	Dry General			USD	925	1,850	1,850	MBS,OBS
+2026-05-15	2026-05-31	AUS	INNSA	NHAVA SHEVA	AUADL	ADELAIDE, SA	Dry General			USD	925	1,850	1,850	MBS,OBS
+2026-05-01	2026-05-14	AUS	INNSA	NHAVA SHEVA	AUEC	AUMEL AUBNE	Dry General			USD	925	1,850	1,850	MBS,OBS
+2026-05-15	2026-05-31	AUS	INNSA	NHAVA SHEVA	AUEC	AUMEL AUBNE	Dry General			USD	925	1,850	1,850	MBS,OBS
+2026-05-01	2026-05-14	AUS	INNSA	NHAVA SHEVA	AUFRE	FREMANTLE, WA	Dry General	SGSIN	WAU	USD	925	1,850	1,850	MBS,OBS
+2026-05-15	2026-05-31	AUS	INNSA	NHAVA SHEVA	AUFRE	FREMANTLE, WA	Dry General	SGSIN	WAU	USD	925	1,850	1,850	MBS,OBS
+2026-05-01	2026-05-14	AUS	INNSA	NHAVA SHEVA	AUSYD	SYDNEY, NSW	Dry General			USD	925	1,850	1,850	MBS,OBS
+2026-05-15	2026-05-31	AUS	INNSA	NHAVA SHEVA	AUSYD	SYDNEY, NSW	Dry General			USD	925	1,850	1,850	MBS,OBS
+2026-05-01	2026-05-14	NZS	INNSA	NHAVA SHEVA	NZAKL	AUCKLAND	Dry General			USD	900	1,700	1,700	MBS,OBS
+2026-05-15	2026-05-31	NZS	INNSA	NHAVA SHEVA	NZAKL	AUCKLAND	Dry General			USD	900	1,700	1,700	MBS,OBS
+2026-05-01	2026-05-14	NZS	INNSA	NHAVA SHEVA	NZBP	New Zealand Base Ports	Dry General			USD	900	1,700	1,700	MBS,OBS
+2026-05-15	2026-05-31	NZS	INNSA	NHAVA SHEVA	NZBP	New Zealand Base Ports	Dry General			USD	900	1,700	1,700	MBS,OBS
+														
+														
+Rates are subject to ISL USD 32 / SLF USD 10 per Container and THC/DOC both end														
+Standard freetime at POD														
+* EFS USD 120 / 240 per 20’ / 40’  For Dry unit (Effective from 01-05-2026)														
+Flexi-tank add-on: USD100/TEU														
+														
+DG Surcharges Table														
+HAZ	DG Class	D20	D40	40HC										
+For All DG cargoes Direct load and via Singapore	CLASS 1	Do not accept												
+	CLASS 2.1/2.2/2.3	USD 300	USD 600	USD 600										
+	CLASS 3	USD 150	USD 300	USD 300										
+	CLASS 4	USD 150	USD 300	USD 300										
+	CLASS 5	USD 300	USD 600	USD 600										
+	CLASS 6	USD 150	USD 300	USD 300										
+	CLASS 7	Do not accept												
+	CLASS 8	USD 150	USD 300	USD 300										
+	CLASS 9	USD 150	USD 300	USD 300										
+														
+- PSA Surcharge (Applicable for DG via SIN Transhipment)														
+PSA Add-on	PSA Group	D20	D40	40HC										
+An addon applicable for Singapore transhipment on top HAZ surcharge	PSA group 1/1D/2	USD 538	USD 753	USD 753										
+	PSA group 1S/2S/2A/2B/2F	USD 269	USD 538	USD 538										
+	PSA group 3	USD 0	USD 0	USD 0										
+														
+														
+																																	
+Effective Date	Expiry Date	Service Scope	POR	POR Description	DEL	DEL Description	Cargo/Container Type	T/S Port	Service Lane	Cur.	OFT 20	OFT 40	OFT HC	Include Surcharge					
+2026-05-08	2026-05-15	CSE	INNSA	NHAVA SHEVA	AWORJ	BARCADERA, ORANJESTAD	Dry General			USD	5,600	5,600	5,600	EFS,MBS,OBS,PSS					
+2026-05-16	2026-05-22	CSE	INNSA	NHAVA SHEVA	AWORJ	BARCADERA, ORANJESTAD	Dry General			USD	5,800	5,800	5,800	EFS,MBS,OBS,PSS					
+2026-05-08	2026-05-15	CSE	INNSA	NHAVA SHEVA	BBBGI	BRIDGETOWN	Dry General			USD	5,600	5,600	5,600	EFS,MBS,OBS,PSS					
+2026-05-16	2026-05-22	CSE	INNSA	NHAVA SHEVA	BBBGI	BRIDGETOWN	Dry General			USD	5,800	5,800	5,800	EFS,MBS,OBS,PSS					
+2026-05-08	2026-05-15	CSE	INNSA	NHAVA SHEVA	BRMAO	MANAUS	Dry General			USD	4,400	4,400	4,400	EFS,MBS,OBS,PSS					
+2026-05-16	2026-05-22	CSE	INNSA	NHAVA SHEVA	BRMAO	MANAUS	Dry General			USD	5,200	5,200	5,200	EFS,MBS,OBS,PSS					
+2026-05-08	2026-05-15	CSE	INNSA	NHAVA SHEVA	BRVLD	VILA DO CONDE	Dry General			USD	4,400	4,400	4,400	EFS,MBS,OBS,PSS					
+2026-05-16	2026-05-22	CSE	INNSA	NHAVA SHEVA	BRVLD	VILA DO CONDE	Dry General			USD	5,200	5,200	5,200	EFS,MBS,OBS,PSS					
+2026-05-08	2026-05-15	CSE	INNSA	NHAVA SHEVA	COBAQ	BARRANQUILLA	Dry General			USD	3,500	3,500	3,500	EFS,MBS,OBS,PSS					
+2026-05-16	2026-05-22	CSE	INNSA	NHAVA SHEVA	COBAQ	BARRANQUILLA	Dry General			USD	3,800	3,800	3,800	EFS,MBS,OBS,PSS					
+2026-05-08	2026-05-15	CSE	INNSA	NHAVA SHEVA	COCNR	CARTAGENA	Dry General			USD	3,500	3,500	3,500	EFS,MBS,OBS,PSS					
+2026-05-16	2026-05-22	CSE	INNSA	NHAVA SHEVA	COCNR	CARTAGENA	Dry General			USD	3,800	3,800	3,800	EFS,MBS,OBS,PSS					
+2026-05-08	2026-05-15	CSE	INNSA	NHAVA SHEVA	COSMR	SANTA MARTA	Dry General			USD	3,500	3,500	3,500	EFS,MBS,OBS,PSS					
+2026-05-16	2026-05-22	CSE	INNSA	NHAVA SHEVA	COSMR	SANTA MARTA	Dry General			USD	3,800	3,800	3,800	EFS,MBS,OBS,PSS					
+2026-05-08	2026-05-15	CSE	INNSA	NHAVA SHEVA	CRMOB	MOIN	Dry General			USD	3,900	3,900	3,900	EFS,MBS,OBS,PSS					
+2026-05-16	2026-05-22	CSE	INNSA	NHAVA SHEVA	CRMOB	MOIN	Dry General			USD	4,100	4,100	4,100	EFS,MBS,OBS,PSS					
+2026-05-08	2026-05-15	CSE	INNSA	NHAVA SHEVA	CWWIL	WILLEMSTAD	Dry General			USD	6,600	6,600	6,600	EFS,MBS,OBS,PSS					
+2026-05-16	2026-05-22	CSE	INNSA	NHAVA SHEVA	CWWIL	WILLEMSTAD	Dry General			USD	6,800	6,800	6,800	EFS,MBS,OBS,PSS					
+2026-05-08	2026-05-15	CSE	INNSA	NHAVA SHEVA	DOCAU	CAUCEDO	Dry General			USD	3,500	3,500	3,500	EFS,MBS,OBS,PSS					
+2026-05-16	2026-05-22	CSE	INNSA	NHAVA SHEVA	DOCAU	CAUCEDO	Dry General			USD	3,800	3,800	3,800	EFS,MBS,OBS,PSS					
+2026-05-08	2026-05-15	CSE	INNSA	NHAVA SHEVA	DOHAI	RIO HAINA	Dry General			USD	4,100	4,100	4,100	EFS,MBS,OBS,PSS					
+2026-05-16	2026-05-22	CSE	INNSA	NHAVA SHEVA	DOHAI	RIO HAINA	Dry General			USD	4,300	4,300	4,300	EFS,MBS,OBS,PSS					
+2026-05-08	2026-05-15	CSE	INNSA	NHAVA SHEVA	GTSTC	SANTO TOMAS DE CASTILLA	Dry General			USD	3,900	3,900	3,900	EFS,MBS,OBS,PSS					
+2026-05-16	2026-05-22	CSE	INNSA	NHAVA SHEVA	GTSTC	SANTO TOMAS DE CASTILLA	Dry General			USD	4,100	4,100	4,100	EFS,MBS,OBS,PSS					
+2026-05-08	2026-05-15	CSE	INNSA	NHAVA SHEVA	GYGEO	GEORGETOWN	Dry General			USD	5,600	5,600	5,600	EFS,MBS,OBS,PSS					
+2026-05-16	2026-05-22	CSE	INNSA	NHAVA SHEVA	GYGEO	GEORGETOWN	Dry General			USD	5,800	5,800	5,800	EFS,MBS,OBS,PSS					
+2026-05-08	2026-05-15	CSE	INNSA	NHAVA SHEVA	HNPCR	PUERTO CORTES	Dry General			USD	3,900	3,900	3,900	EFS,MBS,OBS,PSS					
+2026-05-16	2026-05-22	CSE	INNSA	NHAVA SHEVA	HNPCR	PUERTO CORTES	Dry General			USD	3,800	3,800	3,800	EFS,MBS,OBS,PSS					
+2026-05-08	2026-05-15	CSE	INNSA	NHAVA SHEVA	HTPAP	PORT AU PRINCE	Dry General			USD	4,400	4,400	4,400	EFS,MBS,OBS,PSS					
+2026-05-16	2026-05-22	CSE	INNSA	NHAVA SHEVA	HTPAP	PORT AU PRINCE	Dry General			USD	4,700	4,700	4,700	EFS,MBS,OBS,PSS					
+2026-05-08	2026-05-15	CSE	INNSA	NHAVA SHEVA	JMKIN	KINGSTON	Dry General			USD	4,000	4,000	4,000	EFS,MBS,OBS,PSS					
+2026-05-16	2026-05-22	CSE	INNSA	NHAVA SHEVA	JMKIN	KINGSTON	Dry General			USD	4,100	4,100	4,100	EFS,MBS,OBS,PSS					
+2026-05-08	2026-05-15	CSE	INNSA	NHAVA SHEVA	PACFZ	COLON FREE ZONE	Dry General			USD	3,300	3,300	3,300	EFS,MBS,OBS,PSS					
+2026-05-16	2026-05-22	CSE	INNSA	NHAVA SHEVA	PACFZ	COLON FREE ZONE	Dry General			USD	3,500	3,500	3,500	EFS,MBS,OBS,PSS					
+2026-05-08	2026-05-15	CSE	INNSA	NHAVA SHEVA	PAMIT	MANZANILLO	Dry General			USD	3,200	3,200	3,200	EFS,MBS,OBS,PSS					
+2026-05-16	2026-05-22	CSE	INNSA	NHAVA SHEVA	PAMIT	MANZANILLO	Dry General			USD	3,400	3,400	3,400	EFS,MBS,OBS,PSS					
+2026-05-08	2026-05-15	CSE	INNSA	NHAVA SHEVA	PRSJU	SAN JUAN	Dry General			USD	4,400	4,400	4,400	EFS,MBS,OBS,PSS					
+2026-05-16	2026-05-22	CSE	INNSA	NHAVA SHEVA	PRSJU	SAN JUAN	Dry General			USD	4,700	4,700	4,700	EFS,MBS,OBS,PSS					
+2026-05-08	2026-05-15	CSE	INNSA	NHAVA SHEVA	SRPBM	PARAMARIBO	Dry General			USD	5,600	5,600	5,600	EFS,MBS,OBS,PSS					
+2026-05-16	2026-05-22	CSE	INNSA	NHAVA SHEVA	SRPBM	PARAMARIBO	Dry General			USD	5,800	5,800	5,800	EFS,MBS,OBS,PSS					
+2026-05-08	2026-05-15	CSE	INNSA	NHAVA SHEVA	TTPOS	PORT OF SPAIN	Dry General			USD	3,500	3,500	3,500	EFS,MBS,OBS,PSS					
+2026-05-16	2026-05-22	CSE	INNSA	NHAVA SHEVA	TTPOS	PORT OF SPAIN	Dry General			USD	3,800	3,800	3,800	EFS,MBS,OBS,PSS					
+2026-05-08	2026-05-15	CSE	INNSA	NHAVA SHEVA	VELAG	LA GUAIRA	Dry General			USD	4,400	4,400	4,400	EFS,MBS,OBS,PSS					
+2026-05-16	2026-05-22	CSE	INNSA	NHAVA SHEVA	VELAG	LA GUAIRA	Dry General			USD	4,800	4,800	4,800	EFS,MBS,OBS,PSS					
+2026-05-08	2026-05-15	CSE	INNSA	NHAVA SHEVA	VEPBL	PUERTO CABELLO	Dry General			USD	4,400	4,400	4,400	EFS,MBS,OBS,PSS					
+2026-05-16	2026-05-22	CSE	INNSA	NHAVA SHEVA	VEPBL	PUERTO CABELLO	Dry General			USD	4,800	4,800	4,800	EFS,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LEW	INNSA	NHAVA SHEVA	ARBUE	BUENOS AIRES	Dry General	ESALG	LUX	USD	1,500	1,700	1,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LEW	INNSA	NHAVA SHEVA	ARBUE	BUENOS AIRES	Dry General	ESALG	LUX	USD	1,500	1,700	1,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LEW	INNSA	NHAVA SHEVA	ARBUE	BUENOS AIRES	Dry General	NLRTM	LUX	USD	1,500	1,700	1,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LEW	INNSA	NHAVA SHEVA	ARBUE	BUENOS AIRES	Dry General	NLRTM	LUX	USD	1,500	1,700	1,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-08	2026-05-14	LEW	INNSA	NHAVA SHEVA	ARBUE	BUENOS AIRES	Dry General			USD	3,600	3,700	3,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-15	2026-05-21	LEW	INNSA	NHAVA SHEVA	ARBUE	BUENOS AIRES	Dry General			USD	4,200	4,300	4,300	EFS,HEA,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LEW	INNSA	NHAVA SHEVA	BRIOA	ITAPOA	Dry General	ESALG	LUX	USD	1,500	1,700	1,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LEW	INNSA	NHAVA SHEVA	BRIOA	ITAPOA	Dry General	ESALG	LUX	USD	1,500	1,700	1,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LEW	INNSA	NHAVA SHEVA	BRIOA	ITAPOA	Dry General	NLRTM	LUX	USD	1,500	1,700	1,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LEW	INNSA	NHAVA SHEVA	BRIOA	ITAPOA	Dry General	NLRTM	LUX	USD	1,500	1,700	1,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-08	2026-05-14	LEW	INNSA	NHAVA SHEVA	BRIOA	ITAPOA	Dry General			USD	3,600	3,700	3,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-15	2026-05-21	LEW	INNSA	NHAVA SHEVA	BRIOA	ITAPOA	Dry General			USD	4,200	4,300	4,300	EFS,HEA,MBS,OBS,PSS					
+2026-05-08	2026-05-14	LEW	INNSA	NHAVA SHEVA	BRNVT	NAVEGANTES	Dry General			USD	3,600	3,700	3,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-15	2026-05-21	LEW	INNSA	NHAVA SHEVA	BRNVT	NAVEGANTES	Dry General			USD	4,200	4,300	4,300	EFS,HEA,MBS,OBS,PSS					
+2026-05-08	2026-05-14	LEW	INNSA	NHAVA SHEVA	BRPEC	PECEM	Dry General			USD	5,000	5,200	5,200	EFS,HEA,MBS,OBS,PSS					
+2026-05-15	2026-05-21	LEW	INNSA	NHAVA SHEVA	BRPEC	PECEM	Dry General			USD	5,600	5,800	5,800	EFS,HEA,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LEW	INNSA	NHAVA SHEVA	BRPNG	PARANAGUA	Dry General	ESALG	LUX	USD	1,500	1,700	1,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LEW	INNSA	NHAVA SHEVA	BRPNG	PARANAGUA	Dry General	ESALG	LUX	USD	1,500	1,700	1,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LEW	INNSA	NHAVA SHEVA	BRPNG	PARANAGUA	Dry General	NLRTM	LUX	USD	1,500	1,700	1,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LEW	INNSA	NHAVA SHEVA	BRPNG	PARANAGUA	Dry General	NLRTM	LUX	USD	1,500	1,700	1,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-08	2026-05-14	LEW	INNSA	NHAVA SHEVA	BRPNG	PARANAGUA	Dry General			USD	3,600	3,700	3,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-15	2026-05-21	LEW	INNSA	NHAVA SHEVA	BRPNG	PARANAGUA	Dry General			USD	4,200	4,300	4,300	EFS,HEA,MBS,OBS,PSS					
+2026-05-08	2026-05-14	LEW	INNSA	NHAVA SHEVA	BRRIG	RIO GRANDE	Dry General			USD	3,600	3,700	3,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-15	2026-05-21	LEW	INNSA	NHAVA SHEVA	BRRIG	RIO GRANDE	Dry General			USD	4,200	4,300	4,300	EFS,HEA,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LEW	INNSA	NHAVA SHEVA	BRRIO	RIO DE JANEIRO	Dry General	ESALG	LUX	USD	1,500	1,700	1,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LEW	INNSA	NHAVA SHEVA	BRRIO	RIO DE JANEIRO	Dry General	ESALG	LUX	USD	1,500	1,700	1,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LEW	INNSA	NHAVA SHEVA	BRRIO	RIO DE JANEIRO	Dry General	NLRTM	LUX	USD	1,500	1,700	1,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LEW	INNSA	NHAVA SHEVA	BRRIO	RIO DE JANEIRO	Dry General	NLRTM	LUX	USD	1,500	1,700	1,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-08	2026-05-14	LEW	INNSA	NHAVA SHEVA	BRRIO	RIO DE JANEIRO	Dry General			USD	3,600	3,700	3,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-15	2026-05-21	LEW	INNSA	NHAVA SHEVA	BRRIO	RIO DE JANEIRO	Dry General			USD	4,200	4,300	4,300	EFS,HEA,MBS,OBS,PSS					
+2026-05-08	2026-05-14	LEW	INNSA	NHAVA SHEVA	BRSSA	SALVADOR	Dry General			USD	5,000	5,200	5,200	EFS,HEA,MBS,OBS,PSS					
+2026-05-15	2026-05-21	LEW	INNSA	NHAVA SHEVA	BRSSA	SALVADOR	Dry General			USD	5,600	5,800	5,800	EFS,HEA,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LEW	INNSA	NHAVA SHEVA	BRSSZ	SANTOS	Dry General	ESALG	LUX	USD	1,500	1,700	1,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LEW	INNSA	NHAVA SHEVA	BRSSZ	SANTOS	Dry General	ESALG	LUX	USD	1,500	1,700	1,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LEW	INNSA	NHAVA SHEVA	BRSSZ	SANTOS	Dry General	NLRTM	LUX	USD	1,500	1,700	1,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LEW	INNSA	NHAVA SHEVA	BRSSZ	SANTOS	Dry General	NLRTM	LUX	USD	1,500	1,700	1,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-08	2026-05-14	LEW	INNSA	NHAVA SHEVA	BRSSZ	SANTOS	Dry General			USD	3,600	3,700	3,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-15	2026-05-21	LEW	INNSA	NHAVA SHEVA	BRSSZ	SANTOS	Dry General			USD	4,200	4,300	4,300	EFS,HEA,MBS,OBS,PSS					
+2026-05-08	2026-05-14	LEW	INNSA	NHAVA SHEVA	BRSUA	SUAPE	Dry General			USD	5,000	5,200	5,200	EFS,HEA,MBS,OBS,PSS					
+2026-05-15	2026-05-21	LEW	INNSA	NHAVA SHEVA	BRSUA	SUAPE	Dry General			USD	5,600	5,800	5,800	EFS,HEA,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LEW	INNSA	NHAVA SHEVA	PYASU	ASUNCION	Dry General	ESALG	LUX	USD	3,200	3,400	3,400	EFS,HEA,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LEW	INNSA	NHAVA SHEVA	PYASU	ASUNCION	Dry General	ESALG	LUX	USD	3,200	3,400	3,400	EFS,HEA,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LEW	INNSA	NHAVA SHEVA	PYASU	ASUNCION	Dry General	NLRTM	LUX	USD	3,200	3,400	3,400	EFS,HEA,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LEW	INNSA	NHAVA SHEVA	PYASU	ASUNCION	Dry General	NLRTM	LUX	USD	3,200	3,400	3,400	EFS,HEA,MBS,OBS,PSS					
+2026-05-08	2026-05-14	LEW	INNSA	NHAVA SHEVA	PYASU	ASUNCION	Dry General			USD	4,900	5,400	5,400	EFS,HEA,MBS,OBS,PSS					
+2026-05-15	2026-05-21	LEW	INNSA	NHAVA SHEVA	PYASU	ASUNCION	Dry General			USD	5,500	6,000	6,000	EFS,HEA,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LEW	INNSA	NHAVA SHEVA	UYMVD	MONTEVIDEO	Dry General	ESALG	LUX	USD	1,500	1,700	1,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LEW	INNSA	NHAVA SHEVA	UYMVD	MONTEVIDEO	Dry General	ESALG	LUX	USD	1,500	1,700	1,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LEW	INNSA	NHAVA SHEVA	UYMVD	MONTEVIDEO	Dry General	NLRTM	LUX	USD	1,500	1,700	1,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LEW	INNSA	NHAVA SHEVA	UYMVD	MONTEVIDEO	Dry General	NLRTM	LUX	USD	1,500	1,700	1,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-08	2026-05-14	LEW	INNSA	NHAVA SHEVA	UYMVD	MONTEVIDEO	Dry General			USD	3,600	3,700	3,700	EFS,HEA,MBS,OBS,PSS					
+2026-05-15	2026-05-21	LEW	INNSA	NHAVA SHEVA	UYMVD	MONTEVIDEO	Dry General			USD	4,200	4,300	4,300	EFS,HEA,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LWE	INNSA	NHAVA SHEVA	CLARI	ARICA	Dry General			USD	2,575	3,350	3,350	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LWE	INNSA	NHAVA SHEVA	CLARI	ARICA	Dry General			USD	2,875	3,650	3,650	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LWE	INNSA	NHAVA SHEVA	CLCNL	CORONEL	Dry General			USD	2,275	2,650	2,650	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LWE	INNSA	NHAVA SHEVA	CLCNL	CORONEL	Dry General			USD	2,575	2,950	2,950	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LWE	INNSA	NHAVA SHEVA	CLIQQ	IQUIQUE	Dry General			USD	2,475	3,350	3,350	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LWE	INNSA	NHAVA SHEVA	CLIQQ	IQUIQUE	Dry General			USD	2,775	3,650	3,650	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LWE	INNSA	NHAVA SHEVA	CLLQN	LIRQUEN	Dry General			USD	2,275	2,650	2,650	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LWE	INNSA	NHAVA SHEVA	CLLQN	LIRQUEN	Dry General			USD	2,575	2,950	2,950	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LWE	INNSA	NHAVA SHEVA	CLPAG	PUERTO ANGAMOS	Dry General			USD	2,475	3,350	3,350	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LWE	INNSA	NHAVA SHEVA	CLPAG	PUERTO ANGAMOS	Dry General			USD	2,775	3,650	3,650	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LWE	INNSA	NHAVA SHEVA	CLSAI	SAN ANTONIO	Dry General			USD	2,175	2,550	2,550	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LWE	INNSA	NHAVA SHEVA	CLSAI	SAN ANTONIO	Dry General			USD	2,475	2,850	2,850	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LWE	INNSA	NHAVA SHEVA	CLSVE	SAN VICENTE	Dry General			USD	2,275	2,650	2,650	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LWE	INNSA	NHAVA SHEVA	CLSVE	SAN VICENTE	Dry General			USD	2,575	2,950	2,950	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LWE	INNSA	NHAVA SHEVA	CLVAP	VALPARAISO	Dry General			USD	2,175	2,550	2,550	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LWE	INNSA	NHAVA SHEVA	CLVAP	VALPARAISO	Dry General			USD	2,475	2,850	2,850	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LWE	INNSA	NHAVA SHEVA	COBUN	BUENAVENTURA	Dry General			USD	2,175	2,550	2,550	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LWE	INNSA	NHAVA SHEVA	COBUN	BUENAVENTURA	Dry General			USD	2,475	2,850	2,850	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LWE	INNSA	NHAVA SHEVA	CRCAL	PUERTO CALDERA	Dry General			USD	2,575	3,350	3,350	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LWE	INNSA	NHAVA SHEVA	CRCAL	PUERTO CALDERA	Dry General			USD	2,875	3,650	3,650	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LWE	INNSA	NHAVA SHEVA	ECGYE	GUAYAQUIL	Dry General			USD	2,175	2,550	2,550	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LWE	INNSA	NHAVA SHEVA	ECGYE	GUAYAQUIL	Dry General			USD	2,475	2,850	2,850	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LWE	INNSA	NHAVA SHEVA	ECPSJ	POSORJA	Dry General			USD	1,975	2,350	2,350	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LWE	INNSA	NHAVA SHEVA	ECPSJ	POSORJA	Dry General			USD	2,275	2,650	2,650	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LWE	INNSA	NHAVA SHEVA	GTPRQ	PUERTO QUETZAL	Dry General			USD	2,475	3,350	3,350	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LWE	INNSA	NHAVA SHEVA	GTPRQ	PUERTO QUETZAL	Dry General			USD	2,775	3,650	3,650	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LWE	INNSA	NHAVA SHEVA	HNSLO	SAN LORENZO	Dry General			USD	4,898	5,673	5,673	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LWE	INNSA	NHAVA SHEVA	HNSLO	SAN LORENZO	Dry General			USD	5,198	5,973	5,973	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LWE	INNSA	NHAVA SHEVA	MXESE	ENSENADA	Dry General			USD	2,475	3,350	3,350	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LWE	INNSA	NHAVA SHEVA	MXESE	ENSENADA	Dry General			USD	2,775	3,650	3,650	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LWE	INNSA	NHAVA SHEVA	MXLZC	LAZARO CARDENAS	Dry General			USD	2,175	2,550	2,550	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LWE	INNSA	NHAVA SHEVA	MXLZC	LAZARO CARDENAS	Dry General			USD	2,475	2,850	2,850	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LWE	INNSA	NHAVA SHEVA	MXZLO	MANZANILLO	Dry General			USD	2,175	2,550	2,550	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LWE	INNSA	NHAVA SHEVA	MXZLO	MANZANILLO	Dry General			USD	2,475	2,850	2,850	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LWE	INNSA	NHAVA SHEVA	NICIO	CORINTO	Dry General			USD	2,575	3,350	3,350	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LWE	INNSA	NHAVA SHEVA	NICIO	CORINTO	Dry General			USD	2,875	3,650	3,650	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LWE	INNSA	NHAVA SHEVA	PAPTY	PANAMA CITY	Dry General			USD	2,725	3,600	3,600	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LWE	INNSA	NHAVA SHEVA	PAPTY	PANAMA CITY	Dry General			USD	3,025	3,900	3,900	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LWE	INNSA	NHAVA SHEVA	PAROD	RODMAN	Dry General			USD	2,575	3,550	3,550	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LWE	INNSA	NHAVA SHEVA	PAROD	RODMAN	Dry General			USD	2,875	3,850	3,850	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LWE	INNSA	NHAVA SHEVA	PECLL	CALLAO	Dry General			USD	2,175	2,550	2,550	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LWE	INNSA	NHAVA SHEVA	PECLL	CALLAO	Dry General			USD	2,475	2,850	2,850	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-01	2026-05-14	LWE	INNSA	NHAVA SHEVA	SVAQJ	ACAJUTLA	Dry General			USD	2,575	3,350	3,350	BAF,BRS,EFS,MBS,OBS,PSS					
+2026-05-15	2026-05-31	LWE	INNSA	NHAVA SHEVA	SVAQJ	ACAJUTLA	Dry General			USD	2,875	3,650	3,650	BAF,BRS,EFS,MBS,OBS,PSS					
+																			
+																			
+																			
+- DG surcharge																			
+IMO Class	D20	D40	40HC																
+CLASS 1	pls check with us case by case																		
+CLASS 2.1 	USD 450	USD 800	USD 800																
+CLASS 2.2	USD 300	USD 600	USD 600																
+Other class 2	USD 700	USD 1400	USD 1400																
+CLASS 3	USD 200	USD 400	USD 400																
+CLASS 4	USD 200	USD 400	USD 400																
+Class 5	USD 200	USD 400	USD 400																
+Class 5 .1	USD 500	USD 1000	USD 1000																
+CLASS 6.1/6.2	USD 200	USD 400	USD 400																
+CLASS 7	pls check with us case by case																		
+CLASS 8	USD 100	USD 200	USD 200																
+CLASS 9	USD 100	USD 200	USD 200																
+																			
+- PSA Surcharge (Applicable for DG via SIN Transhipment)																			
+PSA Class	D20	D40	40HC																
+ Dangerous Goods (DG) - Class 1D , 2 & 2B (Non-Storable in PSA) 	USD 538	USD 753	USD 753																
+ Dangerous Goods (DG) - Class 1S, 2S, 2A, 2F  (Storable in PSA)	0	0	0																
+ Dangerous Goods (DG) - Class 3 (Storable in PSA)	0	0	0																
+																			
+ONE will implement an Inland Fuel Charge (IFL / IFD) effective : April 2nd, 2026 for Carrier inland transportation for all Inbound/Outbound Shipments From/To Bolivia, Brazil, Chile, Costa Rica, Ecuador, El Salvador, Guatemala, Honduras, Mexico, Nicaragua, Panama, Paraguay, Peru 
+
+
+
+																			
+and Uruguay, applicable across all trade lanes and services. 																			
+																			
+																			
+Rates subject to:																			
+LEW																			
+Subject to CSS-15/UNIT/SLF-10/UNIT/THL/THD/Tariff Surcharges both ends.																			
+* EFS USD 120 / 240 per 20’ / 40’  For Dry unit (Effective from 01-05-2026)																			
+Heavy Weight surcharge (HEA):
+Nil for cargo weight upto 23.99 tons. USD200 per 20ft for cargo weight over 18 tons																			
+																			
+CSE																			
+subject to HEA , PCT-$40/teus, CSS-15/UNIT/SLF-10/UNIT /THL/ THD/Tariff Surcharges both ends.																			
+Heavy Weight surcharge (HEA):
+Nil for cargo weight upto 17.99 tons. USD200 per 20ft for cargo weight over 18 tons																			
+* EFS USD 120 / 240 per 20’ / 40’  For Dry unit (Effective from 01-05-2026)																			
+																			
+LWE																			
+subj HEA USD 150 for 20/ Weight MIN = 18.01 |Weight MAX = 21.01, and above 21/ton USD200, CSS usd15/unit, SLF usd 10/unit, ENS for MEX, THCS both end , Doc fees both end , and local charges.																			
+* EFS USD 120 / 240 per 20’ / 40’  For Dry unit (Effective from 01-05-2026)																			
+																			
+Freetime for Dry:																			
+LEW																			
+18 days detention free time at destination for LAEC except Buenos Aires and Asuncion																			
+14 days detention free time at destination for Buenos Aires																			
+21 days detention free time at destination for Asuncion																			
+																			
+CSE																			
+12 days detention free time at destination except Caucedo																			
+																			
+LWE																			
+21 days detention free time for Chile / Peru / Mexico																			
+20 days detention free time for Colombia																			
+18 days detention free time for Ecudor																			
+17 days detention free time for Gautemala																			
+16 days detention free time for Nicaragua / Costa Rica / El Salvador / Hondura																			
+12 days detention free time for Panama																			
+																			
+ONE Bunker Surcharge (OBS): usd 160/320/320/544 per D2/D4/D5/R5 NOR during Q1 2026 (Apr  to Jun )																			
+																			
+Free days for FAK DRY cargo( applicable for FAK Dry / DG   cargo )																			
+POD	Free line detention combine (port storage and demurrage under cnee own negotiation with terminal)																		
+Manzanillo, PA	12																		
+Colon Free Zone	12																		
+Barranquilla  	12			Free line detention combine at POD (port storage and demurrage under cnee own negotiation with terminal)	FAK Dry/ DG cargo														
+Santa Marta	12																		
+Cartagena	12			Santos	18														
+Caucedo	12			Buenos Aires	14														
+Moin 	12			Montevideo	18														
+Puerto Cortes	15			Navegantes	18														
+PUERTO BARRIOS 	15			Paranagua	18														
+SANTO TOMAS DE CASTILLA	15			Rio Grande	18														
+Kingston	12			Itapoa	18														
+Port of Spain	12			Asuncion	21														
+Manaus	12			Suape	18														
+Vila do Conde	12			Salvador	18														
+Port Au Prince	20			Pecam	18														
+Bridgetown	12			Ushuaia	18														
+Paramaibo	12			Rosario	18														
+Georgetown	15			Zarate	18														
+San Juan	12			La Plata	18														
+Barcadera,Aruba	12			Rio de Janeiro	18														
+Willemstad,Curacao	15																		
+Point Lisas	12																		
+Rio Haina	12																		
+																			
+IMPORTANT																			
+Note:    																			
+1. San Juan shipment is governed by FMC. Service contract filing should be done BEFORE cargo gated in. No backdate filing is allowed as per new FMC rule or tariff will be charged without exemption. For the ctrn already gate-in without proper filing, ONE will charge TRI tariff rate instead																			
+2. Haiti is one of the country under "Need Due Diligence list ", due diligence procedures is required .  Haiti's Booking checking procedure would be the SAME AS the one placed in Nicaragua.																			
+																			
+																																									
+Effective Date	Expiry Date	Service Scope	POR	POR Description	POL	DEL	DEL Description	Cargo/Container Type	Cur.	OFT 20	OFT 40	OFT HC	Include Surcharge	Simulated Subject To								
+2026-05-01	2026-05-14	EFW	INNSA	NHAVA SHEVA	INNSA	KEMBA	MOMBASA, KENYA	Dry General	USD	1,850	1,850	1,850	AMS,BAF,BRS,CGD,HEA,LSF,MBS,OBS,PSS,WRC	CMD/C,CSS/O,CVC/C,DOC/P,DOF/C,EFS/O,LID/C,SLF/P,THD/C,THL/P								
+2026-05-15	2026-05-31	EFW	INNSA	NHAVA SHEVA	INNSA	KEMBA	MOMBASA, KENYA	Dry General	USD	1,400	1,500	1,500	AMS,BAF,BRS,CGD,HEA,LSF,MBS,OBS,PSS,WRC	CMD/C,CSS/O,CVC/C,DOC/P,DOF/C,EFS/O,LID/C,SLF/P,THD/C,THL/P								
+2026-05-01	2026-05-14	EFW	INNSA	NHAVA SHEVA	INNSA	TZDAR	DAR ES SALAAM, TANZANIA	Dry General	USD	1,950	1,950	1,950	AMS,BAF,BRS,CGD,HEA,LSF,MBS,OBS,PSS,THD,WRC	CSS/O,DOC/P,EFS/O,SLF/P,THL/P								
+2026-05-15	2026-05-31	EFW	INNSA	NHAVA SHEVA	INNSA	TZDAR	DAR ES SALAAM, TANZANIA	Dry General	USD	1,500	1,600	1,600	AMS,BAF,BRS,CGD,HEA,LSF,MBS,OBS,PSS,THD,WRC	CSS/O,DOC/P,EFS/O,SLF/P,THL/P								
+2026-05-01	2026-05-14	WFW	INNSA	NHAVA SHEVA	INNSA	BJCOO	COTONOU	Dry General	USD	3,200	4,200	4,200	AMS,BAF,BRS,CGD,EPH,HEA,LSF,MBS,OBS,PSS,WRC	CMD/C,CSS/O,DOC/P,EFS/O,SLF/P,THL/P,TSD/C								
+2026-05-15	2026-05-31	WFW	INNSA	NHAVA SHEVA	INNSA	BJCOO	COTONOU	Dry General	USD	3,200	4,200	4,200	AMS,BAF,BRS,CGD,EPH,HEA,LSF,MBS,OBS,PSS,WRC	CMD/C,CSS/O,DOC/P,EFS/O,SLF/P,THL/P,TSD/C								
+2026-05-01	2026-05-14	WFW	INNSA	NHAVA SHEVA	INNSA	CIABJ	ABIDJAN	Dry General	USD	3,200	4,200	4,200	AMS,BAF,BRS,CGD,EPH,HEA,LSF,MBS,OBS,PSS,WRC	AHA/C,CMD/C,CNC/C,CSS/O,DOC/P,DOF/C,EFS/O,EST/C,POR/C,SLF/P,STF/C,THL/P,TSD/C								
+2026-05-15	2026-05-31	WFW	INNSA	NHAVA SHEVA	INNSA	CIABJ	ABIDJAN	Dry General	USD	1,700	2,100	2,100	AMS,BAF,BRS,CGD,EPH,HEA,LSF,MBS,OBS,PSS,WRC	AHA/C,CMD/C,CNC/C,CSS/O,DOC/P,DOF/C,EFS/O,EST/C,POR/C,SLF/P,STF/C,THL/P,TSD/C								
+2026-05-01	2026-05-14	WFW	INNSA	NHAVA SHEVA	INNSA	GHTEM	TEMA	Dry General	USD	1,800	2,250	2,250	AMS,BAF,BRS,CGD,EPH,HEA,LSF,MBS,OBS,PSS,WRC	CSS/O,DOC/P,EFS/O,PRS/C,SLF/P,THL/P,TSD/C,XAF/C								
+2026-05-15	2026-05-31	WFW	INNSA	NHAVA SHEVA	INNSA	GHTEM	TEMA	Dry General	USD	1,500	1,900	1,900	AMS,BAF,BRS,CGD,EPH,HEA,LSF,MBS,OBS,PSS,WRC	CSS/O,DOC/P,EFS/O,PRS/C,SLF/P,THL/P,TSD/C,XAF/C								
+2026-05-01	2026-05-14	WFW	INNSA	NHAVA SHEVA	INNSA	NGAPP	APAPA	Dry General	USD	2,200	2,550	2,550	AMS,BAF,BRS,CGD,EPH,HEA,LSF,MBS,OBS,PSS,WRC	CCC/C,CSS/O,DOC/P,DOF/C,EFS/O,NGP/C,NRF/C,SLF/P,THL/P								
+2026-05-15	2026-05-31	WFW	INNSA	NHAVA SHEVA	INNSA	NGAPP	APAPA	Dry General	USD	1,900	2,100	2,100	AMS,BAF,BRS,CGD,EPH,HEA,LSF,MBS,OBS,PSS,WRC	CCC/C,CSS/O,DOC/P,DOF/C,EFS/O,NGP/C,NRF/C,SLF/P,THL/P								
+2026-05-01	2026-05-14	WFW	INNSA	NHAVA SHEVA	INNSA	NGLKK	LEKKI	Dry General	USD	3,800	5,000	5,000	AMS,BAF,BRS,CGD,EPH,HEA,LSF,MBS,OBS,PSS,WRC	CCC/C,CSS/O,DOC/P,DOF/C,EFS/O,NGP/C,NRF/C,SLF/P,THL/P								
+2026-05-15	2026-05-31	WFW	INNSA	NHAVA SHEVA	INNSA	NGLKK	LEKKI	Dry General	USD	2,400	2,800	2,800	AMS,BAF,BRS,CGD,EPH,HEA,LSF,MBS,OBS,PSS,WRC	CCC/C,CSS/O,DOC/P,DOF/C,EFS/O,NGP/C,NRF/C,SLF/P,THL/P								
+2026-05-01	2026-05-14	WFW	INNSA	NHAVA SHEVA	INNSA	NGONN	ONNE	Dry General	USD	3,800	5,000	5,000	AMS,BAF,BRS,CGD,EPH,HEA,LSF,MBS,OBS,PSS,WRC	CCC/C,CSS/O,DOC/P,DOF/C,EFS/O,NGP/C,NRF/C,SLF/P,THL/P								
+2026-05-15	2026-05-31	WFW	INNSA	NHAVA SHEVA	INNSA	NGONN	ONNE	Dry General	USD	3,800	5,000	5,000	AMS,BAF,BRS,CGD,EPH,HEA,LSF,MBS,OBS,PSS,WRC	CCC/C,CSS/O,DOC/P,DOF/C,EFS/O,NGP/C,NRF/C,SLF/P,THL/P								
+2026-05-01	2026-05-14	WFW	INNSA	NHAVA SHEVA	INNSA	NGTIN	TIN CAN	Dry General	USD	2,200	2,550	2,550	AMS,BAF,BRS,CGD,EPH,HEA,LSF,MBS,OBS,PSS,WRC	CCC/C,CSS/O,DOC/P,DOF/C,EFS/O,NGP/C,NRF/C,SLF/P,THL/P								
+2026-05-15	2026-05-31	WFW	INNSA	NHAVA SHEVA	INNSA	NGTIN	TIN CAN	Dry General	USD	1,900	2,100	2,100	AMS,BAF,BRS,CGD,EPH,HEA,LSF,MBS,OBS,PSS,WRC	CCC/C,CSS/O,DOC/P,DOF/C,EFS/O,NGP/C,NRF/C,SLF/P,THL/P								
+2026-05-01	2026-05-14	WFW	INNSA	NHAVA SHEVA	INNSA	SNDKR	DAKAR	Dry General	USD	4,600	5,000	5,000	AMS,BAF,BRS,CGD,EPH,HEA,LSF,MBS,OBS,PSS,WRC	CMD/C,CSS/O,DOC/P,EFS/O,SLF/P,THL/P,TSD/C								
+2026-05-15	2026-05-31	WFW	INNSA	NHAVA SHEVA	INNSA	SNDKR	DAKAR	Dry General	USD	2,200	3,100	3,100	AMS,BAF,BRS,CGD,EPH,HEA,LSF,MBS,OBS,PSS,WRC	CMD/C,CSS/O,DOC/P,EFS/O,SLF/P,THL/P,TSD/C								
+2026-05-01	2026-05-14	WFW	INNSA	NHAVA SHEVA	INNSA	TGLFW	LOME	Dry General	USD	3,200	4,200	4,200	AMS,BAF,BRS,CGD,EPH,HEA,LSF,MBS,OBS,PSS,WRC									
+2026-05-15	2026-05-31	WFW	INNSA	NHAVA SHEVA	INNSA	TGLFW	LOME	Dry General	USD	3,200	4,200	4,200	AMS,BAF,BRS,CGD,EPH,HEA,LSF,MBS,OBS,PSS,WRC									
+2026-05-01	2026-05-14	ZFW	INNSA	NHAVA SHEVA	INNSA	MZMPM	MAPUTO	Dry General	USD	2,200	2,400	2,400	AMS,BAF,BRS,CGD,HEA,MBS,OBS,PSS,WRC	CMD/C,CSS/O,DOC/P,EFS/O,EHD/C,SLF/P,THD/C,THL/P								
+2026-05-15	2026-05-31	ZFW	INNSA	NHAVA SHEVA	INNSA	MZMPM	MAPUTO	Dry General	USD	2,000	2,200	2,200	AMS,BAF,BRS,CGD,HEA,MBS,OBS,PSS,WRC	CMD/C,CSS/O,DOC/P,EFS/O,EHD/C,SLF/P,THD/C,THL/P								
+2026-05-01	2026-05-14	ZFW	INNSA	NHAVA SHEVA	INNSA	ZADUR	DURBAN	Dry General	USD	1,400	1,400	1,400	BAF,BRS,CGD,EPH,HEA,LSF,MBS,OBS,PSS,WRC	AMS/P,CMD/C,CSS/O,DOC/P,DOF/C,EFS/O,EHD/C,PRS/C,SLF/P,THD/C,THL/P								
+2026-05-15	2026-05-31	ZFW	INNSA	NHAVA SHEVA	INNSA	ZADUR	DURBAN	Dry General	USD	1,100	1,100	1,100	BAF,BRS,CGD,EPH,HEA,LSF,MBS,OBS,PSS,WRC	AMS/P,CMD/C,CSS/O,DOC/P,DOF/C,EFS/O,EHD/C,PRS/C,SLF/P,THD/C,THL/P								
+																						
+																						
+																						
+WFW/EFW																						
+Subject to tariff CSS, SLF, THL, doc fee, HAZ (if applicable) and local surcharges at both sides																						
+Free time: 14 days free detention at destination for Dry																						
+HAZ=USD 200/Teu																						
+* EFS USD 120 / 240 per 20’ / 40’  For Dry unit (Effective from 01-05-2026)																						
+* PORT SURCHARGE (PRS)  ZAR52, PER CONTAINER COLLECT BASIS (Effective from 01-05-2026)																						
+																						
+ZFW																						
+Subject to tariff AMS, CSS, SLF, THL, doc fee, HAZ (if applicable) and local surcharges at both sides																						
+Free time: 14 days free detention at destination for Dry																						
+HAZ=USD 200/Teu																						
+* EFS USD 120 / 240 per 20’ / 40’  For Dry unit (Effective from 01-05-2026)																						
+* PORT SURCHARGE (PRS)  ZAR52, PER CONTAINER COLLECT BASIS (Effective from 01-05-2026)																						
+																						
+*** For Nairobi , ICD Embakasi  CY cargo (KENBO34): subj to "ARD" under ONEY-959 ***																						
+*** For Uganda , ICD Kampala  CY cargo (UGKLA30): subj to "ARD" under ONEY-959 ***																						
+																						
+GHTEM / NGAPP / NGTIN / SNDKR / BJCOO / TGLFW / NGONN DG SURCHARGES																						
+*HAZ/PSA tariff table (auto rating)																						
+DG add-on		Condition 	Surcharge	D2	D4	D5																
+IMO class	1,7		HAZ	on application																		
+IMO class	2		HAZ	500	1000	1000																
+IMO class	3-6, 8, 9		HAZ	200	400	400																
+PSA class	3	T/S via SGSIN	HAZ	200	400	400																
+PSA class	1S, 2S, 2A, 2B, 2F	T/S via SGSIN	HAZ	200	400	400																
+PSA class	 1D, 2	T/S via SGSIN	HAZ	200	400	400																
+			PSA	500	728	728																
+* subject to DG desk approval & vessel operator's acceptance																						
+* DG ex. SGSIN is bound by PSA CHEM care and cost is on shipper's account.																						
+																						
+CIABJ DG SURCHARGES																						
+*HAZ/PSA tariff table (auto rating)																						
+DG add-on		Condition 	Surcharge	D2	D4	D5																
+IMO class	1,7		HAZ	on application																		
+IMO class	2		HAZ	550	1100	1100																
+IMO class	3-6, 8, 9		HAZ	550	1100	1100																
+PSA class	3	T/S via SGSIN	HAZ	550	1100	1100																
+			PSA	NIL																		
+PSA class	1S, 2S, 2A, 2B, 2F	T/S via SGSIN	HAZ	550	1100	1100																
+			PSA	NIL																		
+PSA class	 1D, 2	T/S via SGSIN	HAZ	550	1100	1100																
+			PSA	500	728	728																
+* subject to DG desk approval & vessel operator's acceptance																						
+* DG ex. SGSIN is bound by PSA CHEM care and cost is on shipper's account.																						
+* DG on rail to JNB/PRY has an additional surcharge of 25% over the railage (ARD) except class 1 & 7
+
+sheet from oneline
