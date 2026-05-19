@@ -1,12 +1,6 @@
 import webpush from 'web-push'
 import { createClient } from '@supabase/supabase-js'
 
-webpush.setVapidDetails(
-  process.env.VAPID_MAILTO!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-)
-
 export interface PushPayload {
   title: string
   body:  string
@@ -14,7 +8,18 @@ export interface PushPayload {
   tag?:  string
 }
 
+function initVapid() {
+  const pub  = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+  const priv = process.env.VAPID_PRIVATE_KEY
+  const mail = process.env.VAPID_MAILTO
+  if (!pub || !priv || !mail) return false
+  webpush.setVapidDetails(mail, pub, priv)
+  return true
+}
+
 export async function sendPushToUser(userId: string, payload: PushPayload): Promise<void> {
+  if (!initVapid()) return
+
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -30,7 +35,6 @@ export async function sendPushToUser(userId: string, payload: PushPayload): Prom
   try {
     await webpush.sendNotification(data.subscription as webpush.PushSubscription, JSON.stringify(payload))
   } catch (err: unknown) {
-    // 410 Gone = subscription expired — remove it
     if ((err as { statusCode?: number })?.statusCode === 410) {
       await supabase.from('push_subscriptions').delete().eq('user_id', userId)
     }
@@ -38,7 +42,8 @@ export async function sendPushToUser(userId: string, payload: PushPayload): Prom
 }
 
 export async function sendPushToUsers(userIds: string[], payload: PushPayload): Promise<void> {
-  if (userIds.length === 0) return
+  if (userIds.length === 0 || !initVapid()) return
+
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
