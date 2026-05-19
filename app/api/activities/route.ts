@@ -46,7 +46,7 @@ export async function GET(_req: NextRequest) {
       SELECT ${SELECT_COLS}
       FROM [dbo].[TBL_CALLS_VISITS]
       ${where}
-      ORDER BY ID DESC
+      ORDER BY ACTIVITY_DATE DESC, ID DESC
     `)
 
     return NextResponse.json(result.recordset)
