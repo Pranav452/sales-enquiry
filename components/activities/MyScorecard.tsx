@@ -1,8 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { getRank, getNextRank, getRankProgress, RANKS } from "@/lib/constants/activities"
+import { getRank, getNextRank, getRankProgress, RANKS, type RankDef } from "@/lib/constants/activities"
 import { cn } from "@/lib/utils"
+
+const LS_KEY = "activities_last_rank"
 
 interface PersonalStats {
   total_xp:          number
@@ -29,14 +31,25 @@ function StatPill({ label, value, sub }: { label: string; value: string | number
   )
 }
 
-export function MyScorecard() {
+export function MyScorecard({ onLevelUp }: { onLevelUp?: (newRank: RankDef) => void }) {
   const [stats, setStats]     = useState<PersonalStats | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetch("/api/activities/dashboard?type=personal")
       .then((r) => r.json())
-      .then((d) => setStats(d ?? null))
+      .then((d: PersonalStats | null) => {
+        setStats(d ?? null)
+        if (!d) return
+        const currentRank = getRank(d.total_xp ?? 0)
+        const prevRankName = localStorage.getItem(LS_KEY)
+        if (prevRankName && prevRankName !== currentRank.rank) {
+          const prevIdx = RANKS.findIndex((r) => r.rank === prevRankName)
+          const currIdx = RANKS.findIndex((r) => r.rank === currentRank.rank)
+          if (currIdx > prevIdx) onLevelUp?.(currentRank)
+        }
+        localStorage.setItem(LS_KEY, currentRank.rank)
+      })
       .catch(() => setStats(null))
       .finally(() => setLoading(false))
   }, [])

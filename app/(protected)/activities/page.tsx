@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { ActivityForm } from "@/components/activities/ActivityForm"
 import { ActivityList, type Activity } from "@/components/activities/ActivityList"
@@ -9,7 +9,8 @@ import { TeamLeaderboard } from "@/components/activities/TeamLeaderboard"
 import { Button } from "@/components/ui/button"
 import { Plus, X, Trophy, List, ChevronDown, ChevronUp } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { ACTIVITY_TYPE_MAP } from "@/lib/constants/activities"
+import { ACTIVITY_TYPE_MAP, type RankDef } from "@/lib/constants/activities"
+import Confetti from "react-confetti"
 
 interface UserInfo { role: string; salesperson: string | null }
 
@@ -50,6 +51,20 @@ export default function ActivitiesPage() {
   const [toast, setToast]               = useState<{ points: number; type: string } | null>(null)
   const [showLeaderboard, setShowLeaderboard] = useState(true)
   const [tab, setTab]                   = useState<"list" | "leaderboard">("list")
+  const [levelUp, setLevelUp]           = useState<RankDef | null>(null)
+  const [winSize, setWinSize]           = useState({ width: 0, height: 0 })
+
+  useEffect(() => {
+    function update() { setWinSize({ width: window.innerWidth, height: window.innerHeight }) }
+    update()
+    window.addEventListener("resize", update)
+    return () => window.removeEventListener("resize", update)
+  }, [])
+
+  const handleLevelUp = useCallback((newRank: RankDef) => {
+    setLevelUp(newRank)
+    setTimeout(() => setLevelUp(null), 6000)
+  }, [])
 
   useEffect(() => {
     const supabase = createClient()
@@ -147,7 +162,7 @@ export default function ActivitiesPage() {
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
             My Scorecard
           </p>
-          <MyScorecard key={refresh} />
+          <MyScorecard key={refresh} onLevelUp={handleLevelUp} />
         </div>
 
         {/* ── Leaderboard (right side on large, tab on mobile) */}
@@ -221,6 +236,45 @@ export default function ActivitiesPage() {
           type={toast.type}
           onDone={() => setToast(null)}
         />
+      )}
+
+      {/* ── Level-up confetti + banner ──────────────────────── */}
+      {levelUp && (
+        <>
+          <Confetti
+            width={winSize.width}
+            height={winSize.height}
+            numberOfPieces={350}
+            recycle={false}
+            gravity={0.18}
+            style={{ position: "fixed", top: 0, left: 0, zIndex: 100 }}
+          />
+          <div className="fixed inset-0 z-[101] flex items-center justify-center pointer-events-none">
+            <div className={cn(
+              "pointer-events-auto mx-4 rounded-2xl border-2 shadow-2xl px-8 py-7 text-center max-w-sm w-full",
+              levelUp.bg, levelUp.color
+            )}>
+              <p className={cn("text-4xl font-black mb-1", levelUp.text)}>
+                {levelUp.rank.toUpperCase()}
+              </p>
+              <p className={cn("text-lg font-bold mb-2", levelUp.text)}>Rank Unlocked!</p>
+              <p className="text-sm text-muted-foreground">
+                Congratulations — you just leveled up to <strong>{levelUp.rank}</strong>!
+              </p>
+              <button
+                type="button"
+                onClick={() => setLevelUp(null)}
+                className={cn(
+                  "mt-5 px-5 py-2 rounded-lg text-sm font-semibold border-2 transition-colors",
+                  levelUp.text, levelUp.color,
+                  "hover:opacity-80"
+                )}
+              >
+                Let&apos;s go!
+              </button>
+            </div>
+          </div>
+        </>
       )}
     </div>
   )
