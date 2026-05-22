@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Combobox } from "@/components/ui/combobox"
-import { RotateCcw, Send } from "lucide-react"
+import { RotateCcw, Send, ArrowRight, Mail, FileDown, ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   LINKS_SALES_PERSONS,
@@ -236,6 +236,221 @@ function SectionDivider({ label }: { label: string }) {
   )
 }
 
+// ─── Convert Helpers ─────────────────────────────────────────
+
+function buildEmailBody(enqRefNo: string, form: FormData): string {
+  return [
+    "Dear Team,",
+    "",
+    "Please find below the shipment details for your reference:",
+    "",
+    `Enquiry Reference No.: ${enqRefNo}`,
+    `Incoterms: ${form.incoterms || "-"}`,
+    `POL / Origin Airport: ${form.pol || "-"}`,
+    `POD / Destination Airport: ${form.pod || "-"}`,
+    `Container Type / Dimension: ${form.container_type || "-"}`,
+    `Shipper: ${form.shipper || "-"}`,
+    "",
+    "Kindly advise the rates accordingly.",
+    "",
+    "Regards",
+  ].join("\n")
+}
+
+function tryOpenMailto(enqRefNo: string, form: FormData) {
+  const subject = encodeURIComponent(`Rate Request – ${enqRefNo}`)
+  const body = encodeURIComponent(buildEmailBody(enqRefNo, form))
+  window.location.href = `mailto:?subject=${subject}&body=${body}`
+}
+
+function exportPDF(enqRefNo: string, form: FormData, logoOrigin: string) {
+  const rows: [string, string][] = [
+    ["Enquiry Reference No.", enqRefNo],
+    ["Incoterms", form.incoterms || "-"],
+    ["POL / Origin Airport", form.pol || "-"],
+    ["POD / Destination Airport", form.pod || "-"],
+    ["Container Type / Dimension", form.container_type || "-"],
+    ["Shipper", form.shipper || "-"],
+  ]
+
+  const tableRows = rows
+    .map(
+      ([label, value]) => `
+      <tr>
+        <td style="padding:8px 12px;font-weight:600;color:#374151;width:220px;border-bottom:1px solid #e5e7eb;">${label}</td>
+        <td style="padding:8px 12px;color:#111827;border-bottom:1px solid #e5e7eb;">${value}</td>
+      </tr>`
+    )
+    .join("")
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Rate Request – ${enqRefNo}</title>
+  <style>
+    @media print { @page { margin: 30mm 20mm; } }
+    body { font-family: Arial, sans-serif; font-size: 13px; color: #111827; margin: 0; padding: 0; }
+    .header { background: #1e3a5f; color: #fff; padding: 16px 28px; margin-bottom: 28px; display: flex; align-items: center; gap: 20px; }
+    .header-logo { height: 52px; width: auto; object-fit: contain; background: #fff; border-radius: 4px; padding: 4px 8px; }
+    .header-text h1 { margin: 0 0 4px; font-size: 18px; font-weight: 700; letter-spacing: 0.02em; }
+    .header-text p { margin: 0; font-size: 12px; opacity: 0.75; }
+    .content { padding: 0 28px; }
+    .greeting { margin-bottom: 20px; line-height: 1.6; }
+    table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+    .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <img src="${logoOrigin}/logo.jpeg" alt="Logo" class="header-logo" />
+    <div class="header-text">
+      <h1>Rate Request</h1>
+      <p>Reference: ${enqRefNo}</p>
+    </div>
+  </div>
+  <div class="content">
+    <div class="greeting">
+      Dear Team,<br/><br/>
+      Please find below the shipment details for your reference:
+    </div>
+    <table>
+      <tbody>${tableRows}</tbody>
+    </table>
+    <div class="greeting">Kindly advise the rates accordingly.</div>
+    <div class="footer">Regards</div>
+  </div>
+</body>
+</html>`
+
+  const w = window.open("", "_blank", "width=800,height=600")
+  if (!w) return
+  w.document.write(html)
+  w.document.close()
+  w.focus()
+  setTimeout(() => { w.print() }, 400)
+}
+
+function ConvertMenu({ enqRefNo, form }: { enqRefNo: string; form: FormData }) {
+  const [open, setOpen] = useState(false)
+  const [emailModal, setEmailModal] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  const templateText = buildEmailBody(enqRefNo, form)
+  const subject = `Rate Request – ${enqRefNo}`
+
+  function handleCopy() {
+    navigator.clipboard.writeText(templateText).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  return (
+    <>
+      <div className="relative">
+        <Button
+          type="button"
+          variant="outline"
+          className="gap-2 cursor-pointer border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-950"
+          onClick={() => setOpen((o) => !o)}
+        >
+          Convert
+          <ArrowRight className="h-4 w-4" />
+          <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+        </Button>
+        {open && (
+          <>
+            <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+            <div className="absolute right-0 top-full mt-2 z-20 w-52 rounded-md border border-border bg-popover shadow-md py-1">
+              <button
+                type="button"
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent text-left"
+                onClick={() => { setEmailModal(true); setOpen(false) }}
+              >
+                <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span>
+                  <span className="font-medium block">Email Template</span>
+                  <span className="text-xs text-muted-foreground">Copy or open in mail app</span>
+                </span>
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent text-left"
+                onClick={() => { exportPDF(enqRefNo, form, window.location.origin); setOpen(false) }}
+              >
+                <FileDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span>
+                  <span className="font-medium block">Export as PDF</span>
+                  <span className="text-xs text-muted-foreground">Print / save as PDF</span>
+                </span>
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* ── Email Template Modal ── */}
+      {emailModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setEmailModal(false)}>
+          <div
+            className="w-full max-w-lg rounded-lg border border-border bg-background shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">Email Template</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">Subject: {subject}</p>
+              </div>
+              <button
+                type="button"
+                className="text-muted-foreground hover:text-foreground text-lg leading-none cursor-pointer"
+                onClick={() => setEmailModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="px-5 py-4">
+              <pre className="text-xs text-foreground bg-muted/40 rounded-md p-4 border border-border whitespace-pre-wrap font-sans leading-relaxed select-all">
+                {templateText}
+              </pre>
+            </div>
+            <div className="flex items-center gap-3 px-5 pb-4">
+              <Button
+                type="button"
+                size="sm"
+                className="gap-2 cursor-pointer"
+                onClick={handleCopy}
+              >
+                {copied ? "Copied!" : "Copy Text"}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="gap-2 cursor-pointer"
+                onClick={() => tryOpenMailto(enqRefNo, form)}
+              >
+                <Mail className="h-3.5 w-3.5" />
+                Open in Mail App
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="ml-auto cursor-pointer text-muted-foreground"
+                onClick={() => setEmailModal(false)}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
 // ─── Component ───────────────────────────────────────────────
 
 export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props) {
@@ -379,13 +594,13 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
       }}
     >
       {/* ── Reference Strip ──────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-5 gap-y-3 pb-4 mb-1 border-b border-border">
+      <div className="flex items-end gap-5 pb-4 mb-1 border-b border-border">
         <div className="space-y-1.5">
           <Label className="text-xs text-muted-foreground">Enq Ref No.</Label>
           <Input
             value={editingEnquiry?.enq_ref_no ?? "Auto Generated"}
             disabled
-            className="bg-muted/60 text-muted-foreground font-mono text-xs"
+            className="bg-muted/60 text-muted-foreground font-mono text-xs w-40"
           />
         </div>
         <div className="space-y-1.5">
@@ -398,8 +613,14 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
             value={form.enq_receipt_date}
             onChange={(e) => setField("enq_receipt_date", e.target.value)}
             required
+            className="w-44"
           />
         </div>
+        {editingId && editingEnquiry?.enq_ref_no && (
+          <div className="ml-auto">
+            <ConvertMenu enqRefNo={editingEnquiry.enq_ref_no} form={form} />
+          </div>
+        )}
       </div>
 
       {/* ── Sectioned Grid ───────────────────────────────────── */}
