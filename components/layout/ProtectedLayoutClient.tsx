@@ -26,6 +26,7 @@ import {
   TrendingUp,
   Settings2,
   X,
+  FileText,
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
@@ -401,6 +402,7 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
     { label: "Export",            href: "/export",                 icon: FileDown },
     { label: "Rate Explorer",     href: "/rates",                  icon: TrendingUp },
     { label: "Chat",              href: "/chat",                   icon: MessageSquare },
+    { label: "Quotations",        href: "/quotations",             icon: FileText },
     ...(role === "admin"
       ? [
           { label: "Dashboard",          href: "/dashboard",           icon: LayoutDashboard },
