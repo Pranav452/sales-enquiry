@@ -46,6 +46,14 @@ export const ACTIVITY_TYPES: ActivityTypeDef[] = [
     color:       "bg-green-100 dark:bg-green-900/40",
     textColor:   "text-green-700 dark:text-green-300",
   },
+  {
+    value:       "SHIPPING_LINE_VISIT",
+    label:       "Shipping Line Visit",
+    points:      2,
+    description: "In-person visit to a shipping line office",
+    color:       "bg-cyan-100 dark:bg-cyan-900/40",
+    textColor:   "text-cyan-700 dark:text-cyan-300",
+  },
 ]
 
 export const ACTIVITY_TYPE_MAP: Record<string, ActivityTypeDef> =
@@ -74,6 +82,7 @@ export const ACTIVITY_STATUSES: StatusDef[] = [
   { value: "NO_ANSWER",       label: "No Answer",        color: "bg-slate-100 dark:bg-slate-800",    textColor: "text-slate-600 dark:text-slate-400" },
   { value: "INVALID_NUMBER",  label: "Invalid Number",   color: "bg-red-100 dark:bg-red-900/40",     textColor: "text-red-600 dark:text-red-400" },
   { value: "BUSY",            label: "Busy / Try Later", color: "bg-yellow-100 dark:bg-yellow-900/40",textColor: "text-yellow-700 dark:text-yellow-300" },
+  { value: "COMMUNICATION",  label: "Communication",    color: "bg-purple-100 dark:bg-purple-900/40", textColor: "text-purple-700 dark:text-purple-300" },
 ]
 
 export const ACTIVITY_STATUS_MAP: Record<string, StatusDef> =
