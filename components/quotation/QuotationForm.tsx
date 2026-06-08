@@ -520,14 +520,30 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
 
     // ── Logo ──────────────────────────────────────────────
     try {
-      const logoRes = await fetch("/logo.jpeg")
-      const blob = await logoRes.blob()
-      const logoDataUrl = await new Promise<string>((resolve) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve(reader.result as string)
-        reader.readAsDataURL(blob)
-      })
-      doc.addImage(logoDataUrl, "JPEG", margin, y, 32, 16)
+      const isLinks = company === "links"
+      let logoDataUrl: string
+
+      if (isLinks) {
+        const pdfjsLib = await import("pdfjs-dist")
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs"
+        const pdf = await pdfjsLib.getDocument("/Links logo (3).pdf").promise
+        const page = await pdf.getPage(1)
+        const viewport = page.getViewport({ scale: 3 })
+        const canvas = document.createElement("canvas")
+        canvas.width = viewport.width
+        canvas.height = viewport.height
+        await page.render({ canvasContext: canvas.getContext("2d")!, viewport }).promise
+        logoDataUrl = canvas.toDataURL("image/png")
+      } else {
+        const blob = await fetch("/logo.jpeg").then((r) => r.blob())
+        logoDataUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve(reader.result as string)
+          reader.readAsDataURL(blob)
+        })
+      }
+
+      doc.addImage(logoDataUrl, isLinks ? "PNG" : "JPEG", margin, y, 40, 16)
     } catch { /* logo load failed — continue without */ }
 
     // ── Header ────────────────────────────────────────────
