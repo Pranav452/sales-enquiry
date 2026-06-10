@@ -183,7 +183,7 @@ export function CalculatorWidget() {
       {open && (
         <div
           ref={panelRef}
-          className="fixed bottom-20 left-4 z-50 w-[300px] flex flex-col rounded-2xl border border-border bg-background shadow-2xl overflow-hidden"
+          className="fixed bottom-20 right-4 z-50 w-[300px] flex flex-col rounded-2xl border border-border bg-background shadow-2xl overflow-hidden"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-2.5 bg-primary text-primary-foreground shrink-0">
@@ -276,7 +276,7 @@ export function CalculatorWidget() {
       <button
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "fixed bottom-4 left-4 z-50 rounded-full shadow-lg flex items-center justify-center transition-all duration-200",
+          "fixed bottom-4 right-20 z-50 rounded-full shadow-lg flex items-center justify-center transition-all duration-200",
           open
             ? "bg-muted text-muted-foreground hover:bg-muted/80"
             : "bg-primary text-primary-foreground hover:opacity-90 scale-100 hover:scale-105"

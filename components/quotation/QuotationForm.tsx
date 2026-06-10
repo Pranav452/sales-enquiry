@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -191,6 +191,7 @@ export interface QuotationEditing {
   sales_person: string | null
   branch: string | null
   enq_id: string | null
+  exchange_rate?: number | null
 }
 
 interface Props {
@@ -202,11 +203,20 @@ interface Props {
 
 // ─── Exchange rate hook ───────────────────────────────────────
 
+interface DgftRate {
+  name: string
+  import: number   // INR per unit — customs import rate
+  export: number   // INR per unit — customs export rate
+  unit: number
+  effectiveDate: string
+}
+
 interface ExchangeData {
   usdToInr: number
   rates: Record<string, number>
   currencies: Record<string, string>
   currencyList: string[]
+  dgft: Record<string, DgftRate> | null
 }
 
 function useExchangeRate() {
@@ -215,6 +225,7 @@ function useExchangeRate() {
     rates: { usd: 1, inr: 84 },
     currencies: {},
     currencyList: ["USD", "INR", "EUR", "GBP", "AED", "SGD", "JPY", "CNY", "AUD", "CAD"],
+    dgft: null,
   })
 
   useEffect(() => {
@@ -229,6 +240,7 @@ function useExchangeRate() {
           rates: d.rates ?? {},
           currencies: d.currencies ?? {},
           currencyList: currencyList.length > 0 ? currencyList : ["USD", "INR", "EUR"],
+          dgft: d.dgft ?? null,
         })
       })
       .catch(() => {})
@@ -338,6 +350,45 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
   const salesPersons = company === "links" ? LINKS_SALES_PERSONS : MANILAL_SALES_PERSONS
   const portOptions = PORT_CITIES.map(expandPortCity)
 
+  // ─── Exchange rate source + manual override ────────────────
+  type RateSource = "live" | "dgft_import" | "dgft_export"
+  const [rateSource, setRateSource]   = useState<RateSource>("live")
+  const [rateInput, setRateInput]     = useState("")
+  const [rateTouched, setRateTouched] = useState(false)
+
+  const dgftUsd = exchange.dgft?.["USD"]
+  const sourceUsdInr =
+    rateSource === "dgft_import" && dgftUsd ? dgftUsd.import / dgftUsd.unit :
+    rateSource === "dgft_export" && dgftUsd ? dgftUsd.export / dgftUsd.unit :
+    exchange.usdToInr
+
+  // Track the source value until the user edits the number by hand
+  useEffect(() => {
+    if (!rateTouched) setRateInput(sourceUsdInr.toFixed(2))
+  }, [sourceUsdInr, rateTouched])
+
+  const usdInr = (() => {
+    const n = parseFloat(rateInput)
+    return n > 0 ? n : sourceUsdInr
+  })()
+
+  // Conversion table all calculations use. USD-based like the live
+  // API (rates["inr"] = INR per USD). In DGFT mode, currencies on the
+  // customs notification are rebuilt from their notified INR parity;
+  // anything else falls back to live market rates.
+  const effectiveRates = useMemo(() => {
+    const base: Record<string, number> = { ...exchange.rates }
+    if (rateSource !== "live" && exchange.dgft) {
+      for (const [code, r] of Object.entries(exchange.dgft)) {
+        const inrPerUnit = (rateSource === "dgft_import" ? r.import : r.export) / (r.unit || 1)
+        if (inrPerUnit > 0) base[code.toLowerCase()] = usdInr / inrPerUnit
+      }
+      base["usd"] = 1
+    }
+    base["inr"] = usdInr
+    return base
+  }, [exchange.rates, exchange.dgft, rateSource, usdInr])
+
   // Populate from editing quotation
   useEffect(() => {
     if (!editingQuotation) return
@@ -374,6 +425,12 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
       sales_person: q.sales_person ?? "",
       branch: q.branch ?? "",
     })
+
+    // Restore the rate the quotation was saved with
+    if (q.exchange_rate && q.exchange_rate > 0) {
+      setRateInput(String(q.exchange_rate))
+      setRateTouched(true)
+    }
   }, [editingQuotation])
 
   function set<K extends keyof FormData>(key: K, value: FormData[K]) {
@@ -399,7 +456,7 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
 
   const totalInr = useCallback(() => {
     let sum = 0
-    const r = exchange.rates
+    const r = effectiveRates
 
     if (showFreight) {
       sum += toInr(form.freight_charge.amount, form.freight_charge.currency, r)
@@ -434,7 +491,7 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
     }
 
     return sum
-  }, [form, exchange.rates, showFreight, showCC])
+  }, [form, effectiveRates, showFreight, showCC])
 
   // ─── Submit ───────────────────────────────────────────────
 
@@ -473,7 +530,7 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
       transport_enabled: form.transport_enabled,
       transport_cost: form.transport_enabled ? form.transport_cost : null,
       total_inr: totalInr(),
-      exchange_rate: exchange.usdToInr,
+      exchange_rate: usdInr,
       clauses: form.clauses,
       sales_person: form.sales_person,
       branch: form.branch,
@@ -559,7 +616,7 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
     y += 5
     doc.text(`Date: ${form.quot_date}`, pageW - margin, y, { align: "right" })
     doc.text(
-      `USD / INR: ${exchange.usdToInr.toFixed(2)}`,
+      `USD / INR: ${usdInr.toFixed(2)}`,
       pageW - margin,
       y + 5,
       { align: "right" }
@@ -734,7 +791,7 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
     autoTable(doc, {
       startY: y,
       body: [
-        [{ content: `Exchange Rate: 1 USD = ${exchange.usdToInr.toFixed(2)} INR`, colSpan: 2, styles: { fontSize: 8, textColor: [100, 100, 100] } }],
+        [{ content: `Exchange Rate: 1 USD = ${usdInr.toFixed(2)} INR`, colSpan: 2, styles: { fontSize: 8, textColor: [100, 100, 100] } }],
         [
           { content: "TOTAL COST", styles: { fontStyle: "bold", fontSize: 10 } },
           { content: `INR ${total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, styles: { fontStyle: "bold", fontSize: 10, halign: "right" } },
@@ -777,12 +834,55 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
     <form onSubmit={handleSubmit} className="space-y-2">
 
       {/* ── Exchange rate banner ────────────────────────────── */}
-      <div className="flex items-center justify-between rounded-md border border-border bg-muted/40 px-4 py-2 text-sm">
-        <span className="text-muted-foreground">Live Rate</span>
-        <span className="font-semibold">
-          1 USD = <span className="text-blue-600">{exchange.usdToInr.toFixed(2)} INR</span>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-border bg-muted/40 px-4 py-2 text-sm">
+        <span className="text-muted-foreground shrink-0">Exchange Rate</span>
+
+        <select
+          value={rateSource}
+          onChange={(e) => {
+            setRateSource(e.target.value as RateSource)
+            setRateTouched(false)
+          }}
+          className="h-8 rounded-md border border-input bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="live">Live Market</option>
+          <option value="dgft_import" disabled={!dgftUsd}>DGFT Customs — Import</option>
+          <option value="dgft_export" disabled={!dgftUsd}>DGFT Customs — Export</option>
+        </select>
+
+        <span className="flex items-center gap-1.5 font-semibold">
+          1 USD =
+          <Input
+            type="number"
+            min="0"
+            step="0.01"
+            value={rateInput}
+            onChange={(e) => {
+              setRateInput(e.target.value)
+              setRateTouched(true)
+            }}
+            className="h-8 w-24 text-right text-blue-600 font-semibold"
+          />
+          INR
         </span>
-        <span className="text-muted-foreground text-xs">{new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span>
+
+        {rateTouched && (
+          <button
+            type="button"
+            onClick={() => setRateTouched(false)}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            title="Reset to source rate"
+          >
+            <RotateCcw className="h-3 w-3" /> Reset
+          </button>
+        )}
+
+        <span className="text-muted-foreground text-xs ml-auto">
+          {rateSource !== "live" && dgftUsd
+            ? `Customs notification w.e.f. ${dgftUsd.effectiveDate}`
+            : new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+          {rateTouched && " · edited manually"}
+        </span>
       </div>
 
       {/* ── Base Details ─────────────────────────────────────── */}
@@ -1094,7 +1194,7 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
           <SectionHeader>Total Cost</SectionHeader>
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">
-              Exchange rate: 1 USD = {exchange.usdToInr.toFixed(2)} INR
+              Exchange rate: 1 USD = {usdInr.toFixed(2)} INR
             </span>
             <span className="text-2xl font-bold text-blue-700 dark:text-blue-400">
               INR {total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}

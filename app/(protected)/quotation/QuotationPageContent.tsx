@@ -56,6 +56,7 @@ export function QuotationPageContent({ company }: Props) {
           sales_person: data.SALES_PERSON ?? null,
           branch: data.BRANCH ?? null,
           enq_id: data.ENQ_ID ? String(data.ENQ_ID) : null,
+          exchange_rate: data.EXCHANGE_RATE ?? null,
         }
         setEditing(q)
       })
