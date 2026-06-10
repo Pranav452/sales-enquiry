@@ -34,6 +34,7 @@ import { ACTIVITY_TYPE_MAP } from "@/lib/constants/activities"
 import { useChatDock } from "@/lib/store/chatDock"
 import { useChatGlobalRealtime } from "@/components/chat/useChatGlobalRealtime"
 import { ChatDock } from "@/components/chat/ChatDock"
+import { CalculatorWidget } from "@/components/calculator/CalculatorWidget"
 import { usePushNotifications } from "@/lib/hooks/usePushNotifications"
 
 // ─── Types ────────────────────────────────────────────────────
@@ -610,6 +611,9 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
 
       {/* ── Global chat dock — persists across all pages ────── */}
       <ChatDock />
+
+      {/* ── Global calculator — floating button bottom-left ─── */}
+      <CalculatorWidget />
     </div>
   )
 }
