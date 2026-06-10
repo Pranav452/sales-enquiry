@@ -88,7 +88,7 @@ const ALL_COLUMNS: ColDef[] = [
     format: (v) => v ? new Date(v).toLocaleDateString("en-GB") : "" },
 ]
 
-const ALL_SALES_PERSONS = [...LINKS_SALES_PERSONS, ...MANILAL_SALES_PERSONS].sort()
+const ALL_SALES_PERSONS = [...new Set([...LINKS_SALES_PERSONS, ...MANILAL_SALES_PERSONS])].sort()
 const MODES = ["AIR", "SEA", "LAND", "COURIER", "RAIL"]
 const EXIM_OPTIONS = ["EXPORT", "IMPORT", "CROSS TRADE"]
 const ENQ_TYPES = ["LOCAL", "OVERSEAS"]

@@ -526,13 +526,13 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
       if (isLinks) {
         const pdfjsLib = await import("pdfjs-dist")
         pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs"
-        const pdf = await pdfjsLib.getDocument("/Links logo (3).pdf").promise
+        const pdf = await pdfjsLib.getDocument({ url: "/Links logo (3).pdf" }).promise
         const page = await pdf.getPage(1)
         const viewport = page.getViewport({ scale: 3 })
         const canvas = document.createElement("canvas")
         canvas.width = viewport.width
         canvas.height = viewport.height
-        await page.render({ canvasContext: canvas.getContext("2d")!, viewport }).promise
+        await page.render({ canvas, canvasContext: canvas.getContext("2d")!, viewport }).promise
         logoDataUrl = canvas.toDataURL("image/png")
       } else {
         const blob = await fetch("/logo.jpeg").then((r) => r.blob())
