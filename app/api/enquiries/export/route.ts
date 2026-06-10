@@ -33,7 +33,7 @@ const SELECT_COLS = `
 `
 
 // GET /api/enquiries/export
-// Query params: date_from, date_to, sales_person, mode, exim, branch, status, enq_type
+// Query params: date_from, date_to, sales_person, mode, exim, branch, status, enq_type, pol, pod, assigned_user
 export async function GET(req: NextRequest) {
   const auth = await getAuthContext()
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -47,6 +47,9 @@ export async function GET(req: NextRequest) {
   const branch      = sp.get("branch")
   const status      = sp.get("status")
   const enqType     = sp.get("enq_type")
+  const pol         = sp.get("pol")
+  const pod         = sp.get("pod")
+  const assignedUser = sp.get("assigned_user")
 
   try {
     const pool = await getPool(auth.company)
@@ -105,6 +108,20 @@ export async function GET(req: NextRequest) {
     if (enqType) {
       request.input("enq_type", enqType)
       conditions.push("ENQTYPE = @enq_type")
+    }
+    // POL/POD column is VarChar(3) — legacy rows hold a truncated prefix
+    // ("MUM" for "MUMBAI"), so match stored value as prefix of the filter
+    if (pol) {
+      request.input("pol", pol)
+      conditions.push("(POL <> '' AND @pol LIKE POL + '%')")
+    }
+    if (pod) {
+      request.input("pod", pod)
+      conditions.push("(POD <> '' AND @pod LIKE POD + '%')")
+    }
+    if (assignedUser) {
+      request.input("assigned_user", assignedUser)
+      conditions.push("ASSIGNED_USER LIKE '%' + @assigned_user + '%'")
     }
 
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : ""

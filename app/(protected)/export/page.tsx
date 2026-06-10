@@ -12,6 +12,7 @@ import {
   STATUSES,
   MANILAL_SALES_PERSONS,
   LINKS_SALES_PERSONS,
+  PORT_CITIES,
   expandPortCity,
 } from "@/lib/constants/dropdowns"
 
@@ -153,6 +154,9 @@ export default function ExportPage() {
   const [branch, setBranch]           = useState("")
   const [status, setStatus]           = useState("")
   const [enqType, setEnqType]         = useState("")
+  const [pol, setPol]                 = useState("")
+  const [pod, setPod]                 = useState("")
+  const [assignedUser, setAssignedUser] = useState("")
 
   // — Data
   const [rows, setRows]     = useState<Row[]>([])
@@ -238,6 +242,9 @@ export default function ExportPage() {
     if (branch)      params.set("branch",       branch)
     if (status)      params.set("status",       status)
     if (enqType)     params.set("enq_type",     enqType)
+    if (pol)          params.set("pol",          pol)
+    if (pod)          params.set("pod",          pod)
+    if (assignedUser) params.set("assigned_user", assignedUser)
 
     try {
       const res = await fetch(`/api/enquiries/export?${params}`)
@@ -253,7 +260,7 @@ export default function ExportPage() {
     } finally {
       setLoading(false)
     }
-  }, [dateFrom, dateTo, salesPerson, mode, exim, branch, status, enqType])
+  }, [dateFrom, dateTo, salesPerson, mode, exim, branch, status, enqType, pol, pod, assignedUser])
 
   // ─── Selection helpers ────────────────────────────────────
   function toggleAll() {
@@ -331,9 +338,10 @@ export default function ExportPage() {
   function clearFilters() {
     setDateFrom(""); setDateTo(""); setSalesPerson(""); setMode("")
     setExim(""); setBranch(""); setStatus(""); setEnqType("")
+    setPol(""); setPod(""); setAssignedUser("")
   }
 
-  const hasFilters = dateFrom || dateTo || salesPerson || mode || exim || branch || status || enqType
+  const hasFilters = dateFrom || dateTo || salesPerson || mode || exim || branch || status || enqType || pol || pod || assignedUser
 
   return (
     <div className="p-6 max-w-screen-2xl mx-auto space-y-6">
@@ -459,6 +467,17 @@ export default function ExportPage() {
           <FilterSelect label="Branch"       value={branch}      options={BRANCHES}           onChange={setBranch} />
           <FilterSelect label="Status"       value={status}      options={STATUSES}           onChange={setStatus} />
           <FilterSelect label="Enquiry Type" value={enqType}     options={ENQ_TYPES}          onChange={setEnqType} />
+          <FilterSelect label="POL"          value={pol}         options={PORT_CITIES}        onChange={setPol} />
+          <FilterSelect label="POD"          value={pod}         options={PORT_CITIES}        onChange={setPod} />
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-muted-foreground">Assigned User</label>
+            <Input
+              value={assignedUser}
+              onChange={(e) => setAssignedUser(e.target.value)}
+              placeholder="Any assigned user"
+              className="h-8 text-xs"
+            />
+          </div>
         </div>
 
         <div className="flex justify-end">
