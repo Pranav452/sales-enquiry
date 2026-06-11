@@ -20,6 +20,7 @@ const SELECT_COLS = `
   REMARKS_2               AS remarks_2,
   LAST_FOLLOW_UP          AS last_follow_up,
   NOTES                   AS notes,
+  CAST(CONTACT_ID AS varchar(20)) AS contact_id,
   CREATED_BY              AS created_by,
   CONVERT(varchar(10), CREATED_AT, 120) AS created_at
 `

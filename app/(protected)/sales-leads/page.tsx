@@ -28,6 +28,7 @@ export default function SalesLeadsPage() {
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing]   = useState<SalesLead | null>(null)
   const [savedMsg, setSavedMsg] = useState<string | null>(null)
+  const [convertingId, setConvertingId] = useState<string | null>(null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -64,6 +65,26 @@ export default function SalesLeadsPage() {
       won:       rows.filter((r) => r.status === "WON").length,
     }
   }, [rows])
+
+  async function handleConvert(lead: SalesLead) {
+    setConvertingId(lead.id)
+    try {
+      const res = await fetch(`/api/sales-leads/${lead.id}/convert`, { method: "POST" })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? "Conversion failed")
+      setSavedMsg(
+        data.already_converted
+          ? `${lead.shipper ?? "Lead"} is already linked to a contact.`
+          : `${lead.shipper ?? "Lead"} converted to contact.`
+      )
+      fetchLeads()
+    } catch (err) {
+      setSavedMsg(err instanceof Error ? err.message : "Conversion failed")
+    } finally {
+      setConvertingId(null)
+      setTimeout(() => setSavedMsg(null), 4000)
+    }
+  }
 
   function handleSuccess(_id: string, refCode: string | undefined, isEdit: boolean) {
     setShowForm(false)
@@ -147,6 +168,8 @@ export default function SalesLeadsPage() {
             setShowForm(false)
             window.scrollTo({ top: 0, behavior: "smooth" })
           }}
+          onConvert={handleConvert}
+          convertingId={convertingId}
         />
       </div>
     </div>

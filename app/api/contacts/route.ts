@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getAuthContext } from "@/lib/api-auth"
 import { getPool } from "@/lib/mssql/client"
-import sql from "mssql"
+import { ensureContactsTable } from "@/lib/mssql/contacts"
 
 type ContactRow = {
   shipper_name:   string
@@ -14,48 +14,6 @@ type ContactRow = {
   email:          string
 }
 
-// Split into separate .query() calls — MSSQL 2008 R2 can fail on multiple
-// IF NOT EXISTS blocks in a single statement.
-async function ensureTable(pool: sql.ConnectionPool) {
-  await pool.request().query(`
-    IF NOT EXISTS (
-      SELECT 1 FROM INFORMATION_SCHEMA.TABLES
-      WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'TBL_CONTACTS'
-    )
-    BEGIN
-      CREATE TABLE [dbo].[TBL_CONTACTS] (
-        [ID]              int           IDENTITY(1,1) PRIMARY KEY,
-        [SHIPPER_NAME]    varchar(200)  NULL,
-        [CONSIGNEE_NAME]  varchar(200)  NULL,
-        [MODE]            varchar(20)   NULL,
-        [POL]             varchar(100)  NULL,
-        [POD]             varchar(100)  NULL,
-        [CONTACT_PERSON]  varchar(100)  NULL,
-        [CONTACT_NUMBER]  varchar(50)   NULL,
-        [EMAIL]           varchar(200)  NULL,
-        [CREATED_BY]      varchar(200)  NULL,
-        [CREATED_AT]      datetime      NOT NULL DEFAULT GETUTCDATE(),
-        [UPDATED_AT]      datetime      NOT NULL DEFAULT GETUTCDATE()
-      )
-    END
-  `)
-
-  await pool.request().query(`
-    IF NOT EXISTS (
-      SELECT 1 FROM INFORMATION_SCHEMA.TABLES
-      WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'TBL_CONTACT_FLAGS'
-    )
-    BEGIN
-      CREATE TABLE [dbo].[TBL_CONTACT_FLAGS] (
-        [CLIENT_NAME_LOWER]  varchar(400)  NOT NULL PRIMARY KEY,
-        [IS_DEAD_LEAD]       bit           NOT NULL DEFAULT 0,
-        [FLAGGED_BY]         varchar(200)  NULL,
-        [UPDATED_AT]         datetime      NOT NULL DEFAULT GETUTCDATE()
-      )
-    END
-  `)
-}
-
 export async function GET(req: NextRequest) {
   const auth = await getAuthContext()
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -64,7 +22,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const pool = await getPool(auth.company)
-    await ensureTable(pool)
+    await ensureContactsTable(pool)
 
     const request = pool.request()
 
@@ -94,7 +52,7 @@ export async function GET(req: NextRequest) {
         id, shipper_name, consignee_name, mode, pol, pod,
         contact_person, contact_number, email,
         source, activity_count, last_activity_date,
-        created_by, created_at, is_dead_lead
+        created_by, created_at, is_dead_lead, stage
       FROM (
 
         -- ── Part 1: deduplicated Excel-imported contacts ──────────────────
@@ -102,7 +60,7 @@ export async function GET(req: NextRequest) {
           id, shipper_name, consignee_name, mode, pol, pod,
           contact_person, contact_number, email,
           source, activity_count, last_activity_date,
-          created_by, created_at, is_dead_lead
+          created_by, created_at, is_dead_lead, stage
         FROM (
           SELECT
             'c_' + CAST(c.ID AS varchar(20))             AS id,
@@ -120,6 +78,7 @@ export async function GET(req: NextRequest) {
             ISNULL(c.CREATED_BY, '')                      AS created_by,
             CONVERT(varchar(10), c.CREATED_AT, 120)       AS created_at,
             ISNULL(f.IS_DEAD_LEAD, 0)                     AS is_dead_lead,
+            ISNULL(c.STAGE, 'CONTACT')                    AS stage,
             ROW_NUMBER() OVER (
               PARTITION BY LOWER(RTRIM(LTRIM(ISNULL(c.SHIPPER_NAME, '')))),
                            ISNULL(c.CREATED_BY, '')
@@ -162,7 +121,8 @@ export async function GET(req: NextRequest) {
           CONVERT(varchar(10), MAX(cv.ACTIVITY_DATE), 120)  AS last_activity_date,
           ISNULL(MAX(cv.CREATED_BY), '')                    AS created_by,
           CONVERT(varchar(10), MIN(cv.CREATED_AT), 120)     AS created_at,
-          ISNULL(MAX(CAST(f2.IS_DEAD_LEAD AS tinyint)), 0)    AS is_dead_lead
+          ISNULL(MAX(CAST(f2.IS_DEAD_LEAD AS tinyint)), 0)    AS is_dead_lead,
+          'CONTACT'                                         AS stage
         FROM [dbo].[TBL_CALLS_VISITS] cv
         LEFT JOIN [dbo].[TBL_CONTACT_FLAGS] f2
           ON LOWER(RTRIM(LTRIM(cv.CLIENT_NAME))) = f2.CLIENT_NAME_LOWER
@@ -201,7 +161,7 @@ export async function POST(req: NextRequest) {
     }
 
     const pool = await getPool(auth.company)
-    await ensureTable(pool)
+    await ensureContactsTable(pool)
 
     let inserted = 0
     let skipped  = 0

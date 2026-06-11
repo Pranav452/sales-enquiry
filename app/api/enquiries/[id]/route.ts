@@ -36,7 +36,9 @@ const SELECT_COLS = `
   ASSIGNED_USER               AS assigned_user,
   CONVERT(varchar(10), ASSIGNED_DATE, 120) AS assigned_date,
   BUY_RATE_FILE               AS buy_rate_file,
-  SELL_RATE_FILE              AS sell_rate_file
+  SELL_RATE_FILE              AS sell_rate_file,
+  CAST(CONTACT_ID AS varchar(20)) AS contact_id,
+  CAST(LEAD_ID AS varchar(20))    AS lead_id
 `
 
 // ─── GET /api/enquiries/[id] ──────────────────────────────────

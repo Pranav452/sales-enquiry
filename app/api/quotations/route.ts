@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
         VESSEL_NAME, ETD, ETA, TRANSIT_TIME, FREE_TIME,
         LOCAL_CHARGES, STUFFING_TYPE, CC_CHARGES,
         TRANSPORT_ENABLED, TRANSPORT_COST,
-        TOTAL_INR, EXCHANGE_RATE, CLAUSES,
+        TOTAL_INR, EXCHANGE_RATE, CLAUSES, ISNULL(STATUS, 'DRAFT') AS STATUS,
         ENQ_ID, SALES_PERSON, BRANCH, CREATED_BY, CREATED_AT, UPDATED_AT
       FROM [dbo].[TBL_QUOTATIONS]
       ${whereClause}
@@ -81,6 +81,7 @@ export async function POST(req: NextRequest) {
     .input("enq_id",            sql.Int,      body.enq_id ? parseInt(body.enq_id) : null)
     .input("sales_person",      sql.NVarChar, body.sales_person || salesperson || null)
     .input("branch",            sql.NVarChar, branch)
+    .input("status",            sql.NVarChar, "DRAFT")
     .input("created_by",        sql.NVarChar, salesperson ?? email)
     .query(`
       INSERT INTO [dbo].[TBL_QUOTATIONS]
@@ -90,7 +91,7 @@ export async function POST(req: NextRequest) {
          LOCAL_CHARGES, STUFFING_TYPE, CC_CHARGES,
          TRANSPORT_ENABLED, TRANSPORT_COST,
          TOTAL_INR, EXCHANGE_RATE, CLAUSES,
-         ENQ_ID, SALES_PERSON, BRANCH, CREATED_BY)
+         ENQ_ID, SALES_PERSON, BRANCH, STATUS, CREATED_BY)
       VALUES
         (@quot_ref_no, @quot_date, @mode, @exim, @fn, @enq_type, @incoterms,
          @pol, @pod, @container_type, @shipper, @shipment_type,
@@ -98,7 +99,7 @@ export async function POST(req: NextRequest) {
          @local_charges, @stuffing_type, @cc_charges,
          @transport_enabled, @transport_cost,
          @total_inr, @exchange_rate, @clauses,
-         @enq_id, @sales_person, @branch, @created_by)
+         @enq_id, @sales_person, @branch, @status, @created_by)
     `)
 
   const idResult = await pool.request().query<{ QUOT_ID: number }>(

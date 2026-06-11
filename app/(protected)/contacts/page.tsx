@@ -1,6 +1,8 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { ActivityForm } from "@/components/activities/ActivityForm"
 import { Timeline, type TimelineItem } from "@/components/ui/timeline"
@@ -34,6 +36,7 @@ interface Contact {
   created_by:          string
   created_at:          string
   is_dead_lead:        boolean | number
+  stage:               string
 }
 
 interface ActivityHistoryItem {
@@ -240,9 +243,15 @@ function ClientDetailModal({
   defaultSalesPerson: string | undefined
   onClose:            () => void
 }) {
+  const router = useRouter()
   const [history,     setHistory]     = useState<ActivityHistoryItem[]>([])
   const [histLoading, setHistLoading] = useState(true)
   const [showForm,    setShowForm]    = useState(false)
+
+  // Real TBL_CONTACTS rows have "c_<ID>" ids; activity-only clients have "a_…"
+  const numericId = contact.source === "contact" && contact.id.startsWith("c_")
+    ? contact.id.slice(2)
+    : null
 
   // totalXp across all history entries
   const totalXp = history.reduce((s, h) => s + (h.points ?? 0), 0)
@@ -268,9 +277,24 @@ function ClientDetailModal({
         {/* ── Header ─────────────────────────────────────── */}
         <div className="flex items-start justify-between px-5 py-4 border-b border-border flex-shrink-0">
           <div className="flex-1 min-w-0">
-            <h2 className="text-base font-semibold text-foreground truncate">
-              {contact.shipper_name || contact.consignee_name || "Client"}
-            </h2>
+            <div className="flex items-center gap-2 min-w-0">
+              <h2 className="text-base font-semibold text-foreground truncate">
+                {contact.shipper_name || contact.consignee_name || "Client"}
+              </h2>
+              {contact.stage === "CLIENT" && (
+                <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 shrink-0">
+                  Client
+                </span>
+              )}
+              {numericId && (
+                <Link
+                  href={`/contacts/${numericId}`}
+                  className="text-[11px] text-primary hover:underline shrink-0"
+                >
+                  Client 360 →
+                </Link>
+              )}
+            </div>
             <div className="flex items-center gap-3 mt-1 flex-wrap">
               {contact.contact_person && (
                 <span className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -417,10 +441,22 @@ function ClientDetailModal({
                 ? `Last call ${formatDate(history[0]?.activity_date)}`
                 : "No calls yet"}
             </p>
-            <Button size="sm" className="gap-1.5" onClick={() => setShowForm(true)}>
-              <Phone className="h-3.5 w-3.5" />
-              {history.length > 0 ? "Log Follow-up" : "Log First Call"}
-            </Button>
+            <div className="flex items-center gap-2">
+              {numericId && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5"
+                  onClick={() => router.push(`/enquiry?contact=${numericId}`)}
+                >
+                  New Enquiry
+                </Button>
+              )}
+              <Button size="sm" className="gap-1.5" onClick={() => setShowForm(true)}>
+                <Phone className="h-3.5 w-3.5" />
+                {history.length > 0 ? "Log Follow-up" : "Log First Call"}
+              </Button>
+            </div>
           </div>
         )}
       </div>
@@ -467,12 +503,19 @@ function ContactCard({
           </div>
         )}
 
-        {/* Source badge */}
-        {contact.source === "activity" && !isDead && (
-          <div className="mb-2">
-            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
-              From Activity Tracker
-            </span>
+        {/* Source / stage badges */}
+        {(contact.source === "activity" || contact.stage === "CLIENT") && !isDead && (
+          <div className="mb-2 flex items-center gap-1.5 flex-wrap">
+            {contact.stage === "CLIENT" && (
+              <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                Client
+              </span>
+            )}
+            {contact.source === "activity" && (
+              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
+                From Activity Tracker
+              </span>
+            )}
           </div>
         )}
 

@@ -116,6 +116,11 @@ interface Props {
   onSuccess?: () => void
   editingEnquiry?: EnquiryFormEditing | null
   onEditComplete?: () => void
+  /** Prefill for a new enquiry (e.g. started from a contact) */
+  prefill?: Partial<FormData> | null
+  /** Link the created enquiry to a contact / sales lead */
+  linkContactId?: string | null
+  linkLeadId?: string | null
 }
 
 // ─── Helpers ─────────────────────────────────────────────────
@@ -453,7 +458,7 @@ function ConvertMenu({ enqRefNo, form }: { enqRefNo: string; form: FormData }) {
 
 // ─── Component ───────────────────────────────────────────────
 
-export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props) {
+export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete, prefill, linkContactId, linkLeadId }: Props) {
   const supabase = createClient()
   const [form, setFormState] = useState<FormData>(getDefaultForm())
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -482,10 +487,10 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
       setErrors({})
     } else {
       setEditingId(null)
-      setFormState(getDefaultForm())
+      setFormState({ ...getDefaultForm(), ...(prefill ?? {}) })
       setErrors({})
     }
-  }, [editingEnquiry, salesPersonList])
+  }, [editingEnquiry, salesPersonList, prefill])
 
   function setField(field: keyof FormData, value: string) {
     setFormState((prev) => ({ ...prev, [field]: value }))
@@ -532,6 +537,8 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete }: Props
       assigned_date: form.assigned_date || null,
       buy_rate_file: form.buy_rate_file || null,
       sell_rate_file: form.sell_rate_file || null,
+      contact_id: linkContactId ?? null,
+      lead_id: linkLeadId ?? null,
     }
 
     if (editingId) {

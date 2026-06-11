@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { Copy, FileDown, Pencil } from "lucide-react"
+import { CheckCircle2, Copy, FileDown, Pencil } from "lucide-react"
 
 interface Quotation {
   QUOT_ID: number
@@ -21,6 +21,7 @@ interface Quotation {
   TOTAL_INR: number | null
   SALES_PERSON: string | null
   BRANCH: string | null
+  STATUS: string | null
   CREATED_AT: string
 }
 
@@ -28,15 +29,41 @@ export function QuotationList() {
   const router = useRouter()
   const [quotations, setQuotations] = useState<Quotation[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [search, setSearch] = useState("")
   const [page, setPage] = useState(1)
+  const [approvingId, setApprovingId] = useState<number | null>(null)
   const PER_PAGE = 20
+
+  async function handleApprove(q: Quotation) {
+    if (!window.confirm(`Approve ${q.QUOT_REF_NO}? The linked contact will be promoted to CLIENT.`)) return
+    setApprovingId(q.QUOT_ID)
+    try {
+      const res = await fetch(`/api/quotations/${q.QUOT_ID}/approve`, { method: "POST" })
+      const data = await res.json()
+      if (!res.ok) {
+        alert(data.error ?? "Approval failed")
+      } else {
+        await load()
+      }
+    } finally {
+      setApprovingId(null)
+    }
+  }
 
   async function load() {
     setLoading(true)
+    setLoadError(null)
     try {
       const res = await fetch("/api/quotations")
-      if (res.ok) setQuotations(await res.json())
+      if (res.ok) {
+        setQuotations(await res.json())
+      } else {
+        const data = await res.json().catch(() => null)
+        setLoadError(data?.error ?? `Failed to load quotations (${res.status})`)
+      }
+    } catch {
+      setLoadError("Failed to load quotations — check your connection.")
     } finally {
       setLoading(false)
     }
@@ -76,6 +103,8 @@ export function QuotationList() {
 
       {loading ? (
         <p className="text-sm text-muted-foreground py-8 text-center">Loading...</p>
+      ) : loadError ? (
+        <p className="text-sm text-destructive py-8 text-center">{loadError}</p>
       ) : pageItems.length === 0 ? (
         <p className="text-sm text-muted-foreground py-8 text-center">No quotations found.</p>
       ) : (
@@ -91,6 +120,7 @@ export function QuotationList() {
                 <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground">Mode</th>
                 <th className="text-right px-3 py-2.5 font-semibold text-muted-foreground">Total (INR)</th>
                 <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground">Sales</th>
+                <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground">Status</th>
                 <th className="px-3 py-2.5" />
               </tr>
             </thead>
@@ -128,7 +158,27 @@ export function QuotationList() {
                   </td>
                   <td className="px-3 py-2 text-muted-foreground text-xs">{q.SALES_PERSON || "-"}</td>
                   <td className="px-3 py-2">
+                    {q.STATUS === "APPROVED" ? (
+                      <span className="inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 whitespace-nowrap">
+                        Approved
+                      </span>
+                    ) : (
+                      <Badge variant="outline" className="text-xs">Draft</Badge>
+                    )}
+                  </td>
+                  <td className="px-3 py-2">
                     <div className="flex items-center gap-1 justify-end">
+                      {q.STATUS !== "APPROVED" && (
+                        <button
+                          type="button"
+                          title="Approve"
+                          disabled={approvingId === q.QUOT_ID}
+                          onClick={() => handleApprove(q)}
+                          className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-emerald-600 transition-colors disabled:opacity-50"
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                       <button
                         type="button"
                         title="Edit"

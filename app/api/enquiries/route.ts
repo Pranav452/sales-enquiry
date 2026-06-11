@@ -38,7 +38,9 @@ const SELECT_COLS = `
   ASSIGNED_USER               AS assigned_user,
   CONVERT(varchar(10), ASSIGNED_DATE, 120) AS assigned_date,
   BUY_RATE_FILE               AS buy_rate_file,
-  SELL_RATE_FILE              AS sell_rate_file
+  SELL_RATE_FILE              AS sell_rate_file,
+  CAST(CONTACT_ID AS varchar(20)) AS contact_id,
+  CAST(LEAD_ID AS varchar(20))    AS lead_id
 `
 
 // ─── GET /api/enquiries ───────────────────────────────────────
@@ -144,6 +146,8 @@ export async function POST(req: NextRequest) {
       .input("assigned_date", sql.DateTime,     body.assigned_date ? new Date(body.assigned_date) : null)
       .input("buy_rate_file", body.buy_rate_file ?? null)
       .input("sell_rate_file",body.sell_rate_file ?? null)
+      .input("contact_id",    sql.Int, body.contact_id ? parseInt(body.contact_id) : null)
+      .input("lead_id",       sql.Int, body.lead_id ? parseInt(body.lead_id) : null)
       .input("created_by",    auth.userId)
       .input("makerdt",       sql.DateTime,     now)
       .input("updated_at",    sql.DateTime,     now)
@@ -154,7 +158,7 @@ export async function POST(req: NextRequest) {
           POL, POD, INCOTERM, DIMENSION, STATUS, EMAIL_SUBJECT,
           SHIPPER, CONSIGNEE, REMARK, MBL_AWB_NO, JOB_INVOICE_NO, GOP,
           ASSIGNED_USER, ASSIGNED_DATE, BUY_RATE_FILE, SELL_RATE_FILE,
-          CREATED_BY, MAKERDT, UPDATED_AT
+          CONTACT_ID, LEAD_ID, CREATED_BY, MAKERDT, UPDATED_AT
         )
         OUTPUT inserted.PK_ID
         VALUES (
@@ -163,7 +167,7 @@ export async function POST(req: NextRequest) {
           @pol, @pod, @incoterm, @dimension, @status, @email_subject,
           @shipper, @consignee, @remark, @mbl_awb_no, @job_invoice_no, @gop,
           @assigned_user, @assigned_date, @buy_rate_file, @sell_rate_file,
-          @created_by, @makerdt, @updated_at
+          @contact_id, @lead_id, @created_by, @makerdt, @updated_at
         )
       `)
 
@@ -211,4 +215,6 @@ interface EnquiryPayload {
   assigned_date?: string | null
   buy_rate_file?: string | null
   sell_rate_file?: string | null
+  contact_id?: string | null
+  lead_id?: string | null
 }

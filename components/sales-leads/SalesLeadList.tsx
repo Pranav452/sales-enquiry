@@ -1,9 +1,10 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Pencil, ChevronDown, ChevronUp, ExternalLink } from "lucide-react"
+import { Pencil, ChevronDown, ChevronUp, ExternalLink, UserPlus, UserCheck } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { LEAD_STATUSES, LEAD_STATUS_MAP } from "@/lib/constants/sales-leads"
 
@@ -24,6 +25,7 @@ export interface SalesLead {
   remarks_2:       string | null
   last_follow_up:  string | null
   notes:           string | null
+  contact_id:      string | null
   created_by:      string | null
   created_at:      string | null
 }
@@ -70,7 +72,12 @@ function FilterSelect({
   )
 }
 
-function LeadRow({ r, onEdit }: { r: SalesLead; onEdit?: (l: SalesLead) => void }) {
+function LeadRow({ r, onEdit, onConvert, converting }: {
+  r: SalesLead
+  onEdit?: (l: SalesLead) => void
+  onConvert?: (l: SalesLead) => void
+  converting?: boolean
+}) {
   const [expanded, setExpanded] = useState(false)
 
   const remarksAll = [r.remarks, r.remarks_2, r.notes].filter((v) => v?.trim()).join(" · ")
@@ -80,7 +87,7 @@ function LeadRow({ r, onEdit }: { r: SalesLead; onEdit?: (l: SalesLead) => void 
     <div className="border-b border-border/50 last:border-0">
       <div className="flex items-start gap-3 px-4 py-3 hover:bg-accent/50 transition-colors">
 
-        <div className="shrink-0 pt-0.5">
+        <div className="shrink-0 pt-0.5 flex flex-col gap-1">
           <button
             type="button"
             title="Edit lead"
@@ -89,6 +96,25 @@ function LeadRow({ r, onEdit }: { r: SalesLead; onEdit?: (l: SalesLead) => void 
           >
             <Pencil className="h-3.5 w-3.5" />
           </button>
+          {r.contact_id ? (
+            <Link
+              href={`/contacts/${r.contact_id}`}
+              title="View contact (Client 360)"
+              className="h-7 w-7 flex items-center justify-center rounded-md border border-emerald-300 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors"
+            >
+              <UserCheck className="h-3.5 w-3.5" />
+            </Link>
+          ) : (
+            <button
+              type="button"
+              title="Convert to Contact"
+              disabled={converting}
+              onClick={() => onConvert?.(r)}
+              className="h-7 w-7 flex items-center justify-center rounded-md border border-border text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors disabled:opacity-50"
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
 
         <div className="flex-1 min-w-0 space-y-1">
@@ -157,12 +183,14 @@ function LeadRow({ r, onEdit }: { r: SalesLead; onEdit?: (l: SalesLead) => void 
 }
 
 interface Props {
-  rows:     SalesLead[]
-  loading:  boolean
-  onEdit?:  (l: SalesLead) => void
+  rows:          SalesLead[]
+  loading:       boolean
+  onEdit?:       (l: SalesLead) => void
+  onConvert?:    (l: SalesLead) => void
+  convertingId?: string | null
 }
 
-export function SalesLeadList({ rows, loading, onEdit }: Props) {
+export function SalesLeadList({ rows, loading, onEdit, onConvert, convertingId }: Props) {
   const [search, setSearch]           = useState("")
   const [page, setPage]               = useState(1)
   const [filterStatus, setFilterStatus] = useState("")
@@ -246,7 +274,9 @@ export function SalesLeadList({ rows, loading, onEdit }: Props) {
         {paginated.length === 0 ? (
           <div className="py-10 text-sm text-center text-muted-foreground">No leads found.</div>
         ) : (
-          paginated.map((r) => <LeadRow key={r.id} r={r} onEdit={onEdit} />)
+          paginated.map((r) => (
+            <LeadRow key={r.id} r={r} onEdit={onEdit} onConvert={onConvert} converting={convertingId === r.id} />
+          ))
         )}
       </div>
 
