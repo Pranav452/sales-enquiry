@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getAuthContext } from "@/lib/api-auth"
 import { getPool, sql } from "@/lib/mssql/client"
+import { buildLocalBlob, buildCcBlob, parseLocalBlob, parseCcBlob } from "@/lib/quotation-charges"
 
 // ─── GET — single quotation ───────────────────────────────────
 
@@ -35,15 +36,17 @@ export async function GET(
   }
 
   const row = result.recordset[0]
-  const localParsed = row.LOCAL_CHARGES ? JSON.parse(row.LOCAL_CHARGES) : null
-  const freightCharge = localParsed?.__freight_charge ?? null
-  const localCharges = localParsed ? (({ __freight_charge: _, ...rest }) => rest)(localParsed) : null
+  const local = parseLocalBlob(row.LOCAL_CHARGES ?? null)
+  const cc = parseCcBlob(row.CC_CHARGES ?? null)
 
   return NextResponse.json({
     ...row,
-    local_charges:  localCharges,
-    freight_charge: freightCharge,
-    cc_charges:     row.CC_CHARGES     ? JSON.parse(row.CC_CHARGES)     : null,
+    local_charges:  local.local_charges,
+    freight_charge: local.freight_charge,
+    extra_freight:  local.extra_freight,
+    extra_local:    local.extra_local,
+    cc_charges:     cc.cc_charges,
+    extra_cc:       cc.extra_cc,
     transport_cost: row.TRANSPORT_COST ? JSON.parse(row.TRANSPORT_COST) : null,
   })
 }
@@ -79,11 +82,9 @@ export async function PATCH(
     .input("eta",               sql.Date,     body.eta ? new Date(body.eta) : null)
     .input("transit_time",      sql.NVarChar, body.transit_time || null)
     .input("free_time",         sql.NVarChar, body.free_time || null)
-    .input("local_charges",     sql.NVarChar, body.local_charges
-      ? JSON.stringify({ ...body.local_charges, __freight_charge: body.freight_charge ?? null })
-      : (body.freight_charge ? JSON.stringify({ __freight_charge: body.freight_charge }) : null))
+    .input("local_charges",     sql.NVarChar, buildLocalBlob(body))
     .input("stuffing_type",     sql.NVarChar, body.stuffing_type || null)
-    .input("cc_charges",        sql.NVarChar, body.cc_charges ? JSON.stringify(body.cc_charges) : null)
+    .input("cc_charges",        sql.NVarChar, buildCcBlob(body))
     .input("transport_enabled", sql.Bit,      body.transport_enabled ? 1 : 0)
     .input("transport_cost",    sql.NVarChar, body.transport_cost ? JSON.stringify(body.transport_cost) : null)
     .input("total_inr",         sql.Decimal,  body.total_inr ?? null)

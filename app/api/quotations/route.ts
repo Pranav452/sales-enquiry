@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getAuthContext } from "@/lib/api-auth"
 import { getPool, sql } from "@/lib/mssql/client"
 import { generateQuotRefNo } from "@/lib/mssql/quot-ref"
+import { buildLocalBlob, buildCcBlob } from "@/lib/quotation-charges"
 
 // ─── GET — list quotations ────────────────────────────────────
 
@@ -69,11 +70,9 @@ export async function POST(req: NextRequest) {
     .input("eta",               sql.Date,     body.eta ? new Date(body.eta) : null)
     .input("transit_time",      sql.NVarChar, body.transit_time || null)
     .input("free_time",         sql.NVarChar, body.free_time || null)
-    .input("local_charges",     sql.NVarChar, body.local_charges
-      ? JSON.stringify({ ...body.local_charges, __freight_charge: body.freight_charge ?? null })
-      : (body.freight_charge ? JSON.stringify({ __freight_charge: body.freight_charge }) : null))
+    .input("local_charges",     sql.NVarChar, buildLocalBlob(body))
     .input("stuffing_type",     sql.NVarChar, body.stuffing_type || null)
-    .input("cc_charges",        sql.NVarChar, body.cc_charges ? JSON.stringify(body.cc_charges) : null)
+    .input("cc_charges",        sql.NVarChar, buildCcBlob(body))
     .input("transport_enabled", sql.Bit,      body.transport_enabled ? 1 : 0)
     .input("transport_cost",    sql.NVarChar, body.transport_cost ? JSON.stringify(body.transport_cost) : null)
     .input("total_inr",         sql.Decimal,  body.total_inr ?? null)

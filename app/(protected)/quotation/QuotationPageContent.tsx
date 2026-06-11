@@ -17,6 +17,7 @@ export function QuotationPageContent({ company }: Props) {
 
   const [editing, setEditing] = useState<QuotationEditing | null>(null)
   const [loading, setLoading] = useState(false)
+  const [loadFailed, setLoadFailed] = useState(false)
 
   // Load for edit or dup
   useEffect(() => {
@@ -57,10 +58,13 @@ export function QuotationPageContent({ company }: Props) {
           branch: data.BRANCH ?? null,
           enq_id: data.ENQ_ID ? String(data.ENQ_ID) : null,
           exchange_rate: data.EXCHANGE_RATE ?? null,
+          extra_freight: data.extra_freight ?? [],
+          extra_local: data.extra_local ?? [],
+          extra_cc: data.extra_cc ?? [],
         }
         setEditing(q)
       })
-      .catch(console.error)
+      .catch((e) => { console.error(e); setLoadFailed(true) })
       .finally(() => setLoading(false))
   }, [editId, dupId])
 
@@ -77,10 +81,14 @@ export function QuotationPageContent({ company }: Props) {
         <p className="text-sm text-muted-foreground">Fill in details and generate a PDF quotation</p>
       </div>
 
-      {loading ? (
+      {/* Wait for the fetch before mounting the form so it lazy-inits
+          with the editing data — Radix Selects don't reliably reflect a
+          value applied async after an empty mount. */}
+      {loading || ((editId || dupId) && !editing && !loadFailed) ? (
         <p className="text-sm text-muted-foreground py-8 text-center">Loading...</p>
       ) : (
         <QuotationForm
+          key={editId ?? dupId ?? "new"}
           company={company}
           editingQuotation={editing}
           prefilledEnqId={enqId}

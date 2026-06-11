@@ -23,7 +23,7 @@ import {
   PORT_CITIES,
   expandPortCity,
 } from "@/lib/constants/dropdowns"
-import { RotateCcw, FileDown, Save } from "lucide-react"
+import { RotateCcw, FileDown, Save, Plus, X } from "lucide-react"
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -33,8 +33,20 @@ interface ChargeField {
   remarks: string
 }
 
+// User-added custom line item — has its own editable label
+interface ExtraCharge {
+  label: string
+  amount: string
+  currency: string
+  remarks: string
+}
+
 function emptyCharge(currency = "USD"): ChargeField {
   return { amount: "", currency, remarks: "" }
+}
+
+function emptyExtra(currency = "INR"): ExtraCharge {
+  return { label: "", amount: "", currency, remarks: "" }
 }
 
 interface LocalCharges {
@@ -80,6 +92,9 @@ interface FormData {
   shipper: string
   shipment_type: "freight" | "custom_clearance" | "both" | ""
   freight_charge: ChargeField
+  extra_freight: ExtraCharge[]
+  extra_local: ExtraCharge[]
+  extra_cc: ExtraCharge[]
   vessel_name: string
   etd: string
   eta: string
@@ -145,6 +160,9 @@ function getDefaultForm(): FormData {
     shipper: "",
     shipment_type: "",
     freight_charge: emptyCharge(),
+    extra_freight: [],
+    extra_local: [],
+    extra_cc: [],
     vessel_name: "",
     etd: "",
     eta: "",
@@ -159,6 +177,45 @@ function getDefaultForm(): FormData {
     clauses: DEFAULT_CLAUSES,
     sales_person: "",
     branch: "",
+  }
+}
+
+// Build form state from a quotation being edited/duplicated. Used both
+// as the lazy initial state (so Radix Selects mount with the correct
+// value — they don't reliably reflect a value applied async after an
+// empty mount) and in the effect for later prop changes.
+function formFromQuotation(q: QuotationEditing): FormData {
+  const stuffType = (q.stuffing_type ?? "") as "doc" | "factory" | ""
+  return {
+    quot_date: normDate(q.quot_date) || new Date().toISOString().split("T")[0],
+    mode: q.mode ?? "",
+    exim: q.exim ?? "",
+    fn: q.fn ?? "",
+    enq_type: q.enq_type ?? "",
+    incoterms: q.incoterms ?? "",
+    pol: q.pol ?? "",
+    pod: q.pod ?? "",
+    container_type: q.container_type ?? "",
+    shipper: q.shipper ?? "",
+    shipment_type: (q.shipment_type as FormData["shipment_type"]) ?? "",
+    freight_charge: q.freight_charge ?? emptyCharge(),
+    extra_freight: q.extra_freight ?? [],
+    extra_local: q.extra_local ?? [],
+    extra_cc: q.extra_cc ?? [],
+    vessel_name: q.vessel_name ?? "",
+    etd: normDate(q.etd),
+    eta: normDate(q.eta),
+    transit_time: q.transit_time ?? "",
+    free_time: q.free_time ?? "",
+    local_charges: q.local_charges ?? defaultLocalCharges(),
+    stuffing_type: stuffType,
+    doc_charges: (stuffType === "doc" ? (q.cc_charges as DocCharges) : null) ?? defaultDocCharges(),
+    factory_charges: (stuffType === "factory" ? (q.cc_charges as FactoryCharges) : null) ?? defaultFactoryCharges(),
+    transport_enabled: q.transport_enabled ?? false,
+    transport_cost: q.transport_cost ?? { amount: "", currency: "INR", description: "" },
+    clauses: q.clauses ?? DEFAULT_CLAUSES,
+    sales_person: q.sales_person ?? "",
+    branch: q.branch ?? "",
   }
 }
 
@@ -192,6 +249,9 @@ export interface QuotationEditing {
   branch: string | null
   enq_id: string | null
   exchange_rate?: number | null
+  extra_freight?: ExtraCharge[] | null
+  extra_local?: ExtraCharge[] | null
+  extra_cc?: ExtraCharge[] | null
 }
 
 interface Props {
@@ -328,6 +388,59 @@ function ChargeRow({
   )
 }
 
+// Editable custom row: label is typed by the user, plus amount/currency/remarks
+function ExtraChargeRow({
+  field,
+  onChange,
+  onRemove,
+  currencyList,
+}: {
+  field: ExtraCharge
+  onChange: (f: ExtraCharge) => void
+  onRemove: () => void
+  currencyList: string[]
+}) {
+  return (
+    <div className="grid grid-cols-[minmax(140px,1fr)_120px_96px_minmax(120px,1fr)_auto] items-center gap-2">
+      <Input
+        value={field.label}
+        onChange={(e) => onChange({ ...field, label: e.target.value })}
+        placeholder="Charge name"
+        className="text-sm"
+      />
+      <Input
+        type="number"
+        min="0"
+        step="0.01"
+        value={field.amount}
+        onChange={(e) => onChange({ ...field, amount: e.target.value })}
+        placeholder="0.00"
+        className="text-right"
+      />
+      <CurrencySelect
+        value={field.currency}
+        onChange={(v) => onChange({ ...field, currency: v })}
+        currencyList={currencyList}
+      />
+      <Input
+        value={field.remarks}
+        onChange={(e) => onChange({ ...field, remarks: e.target.value })}
+        placeholder="Remarks"
+        className="text-sm"
+      />
+      <button
+        type="button"
+        onClick={onRemove}
+        className="text-muted-foreground hover:text-destructive transition-colors p-1"
+        title="Remove row"
+        aria-label="Remove row"
+      >
+        <X className="h-4 w-4" />
+      </button>
+    </div>
+  )
+}
+
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
     <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground border-b border-border pb-1 mb-3 mt-6">
@@ -341,11 +454,16 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
 export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuccess }: Props) {
   const router = useRouter()
   const exchange = useExchangeRate()
-  const [form, setForm] = useState<FormData>(getDefaultForm())
+  // Lazy-init from editing data so controlled Radix Selects mount with
+  // the correct value (a value applied async after an empty mount is
+  // not reliably reflected by the Select trigger under React 19).
+  const [form, setForm] = useState<FormData>(
+    () => editingQuotation ? formFromQuotation(editingQuotation) : getDefaultForm()
+  )
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
   const [saved, setSaved] = useState(false)
-  const [editId, setEditId] = useState<string | null>(null)
+  const [editId, setEditId] = useState<string | null>(editingQuotation?.id ?? null)
 
   const salesPersons = company === "links" ? LINKS_SALES_PERSONS : MANILAL_SALES_PERSONS
   const portOptions = PORT_CITIES.map(expandPortCity)
@@ -353,8 +471,10 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
   // ─── Exchange rate source + manual override ────────────────
   type RateSource = "live" | "dgft_import" | "dgft_export"
   const [rateSource, setRateSource]   = useState<RateSource>("live")
-  const [rateInput, setRateInput]     = useState("")
-  const [rateTouched, setRateTouched] = useState(false)
+  const [rateInput, setRateInput]     = useState(
+    () => editingQuotation?.exchange_rate ? String(editingQuotation.exchange_rate) : ""
+  )
+  const [rateTouched, setRateTouched] = useState(() => !!editingQuotation?.exchange_rate)
 
   const dgftUsd = exchange.dgft?.["USD"]
   const sourceUsdInr =
@@ -389,46 +509,15 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
     return base
   }, [exchange.rates, exchange.dgft, rateSource, usdInr])
 
-  // Populate from editing quotation
+  // Re-sync when the editing prop changes after mount (e.g. navigating
+  // between quotations without a remount). Initial mount is already
+  // handled by the lazy initializers above.
   useEffect(() => {
     if (!editingQuotation) return
     setEditId(editingQuotation.id)
-
-    const q = editingQuotation
-    const stuffType = (q.stuffing_type ?? "") as "doc" | "factory" | ""
-
-    setForm({
-      quot_date: normDate(q.quot_date) || new Date().toISOString().split("T")[0],
-      mode: q.mode ?? "",
-      exim: q.exim ?? "",
-      fn: q.fn ?? "",
-      enq_type: q.enq_type ?? "",
-      incoterms: q.incoterms ?? "",
-      pol: q.pol ?? "",
-      pod: q.pod ?? "",
-      container_type: q.container_type ?? "",
-      shipper: q.shipper ?? "",
-      shipment_type: (q.shipment_type as FormData["shipment_type"]) ?? "",
-      freight_charge: q.freight_charge ?? emptyCharge(),
-      vessel_name: q.vessel_name ?? "",
-      etd: normDate(q.etd),
-      eta: normDate(q.eta),
-      transit_time: q.transit_time ?? "",
-      free_time: q.free_time ?? "",
-      local_charges: q.local_charges ?? defaultLocalCharges(),
-      stuffing_type: stuffType,
-      doc_charges: (stuffType === "doc" ? (q.cc_charges as DocCharges) : null) ?? defaultDocCharges(),
-      factory_charges: (stuffType === "factory" ? (q.cc_charges as FactoryCharges) : null) ?? defaultFactoryCharges(),
-      transport_enabled: q.transport_enabled ?? false,
-      transport_cost: q.transport_cost ?? { amount: "", currency: "INR", description: "" },
-      clauses: q.clauses ?? DEFAULT_CLAUSES,
-      sales_person: q.sales_person ?? "",
-      branch: q.branch ?? "",
-    })
-
-    // Restore the rate the quotation was saved with
-    if (q.exchange_rate && q.exchange_rate > 0) {
-      setRateInput(String(q.exchange_rate))
+    setForm(formFromQuotation(editingQuotation))
+    if (editingQuotation.exchange_rate && editingQuotation.exchange_rate > 0) {
+      setRateInput(String(editingQuotation.exchange_rate))
       setRateTouched(true)
     }
   }, [editingQuotation])
@@ -449,6 +538,18 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
     setForm((f) => ({ ...f, factory_charges: { ...f.factory_charges, [key]: value } }))
   }
 
+  // Custom extra-row helpers (add / update / remove) for each section
+  type ExtraKey = "extra_freight" | "extra_local" | "extra_cc"
+  function addExtra(key: ExtraKey) {
+    setForm((f) => ({ ...f, [key]: [...f[key], emptyExtra()] }))
+  }
+  function updateExtra(key: ExtraKey, idx: number, value: ExtraCharge) {
+    setForm((f) => ({ ...f, [key]: f[key].map((r, i) => (i === idx ? value : r)) }))
+  }
+  function removeExtra(key: ExtraKey, idx: number) {
+    setForm((f) => ({ ...f, [key]: f[key].filter((_, i) => i !== idx) }))
+  }
+
   const showFreight = form.shipment_type === "freight" || form.shipment_type === "both"
   const showCC = form.shipment_type === "custom_clearance" || form.shipment_type === "both"
 
@@ -467,6 +568,8 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
       sum += toInr(lc.muc.amount, lc.muc.currency, r)
       sum += toInr(lc.toll.amount, lc.toll.currency, r)
       sum += toInr(lc.bl_surrendered.amount, lc.bl_surrendered.currency, r)
+      form.extra_freight.forEach((x) => { sum += toInr(x.amount, x.currency, r) })
+      form.extra_local.forEach((x) => { sum += toInr(x.amount, x.currency, r) })
     }
 
     if (showCC) {
@@ -484,6 +587,7 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
         const fc = form.factory_charges
         sum += toInr(fc.customs_clearance.amount, fc.customs_clearance.currency, r)
       }
+      form.extra_cc.forEach((x) => { sum += toInr(x.amount, x.currency, r) })
     }
 
     if (form.transport_enabled) {
@@ -519,6 +623,9 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
       shipper: form.shipper,
       shipment_type: form.shipment_type,
       freight_charge: showFreight ? form.freight_charge : null,
+      extra_freight: showFreight ? form.extra_freight : [],
+      extra_local: showFreight ? form.extra_local : [],
+      extra_cc: showCC ? form.extra_cc : [],
       vessel_name: showFreight ? form.vessel_name : null,
       etd: showFreight && form.etd ? form.etd : null,
       eta: showFreight && form.eta ? form.eta : null,
@@ -684,7 +791,12 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
       autoTable(doc, {
         startY: y,
         head: [["Charge", "Amount", "Currency", "Remarks"]],
-        body: [["Freight", form.freight_charge.amount || "-", form.freight_charge.currency, form.freight_charge.remarks || ""]],
+        body: [
+          ["Freight", form.freight_charge.amount || "-", form.freight_charge.currency, form.freight_charge.remarks || ""],
+          ...form.extra_freight
+            .filter((x) => x.label || x.amount)
+            .map((x): [string, string, string, string] => [x.label || "-", x.amount || "-", x.currency, x.remarks || ""]),
+        ],
         theme: "grid",
         headStyles: { fillColor: [30, 64, 175], fontSize: 9 },
         bodyStyles: { fontSize: 9 },
@@ -706,6 +818,9 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
         ["MUC", form.local_charges.muc.amount || "-", form.local_charges.muc.currency, form.local_charges.muc.remarks || ""],
         ["Toll", form.local_charges.toll.amount || "-", form.local_charges.toll.currency, form.local_charges.toll.remarks || ""],
         ["BL Surrendered / Seaway Bill", form.local_charges.bl_surrendered.amount || "-", form.local_charges.bl_surrendered.currency, form.local_charges.bl_surrendered.remarks || ""],
+        ...form.extra_local
+          .filter((x) => x.label || x.amount)
+          .map((x): [string, string, string, string] => [x.label || "-", x.amount || "-", x.currency, x.remarks || ""]),
       ]
 
       autoTable(doc, {
@@ -748,6 +863,13 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
           ["Customs Clearance Charges", fc.customs_clearance.amount || "-", fc.customs_clearance.currency, fc.customs_clearance.remarks || ""],
         ]
       }
+
+      ccRows = [
+        ...ccRows,
+        ...form.extra_cc
+          .filter((x) => x.label || x.amount)
+          .map((x): [string, string, string, string] => [x.label || "-", x.amount || "-", x.currency, x.remarks || ""]),
+      ]
 
       autoTable(doc, {
         startY: y,
@@ -1036,6 +1158,26 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
               onChange={(f) => set("freight_charge", f)}
               currencyList={currencyList}
             />
+            {form.extra_freight.length > 0 && (
+              <div className="space-y-2 mt-2">
+                {form.extra_freight.map((row, i) => (
+                  <ExtraChargeRow
+                    key={i}
+                    field={row}
+                    onChange={(f) => updateExtra("extra_freight", i, f)}
+                    onRemove={() => removeExtra("extra_freight", i)}
+                    currencyList={currencyList}
+                  />
+                ))}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => addExtra("extra_freight")}
+              className="mt-2 flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline"
+            >
+              <Plus className="h-3.5 w-3.5" /> Add charge
+            </button>
           </div>
         )}
       </div>
@@ -1085,7 +1227,23 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
             <ChargeRow label="MUC" field={form.local_charges.muc} onChange={(f) => setLocalCharge("muc", f)} currencyList={currencyList} />
             <ChargeRow label="Toll" field={form.local_charges.toll} onChange={(f) => setLocalCharge("toll", f)} currencyList={currencyList} />
             <ChargeRow label="BL Surrendered / Seaway Bill" field={form.local_charges.bl_surrendered} onChange={(f) => setLocalCharge("bl_surrendered", f)} currencyList={currencyList} />
+            {form.extra_local.map((row, i) => (
+              <ExtraChargeRow
+                key={i}
+                field={row}
+                onChange={(f) => updateExtra("extra_local", i, f)}
+                onRemove={() => removeExtra("extra_local", i)}
+                currencyList={currencyList}
+              />
+            ))}
           </div>
+          <button
+            type="button"
+            onClick={() => addExtra("extra_local")}
+            className="mt-2 flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline"
+          >
+            <Plus className="h-3.5 w-3.5" /> Add charge
+          </button>
         </div>
       )}
 
@@ -1138,6 +1296,31 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
             <div className="space-y-2">
               <ChargeRow label="Customs Clearance Charges" field={form.factory_charges.customs_clearance} onChange={(f) => setFactoryCharge("customs_clearance", f)} currencyList={currencyList} />
             </div>
+          )}
+
+          {(form.stuffing_type === "doc" || form.stuffing_type === "factory") && (
+            <>
+              {form.extra_cc.length > 0 && (
+                <div className="space-y-2 mt-2">
+                  {form.extra_cc.map((row, i) => (
+                    <ExtraChargeRow
+                      key={i}
+                      field={row}
+                      onChange={(f) => updateExtra("extra_cc", i, f)}
+                      onRemove={() => removeExtra("extra_cc", i)}
+                      currencyList={currencyList}
+                    />
+                  ))}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => addExtra("extra_cc")}
+                className="mt-2 flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline"
+              >
+                <Plus className="h-3.5 w-3.5" /> Add charge
+              </button>
+            </>
           )}
         </div>
       )}
