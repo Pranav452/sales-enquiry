@@ -25,6 +25,7 @@ import {
   ScrollText,
   TrendingUp,
   Settings2,
+  Target,
   X,
   FileText,
 } from "lucide-react"
@@ -399,6 +400,7 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
     { label: "New Enquiry",       href: "/enquiry",                icon: ClipboardList },
     { label: "Recent Enquiries",  href: "/enquiries",              icon: List },
     { label: "Activity Tracker",  href: "/activities",             icon: Phone },
+    { label: "Sales Leads",       href: "/sales-leads",            icon: Target },
     { label: "Contacts",          href: "/contacts",               icon: BookUser },
     { label: "Export",            href: "/export",                 icon: FileDown },
     { label: "Rate Explorer",     href: "/rates",                  icon: TrendingUp },
@@ -408,6 +410,7 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
       ? [
           { label: "Dashboard",          href: "/dashboard",           icon: LayoutDashboard },
           { label: "Activity Dashboard", href: "/activities/dashboard", icon: BarChart2 },
+          { label: "Lead Dashboard",     href: "/sales-leads/dashboard", icon: BarChart2 },
           { label: "Audit Log",          href: "/audit",               icon: ScrollText },
           { label: "Manage Rates",       href: "/rates/manage",        icon: Settings2 },
         ]
@@ -549,7 +552,9 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
                     ? pathname === "/rates"
                     : href === "/activities"
                       ? pathname === "/activities"
-                      : pathname.startsWith(href)
+                      : href === "/sales-leads"
+                        ? pathname === "/sales-leads"
+                        : pathname.startsWith(href)
 
             return (
               <Link
