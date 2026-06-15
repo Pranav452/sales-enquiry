@@ -9,25 +9,37 @@ import { cn } from "@/lib/utils"
 import { LEAD_STATUSES, LEAD_STATUS_MAP } from "@/lib/constants/sales-leads"
 
 export interface SalesLead {
-  id:              string
-  ref_code:        string
-  sent_by:         string | null
-  date_sent:       string | null
-  shipper:         string | null
-  shipper_website: string | null
-  city:            string | null
-  consignee:       string | null
-  dest_country:    string | null
-  agent_name:      string | null
-  agent_email:     string | null
-  status:          string | null
-  remarks:         string | null
-  remarks_2:       string | null
-  last_follow_up:  string | null
-  notes:           string | null
-  contact_id:      string | null
-  created_by:      string | null
-  created_at:      string | null
+  id:                    string
+  ref_code:              string
+  sent_by:               string | null
+  date_sent:             string | null
+  shipper:               string | null
+  shipper_website:       string | null
+  city:                  string | null
+  consignee:             string | null
+  dest_country:          string | null
+  agent_name:            string | null
+  agent_email:           string | null
+  status:                string | null
+  remarks:               string | null
+  remarks_2:             string | null
+  last_follow_up:        string | null
+  notes:                 string | null
+  contact_id:            string | null
+  created_by:            string | null
+  created_at:            string | null
+  shipper_address?:      string | null
+  consignee_address?:    string | null
+  consignee_website?:    string | null
+  mode_of_transport?:    string | null
+  origin_port?:          string | null
+  dest_port?:            string | null
+  commodity?:            string | null
+  hs_code?:              string | null
+  special_requirements?: string | null
+  rate_fcl?:             string | null
+  rate_lcl?:             string | null
+  rate_validity?:        string | null
 }
 
 const PAGE_SIZE = 20

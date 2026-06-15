@@ -22,7 +22,19 @@ const SELECT_COLS = `
   NOTES                   AS notes,
   CAST(CONTACT_ID AS varchar(20)) AS contact_id,
   CREATED_BY              AS created_by,
-  CONVERT(varchar(10), CREATED_AT, 120) AS created_at
+  CONVERT(varchar(10), CREATED_AT, 120) AS created_at,
+  SHIPPER_ADDRESS         AS shipper_address,
+  CONSIGNEE_ADDRESS       AS consignee_address,
+  CONSIGNEE_WEBSITE       AS consignee_website,
+  MODE_OF_TRANSPORT       AS mode_of_transport,
+  ORIGIN_PORT             AS origin_port,
+  DEST_PORT               AS dest_port,
+  COMMODITY               AS commodity,
+  HS_CODE                 AS hs_code,
+  SPECIAL_REQUIREMENTS    AS special_requirements,
+  RATE_FCL                AS rate_fcl,
+  RATE_LCL                AS rate_lcl,
+  RATE_VALIDITY           AS rate_validity
 `
 
 // ─── GET /api/sales-leads ─────────────────────────────────────
@@ -96,28 +108,44 @@ export async function POST(req: NextRequest) {
 
       try {
         const result = await pool.request()
-          .input("ref",            refCode)
-          .input("sent_by",        trunc(body.sent_by, 50))
-          .input("date_sent",      trunc(body.date_sent, 10))
-          .input("shipper",        trunc(body.shipper, 255))
-          .input("website",        trunc(body.shipper_website, 500))
-          .input("city",           trunc(body.city, 255))
-          .input("consignee",      trunc(body.consignee, 255))
-          .input("country",        trunc(body.dest_country, 150))
-          .input("agent_name",     trunc(body.agent_name, 255))
-          .input("agent_email",    trunc(body.agent_email, 500))
-          .input("status",         body.status || null)
-          .input("remarks",        trunc(body.remarks, 2000))
-          .input("remarks_2",      trunc(body.remarks_2, 2000))
-          .input("last_follow_up", trunc(body.last_follow_up, 10))
-          .input("notes",          trunc(body.notes, 2000))
-          .input("created_by",     auth.userId)
-          .input("now",            now)
+          .input("ref",                 refCode)
+          .input("sent_by",             trunc(body.sent_by, 50))
+          .input("date_sent",           trunc(body.date_sent, 10))
+          .input("shipper",             trunc(body.shipper, 255))
+          .input("website",             trunc(body.shipper_website, 500))
+          .input("city",                trunc(body.city, 255))
+          .input("consignee",           trunc(body.consignee, 255))
+          .input("country",             trunc(body.dest_country, 150))
+          .input("agent_name",          trunc(body.agent_name, 255))
+          .input("agent_email",         trunc(body.agent_email, 500))
+          .input("status",              body.status || null)
+          .input("remarks",             trunc(body.remarks, 2000))
+          .input("remarks_2",           trunc(body.remarks_2, 2000))
+          .input("last_follow_up",      trunc(body.last_follow_up, 10))
+          .input("notes",               trunc(body.notes, 2000))
+          .input("shipper_address",     trunc(body.shipper_address, 1000))
+          .input("consignee_address",   trunc(body.consignee_address, 1000))
+          .input("consignee_website",   trunc(body.consignee_website, 500))
+          .input("mode_of_transport",   trunc(body.mode_of_transport, 100))
+          .input("origin_port",         trunc(body.origin_port, 255))
+          .input("dest_port",           trunc(body.dest_port, 255))
+          .input("commodity",           trunc(body.commodity, 2000))
+          .input("hs_code",             trunc(body.hs_code, 100))
+          .input("special_requirements",trunc(body.special_requirements, 2000))
+          .input("rate_fcl",            trunc(body.rate_fcl, 500))
+          .input("rate_lcl",            trunc(body.rate_lcl, 500))
+          .input("rate_validity",       trunc(body.rate_validity, 255))
+          .input("created_by",          auth.userId)
+          .input("now",                 now)
           .query<{ ID: number }>(`
             INSERT INTO [dbo].[TBL_SALES_LEADS] (
               REF_CODE, SENT_BY, DATE_SENT, SHIPPER, SHIPPER_WEBSITE, CITY,
               CONSIGNEE, DEST_COUNTRY, AGENT_NAME, AGENT_EMAIL, STATUS,
               REMARKS, REMARKS_2, LAST_FOLLOW_UP, NOTES,
+              SHIPPER_ADDRESS, CONSIGNEE_ADDRESS, CONSIGNEE_WEBSITE,
+              MODE_OF_TRANSPORT, ORIGIN_PORT, DEST_PORT,
+              COMMODITY, HS_CODE, SPECIAL_REQUIREMENTS,
+              RATE_FCL, RATE_LCL, RATE_VALIDITY,
               CREATED_BY, CREATED_AT, UPDATED_AT
             )
             OUTPUT inserted.ID
@@ -125,6 +153,10 @@ export async function POST(req: NextRequest) {
               @ref, @sent_by, @date_sent, @shipper, @website, @city,
               @consignee, @country, @agent_name, @agent_email, @status,
               @remarks, @remarks_2, @last_follow_up, @notes,
+              @shipper_address, @consignee_address, @consignee_website,
+              @mode_of_transport, @origin_port, @dest_port,
+              @commodity, @hs_code, @special_requirements,
+              @rate_fcl, @rate_lcl, @rate_validity,
               @created_by, @now, @now
             )
           `)
@@ -158,18 +190,30 @@ function trunc(val: string | null | undefined, max: number): string | null {
 }
 
 interface LeadPayload {
-  sent_by?:         string | null
-  date_sent?:       string | null
-  shipper?:         string | null
-  shipper_website?: string | null
-  city?:            string | null
-  consignee?:       string | null
-  dest_country?:    string | null
-  agent_name?:      string | null
-  agent_email?:     string | null
-  status?:          string | null
-  remarks?:         string | null
-  remarks_2?:       string | null
-  last_follow_up?:  string | null
-  notes?:           string | null
+  sent_by?:              string | null
+  date_sent?:            string | null
+  shipper?:              string | null
+  shipper_website?:      string | null
+  city?:                 string | null
+  consignee?:            string | null
+  dest_country?:         string | null
+  agent_name?:           string | null
+  agent_email?:          string | null
+  status?:               string | null
+  remarks?:              string | null
+  remarks_2?:            string | null
+  last_follow_up?:       string | null
+  notes?:                string | null
+  shipper_address?:      string | null
+  consignee_address?:    string | null
+  consignee_website?:    string | null
+  mode_of_transport?:    string | null
+  origin_port?:          string | null
+  dest_port?:            string | null
+  commodity?:            string | null
+  hs_code?:              string | null
+  special_requirements?: string | null
+  rate_fcl?:             string | null
+  rate_lcl?:             string | null
+  rate_validity?:        string | null
 }

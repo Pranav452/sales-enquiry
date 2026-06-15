@@ -109,6 +109,8 @@ interface FormData {
   clauses: string
   sales_person: string
   branch: string
+  freight_validity: string
+  freight_validity_date: string
 }
 
 const DEFAULT_CLAUSES = `Note: Rates are subject to inventory / Space / Vessel availability
@@ -177,6 +179,8 @@ function getDefaultForm(): FormData {
     clauses: DEFAULT_CLAUSES,
     sales_person: "",
     branch: "",
+    freight_validity: "",
+    freight_validity_date: "",
   }
 }
 
@@ -216,6 +220,8 @@ function formFromQuotation(q: QuotationEditing): FormData {
     clauses: q.clauses ?? DEFAULT_CLAUSES,
     sales_person: q.sales_person ?? "",
     branch: q.branch ?? "",
+    freight_validity: q.freight_validity ?? "",
+    freight_validity_date: q.freight_validity_date ?? "",
   }
 }
 
@@ -252,6 +258,8 @@ export interface QuotationEditing {
   extra_freight?: ExtraCharge[] | null
   extra_local?: ExtraCharge[] | null
   extra_cc?: ExtraCharge[] | null
+  freight_validity?: string | null
+  freight_validity_date?: string | null
 }
 
 interface Props {
@@ -326,6 +334,14 @@ function toInr(amount: string, currency: string, rates: Record<string, number>):
   const inrRate = rates["inr"] ?? 84
   const curRate = rates[cur] ?? 1
   return n * (inrRate / curRate)
+}
+
+function fromInr(inrAmount: number, currency: string, rates: Record<string, number>): number {
+  const cur = currency.toLowerCase()
+  if (cur === "inr") return inrAmount
+  const inrRate = rates["inr"] ?? 84
+  const curRate = rates[cur] ?? 1
+  return inrAmount * (curRate / inrRate)
 }
 
 // ─── Sub-components ───────────────────────────────────────────
@@ -463,6 +479,7 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
   const [saved, setSaved] = useState(false)
+  const [displayCurrency, setDisplayCurrency] = useState("INR")
   const [editId, setEditId] = useState<string | null>(editingQuotation?.id ?? null)
 
   const salesPersons = company === "links" ? LINKS_SALES_PERSONS : MANILAL_SALES_PERSONS
@@ -642,6 +659,8 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
       sales_person: form.sales_person,
       branch: form.branch,
       enq_id: prefilledEnqId ?? null,
+      freight_validity: showFreight ? form.freight_validity : null,
+      freight_validity_date: showFreight && form.freight_validity_date ? form.freight_validity_date : null,
     }
 
     try {
@@ -804,6 +823,18 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
         margin: { left: margin, right: margin },
       })
       y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6
+
+      if (form.freight_validity || form.freight_validity_date) {
+        const validityParts = []
+        if (form.freight_validity) validityParts.push(`Validity: ${form.freight_validity}`)
+        if (form.freight_validity_date) validityParts.push(`Valid Until: ${form.freight_validity_date}`)
+        doc.setFontSize(8)
+        doc.setFont("helvetica", "normal")
+        doc.setTextColor(80)
+        doc.text(validityParts.join("  ·  "), margin, y)
+        doc.setTextColor(0)
+        y += 5
+      }
 
       // Local charges
       doc.setFontSize(10)
@@ -1178,6 +1209,26 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
             >
               <Plus className="h-3.5 w-3.5" /> Add charge
             </button>
+            <div className="mt-4 flex flex-wrap items-end gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Validity</Label>
+                <Input
+                  value={form.freight_validity}
+                  onChange={(e) => set("freight_validity", e.target.value)}
+                  placeholder="e.g. 30 days"
+                  className="h-9 w-40 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Valid Until</Label>
+                <Input
+                  type="date"
+                  value={form.freight_validity_date}
+                  onChange={(e) => set("freight_validity_date", e.target.value)}
+                  className="h-9 text-sm"
+                />
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -1375,12 +1426,31 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
       {total > 0 && (
         <div className="rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-900 p-4">
           <SectionHeader>Total Cost</SectionHeader>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">
-              Exchange rate: 1 USD = {usdInr.toFixed(2)} INR
-            </span>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col gap-1">
+              <span className="text-sm text-muted-foreground">
+                Exchange rate: 1 USD = {usdInr.toFixed(2)} INR
+              </span>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>Display in</span>
+                <select
+                  value={displayCurrency}
+                  onChange={(e) => setDisplayCurrency(e.target.value)}
+                  className="h-7 rounded-md border border-input bg-white text-slate-800 dark:bg-slate-800 dark:text-slate-100 px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  <option value="INR">INR</option>
+                  {currencyList.filter((c) => c !== "INR").map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
             <span className="text-2xl font-bold text-blue-700 dark:text-blue-400">
-              INR {total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {displayCurrency}{" "}
+              {fromInr(total, displayCurrency, effectiveRates).toLocaleString("en-IN", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
             </span>
           </div>
         </div>

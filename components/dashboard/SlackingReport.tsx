@@ -43,10 +43,20 @@ export function SlackingReport() {
   const [items, setItems] = useState<OverdueItem[]>([])
   const [loading, setLoading] = useState(true)
   const [threshold, setThreshold] = useState(3)
+  const [autoLostCount, setAutoLostCount] = useState(0)
 
   useEffect(() => {
     async function load() {
       setLoading(true)
+      setAutoLostCount(0)
+
+      try {
+        const alRes = await fetch("/api/dashboard/auto-lose", { method: "POST" })
+        if (alRes.ok) {
+          const alData = await alRes.json()
+          if (alData.count > 0) setAutoLostCount(alData.count)
+        }
+      } catch { /* silent */ }
 
       const params = new URLSearchParams({ type: "slacking", threshold: String(threshold) })
       const res = await fetch(`/api/dashboard?${params}`)
@@ -123,6 +133,11 @@ export function SlackingReport() {
                   </>
               }
             </CardDescription>
+            {autoLostCount > 0 && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                {autoLostCount} enquir{autoLostCount === 1 ? "y" : "ies"} with 30+ days no response auto-marked as Lost.
+              </p>
+            )}
           </div>
 
           <div className="flex items-center gap-3 flex-shrink-0 flex-wrap">
