@@ -4,9 +4,10 @@ import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Pencil, ChevronDown, ChevronUp, ExternalLink, UserPlus, UserCheck } from "lucide-react"
+import { Pencil, ChevronDown, ChevronUp, ExternalLink, UserPlus, UserCheck, FileDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { LEAD_STATUSES, LEAD_STATUS_MAP } from "@/lib/constants/sales-leads"
+import { generateSalesLeadPdf } from "@/lib/sales-lead-pdf"
 
 export interface SalesLead {
   id:                    string
@@ -91,6 +92,16 @@ function LeadRow({ r, onEdit, onConvert, converting }: {
   converting?: boolean
 }) {
   const [expanded, setExpanded] = useState(false)
+  const [downloading, setDownloading] = useState(false)
+
+  async function handleDownload() {
+    setDownloading(true)
+    try {
+      await generateSalesLeadPdf(r)
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   const remarksAll = [r.remarks, r.remarks_2, r.notes].filter((v) => v?.trim()).join(" · ")
   const remarksShort = remarksAll.length > 110 ? remarksAll.slice(0, 110) + "…" : remarksAll
@@ -127,6 +138,15 @@ function LeadRow({ r, onEdit, onConvert, converting }: {
               <UserPlus className="h-3.5 w-3.5" />
             </button>
           )}
+          <button
+            type="button"
+            title="Download PDF"
+            disabled={downloading}
+            onClick={handleDownload}
+            className="h-7 w-7 flex items-center justify-center rounded-md border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors disabled:opacity-50"
+          >
+            <FileDown className="h-3.5 w-3.5" />
+          </button>
         </div>
 
         <div className="flex-1 min-w-0 space-y-1">
