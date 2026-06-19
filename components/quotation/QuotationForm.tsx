@@ -702,9 +702,19 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
     let y = 14
 
     // ── Logo ──────────────────────────────────────────────
+    // Fit the logo inside a max box preserving its native aspect ratio.
+    // The two source assets have different shapes (manilal logo.jpeg is
+    // ~square, the Links PDF is ~2:1), so a fixed 40x16 box stretched both.
+    const maxLogoW = 40
+    const maxLogoH = 16
+    // Width actually drawn — used to place the title clear of the logo.
+    // Defaults to maxLogoW so the title position is sane if the logo fails.
+    let drawnLogoW = maxLogoW
     try {
       const isLinks = company === "links"
       let logoDataUrl: string
+      let natW: number
+      let natH: number
 
       if (isLinks) {
         const pdfjsLib = await import("pdfjs-dist")
@@ -717,6 +727,8 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
         canvas.height = viewport.height
         await page.render({ canvas, canvasContext: canvas.getContext("2d")!, viewport }).promise
         logoDataUrl = canvas.toDataURL("image/png")
+        natW = canvas.width
+        natH = canvas.height
       } else {
         const blob = await fetch("/logo.jpeg").then((r) => r.blob())
         logoDataUrl = await new Promise<string>((resolve) => {
@@ -724,15 +736,30 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
           reader.onload = () => resolve(reader.result as string)
           reader.readAsDataURL(blob)
         })
+        const img = new Image()
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve()
+          img.onerror = reject
+          img.src = logoDataUrl
+        })
+        natW = img.naturalWidth || maxLogoW
+        natH = img.naturalHeight || maxLogoH
       }
 
-      doc.addImage(logoDataUrl, isLinks ? "PNG" : "JPEG", margin, y, 40, 16)
+      // Contain-fit: scale down to fit the box, keep aspect ratio.
+      const scale = Math.min(maxLogoW / natW, maxLogoH / natH)
+      const logoW = natW * scale
+      const logoH = natH * scale
+      drawnLogoW = logoW
+      doc.addImage(logoDataUrl, isLinks ? "PNG" : "JPEG", margin, y, logoW, logoH)
     } catch { /* logo load failed — continue without */ }
 
     // ── Header ────────────────────────────────────────────
+    // Place the title 4mm to the right of the actual logo width so it
+    // never overlaps, regardless of which company's logo was drawn.
     doc.setFontSize(16)
     doc.setFont("helvetica", "bold")
-    doc.text("FREIGHT QUOTATION", margin + 36, y + 10)
+    doc.text("FREIGHT QUOTATION", margin + drawnLogoW + 4, y + 10)
 
     doc.setFontSize(9)
     doc.setFont("helvetica", "normal")
