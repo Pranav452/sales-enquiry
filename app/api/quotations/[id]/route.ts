@@ -25,7 +25,8 @@ export async function GET(
         VESSEL_NAME, ETD, ETA, TRANSIT_TIME, FREE_TIME,
         LOCAL_CHARGES, STUFFING_TYPE, CC_CHARGES,
         TRANSPORT_ENABLED, TRANSPORT_COST,
-        TOTAL_INR, EXCHANGE_RATE, CLAUSES, ISNULL(STATUS, 'DRAFT') AS STATUS,
+        TOTAL_INR, EXCHANGE_RATE, TOTAL_DISPLAY, DISPLAY_CURRENCY,
+        CLAUSES, ISNULL(STATUS, 'DRAFT') AS STATUS,
         ENQ_ID, SALES_PERSON, BRANCH, CREATED_BY, CREATED_AT, UPDATED_AT
       FROM [dbo].[TBL_QUOTATIONS]
       WHERE QUOT_ID = @quot_id
@@ -92,6 +93,8 @@ export async function PATCH(
       .input("transport_cost",    sql.NVarChar, body.transport_cost ? JSON.stringify(body.transport_cost) : null)
       .input("total_inr",         sql.Decimal(18, 2), body.total_inr ?? null)
       .input("exchange_rate",     sql.Decimal(18, 6), body.exchange_rate ?? null)
+      .input("total_display",     sql.Decimal(18, 2), body.total_display ?? null)
+      .input("display_currency",  sql.NVarChar, body.display_currency || null)
       .input("clauses",           sql.NVarChar, body.clauses || null)
       .input("sales_person",      sql.NVarChar, body.sales_person || null)
       .input("branch",            sql.NVarChar, body.branch || null)
@@ -120,6 +123,8 @@ export async function PATCH(
           TRANSPORT_COST    = @transport_cost,
           TOTAL_INR         = @total_inr,
           EXCHANGE_RATE     = @exchange_rate,
+          TOTAL_DISPLAY     = @total_display,
+          DISPLAY_CURRENCY  = @display_currency,
           CLAUSES           = @clauses,
           SALES_PERSON      = @sales_person,
           BRANCH            = @branch,

@@ -29,6 +29,9 @@ CREATE TABLE [dbo].[TBL_QUOTATIONS] (
   -- Totals
   TOTAL_INR         DECIMAL(18,2),
   EXCHANGE_RATE     DECIMAL(18,6),
+  -- Display currency (what the list view and PDF show the total in)
+  DISPLAY_CURRENCY  NVARCHAR(10),
+  TOTAL_DISPLAY     DECIMAL(18,2),
   -- Clauses
   CLAUSES           NVARCHAR(MAX),
   -- Link to enquiry

@@ -19,6 +19,8 @@ interface Quotation {
   POD: string | null
   SHIPMENT_TYPE: string | null
   TOTAL_INR: number | null
+  TOTAL_DISPLAY: number | null
+  DISPLAY_CURRENCY: string | null
   SALES_PERSON: string | null
   BRANCH: string | null
   STATUS: string | null
@@ -118,7 +120,7 @@ export function QuotationList() {
                 <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground">POL</th>
                 <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground">POD</th>
                 <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground">Mode</th>
-                <th className="text-right px-3 py-2.5 font-semibold text-muted-foreground">Total (INR)</th>
+                <th className="text-right px-3 py-2.5 font-semibold text-muted-foreground">Total</th>
                 <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground">Sales</th>
                 <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground">Status</th>
                 <th className="px-3 py-2.5" />
@@ -151,10 +153,13 @@ export function QuotationList() {
                       <Badge variant="outline" className="text-xs">{q.MODE}</Badge>
                     )}
                   </td>
-                  <td className="px-3 py-2 text-right font-medium">
-                    {q.TOTAL_INR != null
-                      ? q.TOTAL_INR.toLocaleString("en-IN", { maximumFractionDigits: 0 })
-                      : "-"}
+                  <td className="px-3 py-2 text-right font-medium whitespace-nowrap">
+                    {(() => {
+                      const amt = q.TOTAL_DISPLAY ?? q.TOTAL_INR
+                      if (amt == null) return "-"
+                      const cur = q.DISPLAY_CURRENCY || "INR"
+                      return `${cur} ${amt.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`
+                    })()}
                   </td>
                   <td className="px-3 py-2 text-muted-foreground text-xs">{q.SALES_PERSON || "-"}</td>
                   <td className="px-3 py-2">

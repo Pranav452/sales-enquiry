@@ -17,18 +17,19 @@ export async function GET(req: NextRequest) {
     ? ""
     : "WHERE CREATED_BY = @created_by"
 
+  // List view only renders/searches a handful of light columns. Select
+  // exactly those — the heavy NVARCHAR(MAX) blobs (LOCAL_CHARGES,
+  // CC_CHARGES, TRANSPORT_COST, CLAUSES) are never shown here and were
+  // bloating the payload for every row. The full record is fetched
+  // per-quotation by the [id] route when editing.
   const result = await pool
     .request()
     .input("created_by", sql.NVarChar, salesperson ?? auth.email)
     .query(`
       SELECT
-        QUOT_ID, QUOT_REF_NO, QUOT_DATE, MODE, EXIM, FN, ENQ_TYPE,
-        INCOTERMS, POL, POD, CONTAINER_TYPE, SHIPPER, SHIPMENT_TYPE,
-        VESSEL_NAME, ETD, ETA, TRANSIT_TIME, FREE_TIME,
-        LOCAL_CHARGES, STUFFING_TYPE, CC_CHARGES,
-        TRANSPORT_ENABLED, TRANSPORT_COST,
-        TOTAL_INR, EXCHANGE_RATE, CLAUSES, ISNULL(STATUS, 'DRAFT') AS STATUS,
-        ENQ_ID, SALES_PERSON, BRANCH, CREATED_BY, CREATED_AT, UPDATED_AT
+        QUOT_ID, QUOT_REF_NO, QUOT_DATE, MODE, EXIM, SHIPPER, POL, POD,
+        SHIPMENT_TYPE, TOTAL_INR, TOTAL_DISPLAY, DISPLAY_CURRENCY,
+        SALES_PERSON, BRANCH, ISNULL(STATUS, 'DRAFT') AS STATUS, CREATED_AT
       FROM [dbo].[TBL_QUOTATIONS]
       ${whereClause}
       ORDER BY CREATED_AT DESC
@@ -78,6 +79,8 @@ export async function POST(req: NextRequest) {
       .input("transport_cost",    sql.NVarChar, body.transport_cost ? JSON.stringify(body.transport_cost) : null)
       .input("total_inr",         sql.Decimal(18, 2), body.total_inr ?? null)
       .input("exchange_rate",     sql.Decimal(18, 6), body.exchange_rate ?? null)
+      .input("total_display",     sql.Decimal(18, 2), body.total_display ?? null)
+      .input("display_currency",  sql.NVarChar, body.display_currency || null)
       .input("clauses",           sql.NVarChar, body.clauses || null)
       .input("enq_id",            sql.Int,      body.enq_id ? parseInt(body.enq_id) : null)
       .input("sales_person",      sql.NVarChar, body.sales_person || salesperson || null)
@@ -91,7 +94,7 @@ export async function POST(req: NextRequest) {
            VESSEL_NAME, ETD, ETA, TRANSIT_TIME, FREE_TIME,
            LOCAL_CHARGES, STUFFING_TYPE, CC_CHARGES,
            TRANSPORT_ENABLED, TRANSPORT_COST,
-           TOTAL_INR, EXCHANGE_RATE, CLAUSES,
+           TOTAL_INR, EXCHANGE_RATE, TOTAL_DISPLAY, DISPLAY_CURRENCY, CLAUSES,
            ENQ_ID, SALES_PERSON, BRANCH, STATUS, CREATED_BY)
         VALUES
           (@quot_ref_no, @quot_date, @mode, @exim, @fn, @enq_type, @incoterms,
@@ -99,7 +102,7 @@ export async function POST(req: NextRequest) {
            @vessel_name, @etd, @eta, @transit_time, @free_time,
            @local_charges, @stuffing_type, @cc_charges,
            @transport_enabled, @transport_cost,
-           @total_inr, @exchange_rate, @clauses,
+           @total_inr, @exchange_rate, @total_display, @display_currency, @clauses,
            @enq_id, @sales_person, @branch, @status, @created_by)
       `)
 

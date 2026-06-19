@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useMemo } from "react"
 import { cn } from "@/lib/utils"
 
 interface ComboboxProps {
@@ -40,9 +40,12 @@ export function Combobox({
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
-  const filtered = options.filter((o) =>
-    o.toLowerCase().includes(query.toLowerCase())
-  )
+  // Memoised so an unrelated parent re-render (e.g. a keystroke elsewhere
+  // in the form) doesn't re-scan the whole option list every time.
+  const filtered = useMemo(() => {
+    const q = query.toLowerCase()
+    return options.filter((o) => o.toLowerCase().includes(q))
+  }, [options, query])
 
   const showList = open && !disabled && filtered.length > 0
 

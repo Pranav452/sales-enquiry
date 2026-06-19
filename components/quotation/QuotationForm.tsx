@@ -23,7 +23,12 @@ import {
   PORT_CITIES,
   expandPortCity,
 } from "@/lib/constants/dropdowns"
-import { RotateCcw, FileDown, Save, Plus, X } from "lucide-react"
+import { RotateCcw, FileDown, Save, Plus, X, Loader2 } from "lucide-react"
+import type { RowInput } from "jspdf-autotable"
+
+// Port list is static — expand it once at module load, not on every
+// render. (Re-mapping ~600 entries on each keystroke made the form janky.)
+const PORT_OPTIONS = PORT_CITIES.map(expandPortCity)
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -255,6 +260,9 @@ export interface QuotationEditing {
   branch: string | null
   enq_id: string | null
   exchange_rate?: number | null
+  display_currency?: string | null
+  total_inr?: number | null
+  total_display?: number | null
   extra_freight?: ExtraCharge[] | null
   extra_local?: ExtraCharge[] | null
   extra_cc?: ExtraCharge[] | null
@@ -340,8 +348,28 @@ function fromInr(inrAmount: number, currency: string, rates: Record<string, numb
   const cur = currency.toLowerCase()
   if (cur === "inr") return inrAmount
   const inrRate = rates["inr"] ?? 84
-  const curRate = rates[cur] ?? 1
+  const curRate = rates[cur]
+  // Rate unknown (e.g. live feed degraded) — fall back to the INR figure
+  // rather than emitting a wildly wrong number from a bogus rate of 1.
+  if (!curRate) return inrAmount
   return inrAmount * (curRate / inrRate)
+}
+
+// When editing an existing quotation the display total must stay frozen at
+// the rate it was quoted with (a quotation is a fixed offer, and the list
+// shows the stored figure). We reconstruct that rate from the two stored
+// totals — display-per-INR = TOTAL_DISPLAY / TOTAL_INR — so no extra DB
+// column is needed. Per-charge INR math stays live; only the final display
+// conversion is locked, and only for the originally-saved currency.
+function lockedDisplayFrom(
+  q: QuotationEditing | null | undefined
+): { cur: string; rate: number } | null {
+  if (!q) return null
+  const cur = q.display_currency || "INR"
+  const inr = q.total_inr
+  const disp = q.total_display
+  if (!inr || inr <= 0 || disp == null) return null
+  return { cur, rate: disp / inr }
 }
 
 // ─── Sub-components ───────────────────────────────────────────
@@ -477,13 +505,20 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
     () => editingQuotation ? formFromQuotation(editingQuotation) : getDefaultForm()
   )
   const [submitting, setSubmitting] = useState(false)
+  const [pdfGenerating, setPdfGenerating] = useState(false)
   const [error, setError] = useState("")
   const [saved, setSaved] = useState(false)
-  const [displayCurrency, setDisplayCurrency] = useState("INR")
+  const [displayCurrency, setDisplayCurrency] = useState(
+    () => editingQuotation?.display_currency || "INR"
+  )
+  // Frozen display rate for the saved currency (null for a new quote).
+  const [lockedDisplay, setLockedDisplay] = useState(
+    () => lockedDisplayFrom(editingQuotation)
+  )
   const [editId, setEditId] = useState<string | null>(editingQuotation?.id ?? null)
 
   const salesPersons = company === "links" ? LINKS_SALES_PERSONS : MANILAL_SALES_PERSONS
-  const portOptions = PORT_CITIES.map(expandPortCity)
+  const portOptions = PORT_OPTIONS
 
   // ─── Exchange rate source + manual override ────────────────
   type RateSource = "live" | "dgft_import" | "dgft_export"
@@ -533,6 +568,8 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
     if (!editingQuotation) return
     setEditId(editingQuotation.id)
     setForm(formFromQuotation(editingQuotation))
+    setDisplayCurrency(editingQuotation.display_currency || "INR")
+    setLockedDisplay(lockedDisplayFrom(editingQuotation))
     if (editingQuotation.exchange_rate && editingQuotation.exchange_rate > 0) {
       setRateInput(String(editingQuotation.exchange_rate))
       setRateTouched(true)
@@ -614,6 +651,14 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
     return sum
   }, [form, effectiveRates, showFreight, showCC])
 
+  // Convert an INR total into the display currency. For the originally-saved
+  // currency we use the frozen rate so the on-screen total, the PDF and the
+  // list never disagree; everything else converts at live rates.
+  function displayTotal(inr: number, cur: string): number {
+    if (lockedDisplay && lockedDisplay.cur === cur) return inr * lockedDisplay.rate
+    return fromInr(inr, cur, effectiveRates)
+  }
+
   // ─── Submit ───────────────────────────────────────────────
 
   async function handleSubmit(e: React.FormEvent) {
@@ -654,6 +699,8 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
       transport_enabled: form.transport_enabled,
       transport_cost: form.transport_enabled ? form.transport_cost : null,
       total_inr: totalInr(),
+      total_display: displayTotal(totalInr(), displayCurrency),
+      display_currency: displayCurrency,
       exchange_rate: usdInr,
       clauses: form.clauses,
       sales_person: form.sales_person,
@@ -692,7 +739,23 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
 
   // ─── PDF generation ───────────────────────────────────────
 
+  // Public handler: guards against double-clicks (the build is async and
+  // can take a couple of seconds) and shows progress on the button.
   async function handleGeneratePdf() {
+    if (pdfGenerating) return
+    setPdfGenerating(true)
+    setError("")
+    try {
+      await buildAndSavePdf()
+    } catch (err) {
+      console.error("PDF generation failed", err)
+      setError("Could not generate the PDF. Please try again.")
+    } finally {
+      setPdfGenerating(false)
+    }
+  }
+
+  async function buildAndSavePdf() {
     const { jsPDF } = await import("jspdf")
     const autoTable = (await import("jspdf-autotable")).default
 
@@ -967,16 +1030,31 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
     }
 
     // ── Total ─────────────────────────────────────────────
+    // Show the total in the user-selected display currency. INR stays the
+    // canonical figure, so when the display currency isn't INR we keep an
+    // INR-equivalent line beneath the rate for reference.
     const total = totalInr()
+    const totalDisplay = displayTotal(total, displayCurrency)
+    const fmtMoney = (n: number) =>
+      n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+    const totalRows: RowInput[] = [
+      [{ content: `Exchange Rate: 1 USD = ${usdInr.toFixed(2)} INR`, colSpan: 2, styles: { fontSize: 8, textColor: [100, 100, 100] } }],
+    ]
+    if (displayCurrency !== "INR") {
+      totalRows.push([
+        { content: "Equivalent (INR)", styles: { fontSize: 8, textColor: [100, 100, 100] } },
+        { content: `INR ${fmtMoney(total)}`, styles: { fontSize: 8, textColor: [100, 100, 100], halign: "right" } },
+      ])
+    }
+    totalRows.push([
+      { content: "TOTAL COST", styles: { fontStyle: "bold", fontSize: 10 } },
+      { content: `${displayCurrency} ${fmtMoney(totalDisplay)}`, styles: { fontStyle: "bold", fontSize: 10, halign: "right" } },
+    ])
+
     autoTable(doc, {
       startY: y,
-      body: [
-        [{ content: `Exchange Rate: 1 USD = ${usdInr.toFixed(2)} INR`, colSpan: 2, styles: { fontSize: 8, textColor: [100, 100, 100] } }],
-        [
-          { content: "TOTAL COST", styles: { fontStyle: "bold", fontSize: 10 } },
-          { content: `INR ${total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, styles: { fontStyle: "bold", fontSize: 10, halign: "right" } },
-        ],
-      ],
+      body: totalRows,
       theme: "grid",
       margin: { left: margin, right: margin },
     })
@@ -1466,15 +1544,20 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
                   className="h-7 rounded-md border border-input bg-white text-slate-800 dark:bg-slate-800 dark:text-slate-100 px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
                 >
                   <option value="INR">INR</option>
-                  {currencyList.filter((c) => c !== "INR").map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
+                  {/* Always include the selected currency even if today's
+                      live feed doesn't list it, so an edited quote's saved
+                      currency stays selectable. */}
+                  {Array.from(new Set([displayCurrency, ...currencyList]))
+                    .filter((c) => c !== "INR")
+                    .map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
                 </select>
               </div>
             </div>
             <span className="text-2xl font-bold text-blue-700 dark:text-blue-400">
               {displayCurrency}{" "}
-              {fromInr(total, displayCurrency, effectiveRates).toLocaleString("en-IN", {
+              {displayTotal(total, displayCurrency).toLocaleString("en-IN", {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}
@@ -1517,10 +1600,20 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
           type="button"
           variant="outline"
           onClick={handleGeneratePdf}
+          disabled={pdfGenerating}
           className="gap-2"
         >
-          <FileDown className="h-4 w-4" />
-          Generate PDF
+          {pdfGenerating ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Generating PDF...
+            </>
+          ) : (
+            <>
+              <FileDown className="h-4 w-4" />
+              Generate PDF
+            </>
+          )}
         </Button>
 
         <Button
@@ -1529,6 +1622,8 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
           onClick={() => {
             setForm(getDefaultForm())
             setEditId(null)
+            setDisplayCurrency("INR")
+            setLockedDisplay(null)
             setSaved(false)
             setError("")
           }}
