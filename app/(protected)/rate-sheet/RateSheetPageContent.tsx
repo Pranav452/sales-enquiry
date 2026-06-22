@@ -689,80 +689,113 @@ export default function RateSheetPageContent({ company }: { company: string }) {
                     </div>
                   )}
 
-                  {/* Schedules grouped by carrier */}
+                  {/* Schedules grouped by carrier — journey timeline view */}
                   {schedules.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-8">No schedules yet. Add sailings above.</p>
                   ) : (
                     <div className="space-y-4">
-                      {[...new Set(schedules.map(s => s.CARRIER))].map(carrier => (
-                        <div key={carrier}>
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">{carrier}</h4>
-                          <div className="rounded-lg border border-border overflow-hidden">
-                            <table className="w-full text-sm">
-                              <thead>
-                                <tr className="bg-muted/50 border-b border-border">
-                                  <th className="text-left px-3 py-2 text-xs font-semibold text-muted-foreground">Vessel / Voyage</th>
-                                  <th className="text-left px-3 py-2 text-xs font-semibold text-muted-foreground">ETD</th>
-                                  <th className="text-left px-3 py-2 text-xs font-semibold text-muted-foreground">ETA</th>
-                                  <th className="text-left px-3 py-2 text-xs font-semibold text-muted-foreground">Transit</th>
-                                  <th className="text-left px-3 py-2 text-xs font-semibold text-muted-foreground">Via</th>
-                                  <th className="px-3 py-2" />
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {schedules.filter(s => s.CARRIER === carrier).map((s, i) => (
-                                  <tr key={s.SCHED_ID} className={cn("border-b border-border last:border-0", i % 2 === 0 ? "bg-background" : "bg-muted/20")}>
-                                    {editingSched?.SCHED_ID === s.SCHED_ID ? (
-                                      <td colSpan={6} className="px-2 py-1.5">
-                                        <div className="grid grid-cols-3 gap-1.5">
-                                          {(["VESSEL_NAME","VOYAGE_NO","ETD","ETA","TRANSIT_DAYS","VIA_PORT","GATE_IN"] as (keyof Schedule)[]).map(field => (
-                                            <Input key={field} value={(editingSched[field] as string) ?? ""}
-                                              placeholder={field.replace("_", " ").toLowerCase()}
-                                              onChange={e => setEditingSched(p => p ? { ...p, [field]: e.target.value } : p)}
-                                              className="h-7 text-xs" />
-                                          ))}
+                      {[...new Set(schedules.map(s => s.CARRIER))].map(carrier => {
+                        const destShort = selectedDest?.PORT_NAME?.split(",")[0] ?? selectedDest?.DEST_NAME ?? "Dest"
+                        return (
+                          <div key={carrier}>
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+                              <Ship className="h-3 w-3" />{carrier}
+                            </h4>
+                            <div className="rounded-lg border border-border overflow-hidden divide-y divide-border">
+                              {schedules.filter(s => s.CARRIER === carrier).map(s => (
+                                <div key={s.SCHED_ID}>
+                                  {editingSched?.SCHED_ID === s.SCHED_ID ? (
+                                    <div className="px-3 py-2.5 bg-muted/20">
+                                      <div className="grid grid-cols-3 gap-1.5">
+                                        {(["VESSEL_NAME","VOYAGE_NO","ETD","ETA","TRANSIT_DAYS","VIA_PORT","GATE_IN"] as (keyof Schedule)[]).map(field => (
+                                          <Input key={field} value={(editingSched[field] as string) ?? ""}
+                                            placeholder={field.replace(/_/g, " ").toLowerCase()}
+                                            onChange={e => setEditingSched(p => p ? { ...p, [field]: e.target.value } : p)}
+                                            className="h-7 text-xs" />
+                                        ))}
+                                      </div>
+                                      <div className="flex gap-1 mt-1.5">
+                                        <Button size="sm" onClick={saveEditSched} disabled={savingSched} className="h-6 text-xs">
+                                          <Check className="h-3 w-3 mr-1" /> Save
+                                        </Button>
+                                        <Button size="sm" variant="outline" onClick={() => setEditingSched(null)} className="h-6 text-xs">
+                                          <X className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted/20 group transition-colors">
+                                      {/* Vessel info */}
+                                      <div className="w-36 flex-shrink-0">
+                                        <div className="font-semibold text-xs flex items-center gap-1.5">
+                                          <Ship className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                          <span className="truncate">{s.VESSEL_NAME || "TBN"}</span>
                                         </div>
-                                        <div className="flex gap-1 mt-1.5">
-                                          <Button size="sm" onClick={saveEditSched} disabled={savingSched} className="h-6 text-xs">
-                                            <Check className="h-3 w-3 mr-1" /> Save
-                                          </Button>
-                                          <Button size="sm" variant="outline" onClick={() => setEditingSched(null)} className="h-6 text-xs">
-                                            <X className="h-3 w-3" />
-                                          </Button>
-                                        </div>
-                                      </td>
-                                    ) : (
-                                      <>
-                                        <td className="px-3 py-2 text-xs">
-                                          <p className="font-medium">{s.VESSEL_NAME || "TBN"}</p>
-                                          {s.VOYAGE_NO && <p className="text-muted-foreground">{s.VOYAGE_NO}</p>}
-                                          {s.GATE_IN && <p className="text-[10px] text-amber-600">Gate-in: {s.GATE_IN}</p>}
-                                        </td>
-                                        <td className="px-3 py-2 text-xs text-muted-foreground">{s.ETD || "—"}</td>
-                                        <td className="px-3 py-2 text-xs text-muted-foreground">{s.ETA || "—"}</td>
-                                        <td className="px-3 py-2 text-xs text-muted-foreground">{s.TRANSIT_DAYS || "—"}</td>
-                                        <td className="px-3 py-2 text-xs text-muted-foreground">{s.VIA_PORT || "—"}</td>
-                                        <td className="px-3 py-2">
-                                          <div className="flex gap-0.5 justify-end">
-                                            <button onClick={() => setEditingSched(s)}
-                                              className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground">
-                                              <Pencil className="h-3.5 w-3.5" />
-                                            </button>
-                                            <button onClick={() => deleteSched(s.SCHED_ID)}
-                                              className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-destructive">
-                                              <Trash2 className="h-3.5 w-3.5" />
-                                            </button>
+                                        {s.VOYAGE_NO && (
+                                          <div className="text-[10px] text-muted-foreground ml-[18px]">{s.VOYAGE_NO}</div>
+                                        )}
+                                        {s.GATE_IN && (
+                                          <div className="text-[10px] text-amber-600 font-semibold ml-[18px] mt-0.5">
+                                            ⏰ {s.GATE_IN}
                                           </div>
-                                        </td>
-                                      </>
-                                    )}
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                                        )}
+                                      </div>
+
+                                      {/* Journey bar */}
+                                      <div className="flex-1 flex items-center gap-2 min-w-0">
+                                        {/* Origin */}
+                                        <div className="flex-shrink-0 text-center">
+                                          <div className="text-[11px] font-bold text-foreground whitespace-nowrap">{s.ETD || "—"}</div>
+                                          <div className="text-[9px] text-muted-foreground uppercase tracking-wide">India</div>
+                                        </div>
+
+                                        {/* Track line */}
+                                        <div className="flex-1 flex flex-col items-center gap-0.5 min-w-0">
+                                          <div className="flex items-center w-full">
+                                            <div className="w-2 h-2 rounded-full bg-slate-700 flex-shrink-0"
+                                              style={{ boxShadow: "0 0 0 2px rgba(51,65,85,0.2)" }} />
+                                            <div className="flex-1 h-px"
+                                              style={{ background: "repeating-linear-gradient(to right, #94a3b8 0,#94a3b8 3px,transparent 3px,transparent 6px)" }} />
+                                            <span className="text-base flex-shrink-0 px-0.5">🚢</span>
+                                            <div className="flex-1 h-px"
+                                              style={{ background: "repeating-linear-gradient(to right, #94a3b8 0,#94a3b8 3px,transparent 3px,transparent 6px)" }} />
+                                            <div className="w-2 h-2 rounded-full bg-blue-600 flex-shrink-0"
+                                              style={{ boxShadow: "0 0 0 2px rgba(37,99,235,0.2)" }} />
+                                          </div>
+                                          {s.TRANSIT_DAYS && (
+                                            <div className="text-[9px] font-bold text-slate-600 whitespace-nowrap">{s.TRANSIT_DAYS}</div>
+                                          )}
+                                          {s.VIA_PORT && s.VIA_PORT !== "—" && (
+                                            <div className="text-[9px] text-muted-foreground truncate max-w-full">via {s.VIA_PORT}</div>
+                                          )}
+                                        </div>
+
+                                        {/* Destination */}
+                                        <div className="flex-shrink-0 text-center">
+                                          <div className="text-[11px] font-bold text-foreground whitespace-nowrap">{s.ETA || "—"}</div>
+                                          <div className="text-[9px] text-muted-foreground uppercase tracking-wide truncate max-w-[56px]">{destShort}</div>
+                                        </div>
+                                      </div>
+
+                                      {/* Actions — visible on hover */}
+                                      <div className="flex gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onClick={() => setEditingSched(s)}
+                                          className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground">
+                                          <Pencil className="h-3.5 w-3.5" />
+                                        </button>
+                                        <button onClick={() => deleteSched(s.SCHED_ID)}
+                                          className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-destructive">
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )}
                 </div>
