@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import {
   Plus, Trash2, Pencil, Check, X, ChevronDown, ChevronRight,
-  Link2, Copy, CheckCheck, Ship, Globe, AlertTriangle
+  Link2, Copy, CheckCheck, Ship, Globe, AlertTriangle, Camera
 } from "lucide-react"
 
 // ─── Types ───────────────────────────────────────────────────
@@ -64,6 +64,51 @@ interface Token {
 
 const CARRIERS = ["CMA CGM", "Maersk", "MSC", "ONE LINE", "Hapag-Lloyd", "Evergreen"]
 const CONTINENTS = ["Africa", "Far East", "Middle East", "Europe", "Americas"]
+
+interface ExtractedSailing {
+  vessel_name: string
+  voyage_no: string
+  etd: string
+  eta: string
+  transit_days: string
+  via_port: string
+  gate_in: string
+}
+
+const CARRIER_EXTRACT_TIPS: Record<string, string[]> = {
+  "CMA CGM": [
+    "CMA CGM shows multiple sailings per page in a vertical timeline",
+    "Each entry shows: departure date (top) → service code → vessel name → arrival date (bottom)",
+    "1–2 full-page screenshots usually covers a full month",
+    "Include the full card — don't crop departure or arrival dates at the edges",
+  ],
+  "Maersk": [
+    "Maersk shows ONE sailing per card — upload a separate screenshot per sailing",
+    "Make sure the full card is visible: Departure · Gate-in Deadline · Arrival · Transit · Vessel/Voyage",
+    "5 sailings = 5 screenshots — shift-select all files at once when uploading",
+    "Even if a card says 'sold out', the sailing dates are still real — upload it",
+  ],
+  "MSC": [
+    "MSC shows sailings in a table — one screenshot covers 5–6 rows",
+    "Capture the full table including the header row (Departure / Arrival / Vessel / Transit / Routing)",
+    "1–2 screenshots typically covers a full month of sailings",
+  ],
+  "ONE LINE": [
+    "Upload a screenshot of the ONE LINE schedule table",
+    "Include all columns: Vessel, Voyage, ETD, ETA, Transit, Via port",
+    "Multiple sailings can be captured in a single screenshot",
+  ],
+  "Hapag-Lloyd": [
+    "Take a screenshot of the Hapag-Lloyd schedule results page",
+    "Include the full table: Vessel, Voyage, Departure, Arrival, Transit",
+    "The 'SI Cutoff' date is the gate-in deadline — make sure it's visible",
+  ],
+  "Evergreen": [
+    "Upload screenshots of the Evergreen schedule search results table",
+    "Include all columns: Vessel, Voyage, CY Closing (gate-in), ETD, ETA, Transit",
+    "Multiple sailings can be captured per screenshot",
+  ],
+}
 
 // ─── Small reusable pieces ────────────────────────────────────
 
@@ -124,6 +169,15 @@ export default function RateSheetPageContent({ company }: { company: string }) {
   const [newToken, setNewToken] = useState({ client_name: "", client_email: "" })
   const [savingToken, setSavingToken] = useState(false)
   const [copiedToken, setCopiedToken] = useState<string | null>(null)
+
+  // Extract from images
+  const [showExtractModal, setShowExtractModal] = useState(false)
+  const [extractCarrier, setExtractCarrier] = useState("")
+  const [extractFiles, setExtractFiles] = useState<File[]>([])
+  const [extracting, setExtracting] = useState(false)
+  const [extractedRows, setExtractedRows] = useState<ExtractedSailing[]>([])
+  const [extractStep, setExtractStep] = useState<"upload" | "preview">("upload")
+  const [importingExtract, setImportingExtract] = useState(false)
 
   const [error, setError] = useState("")
 
@@ -342,6 +396,77 @@ export default function RateSheetPageContent({ company }: { company: string }) {
     navigator.clipboard.writeText(url)
     setCopiedToken(token)
     setTimeout(() => setCopiedToken(null), 2000)
+  }
+
+  // ── Extract from images ────────────────────────────────────
+
+  function resetExtract() {
+    setShowExtractModal(false)
+    setExtractStep("upload")
+    setExtractedRows([])
+    setExtractFiles([])
+    setExtractCarrier("")
+    setExtracting(false)
+  }
+
+  async function runExtraction() {
+    if (!extractCarrier || extractFiles.length === 0) return
+    setExtracting(true)
+    setError("")
+    try {
+      const fd = new FormData()
+      fd.append("carrier", extractCarrier)
+      extractFiles.forEach(f => fd.append("images", f))
+      const res = await fetch("/api/rate-sheet/extract-schedule", { method: "POST", body: fd })
+      if (!res.ok) throw new Error(await res.text())
+      const rows: ExtractedSailing[] = (await res.json()).map((r: Record<string, string | null>) => ({
+        vessel_name:  r.vessel_name  ?? "",
+        voyage_no:    r.voyage_no    ?? "",
+        etd:          r.etd          ?? "",
+        eta:          r.eta          ?? "",
+        transit_days: r.transit_days ?? "",
+        via_port:     r.via_port     ?? "",
+        gate_in:      r.gate_in      ?? "",
+      }))
+      setExtractedRows(rows)
+      setExtractStep("preview")
+    } catch (e) {
+      setError(`Extraction failed: ${String(e)}`)
+    } finally {
+      setExtracting(false)
+    }
+  }
+
+  async function importExtracted() {
+    if (!selectedDest || extractedRows.length === 0) return
+    setImportingExtract(true)
+    setError("")
+    try {
+      for (const [i, row] of extractedRows.entries()) {
+        await fetch("/api/rate-sheet/schedules", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            dest_id:      selectedDest.DEST_ID,
+            carrier:      extractCarrier,
+            vessel_name:  row.vessel_name  || null,
+            voyage_no:    row.voyage_no    || null,
+            etd:          row.etd          || null,
+            eta:          row.eta          || null,
+            transit_days: row.transit_days || null,
+            via_port:     row.via_port     || null,
+            gate_in:      row.gate_in      || null,
+            sort_order:   i,
+          }),
+        })
+      }
+      resetExtract()
+      await loadDestData(selectedDest.DEST_ID)
+    } catch (e) {
+      setError(`Import failed: ${String(e)}`)
+    } finally {
+      setImportingExtract(false)
+    }
   }
 
   // ── Helpers ────────────────────────────────────────────────
@@ -643,9 +768,14 @@ export default function RateSheetPageContent({ company }: { company: string }) {
                 <div>
                   <SectionHeader title="Vessel Schedules" icon={Ship}
                     action={
-                      <Button size="sm" variant="outline" onClick={() => setShowAddSched(v => !v)}>
-                        <Plus className="h-3.5 w-3.5 mr-1" /> Add Sailing
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => setShowExtractModal(true)}>
+                          <Camera className="h-3.5 w-3.5 mr-1" /> Extract from images
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => setShowAddSched(v => !v)}>
+                          <Plus className="h-3.5 w-3.5 mr-1" /> Add Sailing
+                        </Button>
+                      </div>
                     }
                   />
 
@@ -889,6 +1019,216 @@ export default function RateSheetPageContent({ company }: { company: string }) {
           </>
         )}
       </div>
+
+      {/* ── Extract from images modal ───────────────────────── */}
+      {showExtractModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-background border border-border rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
+
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-border flex items-start justify-between gap-3">
+              <div>
+                <h2 className="font-bold flex items-center gap-2 text-base">
+                  <Camera className="h-4 w-4" /> Extract Schedule from Screenshots
+                </h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  GPT-4o Vision reads your carrier screenshots and fills in the sailing data automatically
+                </p>
+              </div>
+              <button onClick={resetExtract} className="p-1.5 rounded-md hover:bg-accent flex-shrink-0">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {extractStep === "upload" ? (
+              /* ── Step 1: Upload ──────────────────────────── */
+              <div className="flex-1 overflow-y-auto p-5 space-y-4">
+
+                {/* Carrier selector */}
+                <Field label="Which carrier are these screenshots from? *">
+                  <select
+                    value={extractCarrier}
+                    onChange={e => setExtractCarrier(e.target.value)}
+                    className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="">Select carrier…</option>
+                    {CARRIERS.map(c => <option key={c}>{c}</option>)}
+                  </select>
+                </Field>
+
+                {/* Carrier-specific tips */}
+                {extractCarrier && CARRIER_EXTRACT_TIPS[extractCarrier] && (
+                  <div className="rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 p-3 space-y-2">
+                    <p className="text-xs font-semibold text-blue-800 dark:text-blue-300">
+                      📸 How to screenshot {extractCarrier}:
+                    </p>
+                    <ul className="space-y-1">
+                      {CARRIER_EXTRACT_TIPS[extractCarrier].map((tip, i) => (
+                        <li key={i} className="text-xs text-blue-700 dark:text-blue-400 flex gap-1.5">
+                          <span className="flex-shrink-0 mt-0.5">•</span>{tip}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Drop zone */}
+                <div>
+                  <label
+                    className={cn(
+                      "flex flex-col items-center justify-center rounded-lg border-2 border-dashed cursor-pointer transition-colors p-8 text-center gap-3",
+                      extractFiles.length > 0
+                        ? "border-primary/50 bg-primary/5"
+                        : "border-border hover:border-primary/40 hover:bg-muted/30"
+                    )}
+                  >
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      className="hidden"
+                      onChange={e => {
+                        const picked = Array.from(e.target.files ?? [])
+                        setExtractFiles(prev => [...prev, ...picked].slice(0, 15))
+                        e.target.value = ""
+                      }}
+                    />
+                    <Camera className="h-9 w-9 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Drop images here or click to browse</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">JPG, PNG, WebP · Up to 15 images</p>
+                    </div>
+                  </label>
+
+                  {/* High-res warning */}
+                  <div className="mt-2.5 flex items-start gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2">
+                    <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-amber-800 dark:text-amber-300">
+                      <strong>Upload high-resolution screenshots for maximum accuracy.</strong>{" "}
+                      Screenshot at 100% browser zoom. Blurry or cropped images cause extraction errors.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Selected files list */}
+                {extractFiles.length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs text-muted-foreground">
+                      {extractFiles.length} image{extractFiles.length !== 1 ? "s" : ""} selected:
+                    </p>
+                    <div className="max-h-36 overflow-y-auto space-y-1 pr-1">
+                      {extractFiles.map((f, i) => (
+                        <div key={i} className="flex items-center justify-between rounded-md bg-muted/40 px-2.5 py-1.5 text-xs gap-2">
+                          <span className="truncate text-foreground flex-1">{f.name}</span>
+                          <span className="text-muted-foreground flex-shrink-0">{(f.size / 1024 / 1024).toFixed(1)} MB</span>
+                          <button
+                            onClick={() => setExtractFiles(prev => prev.filter((_, j) => j !== i))}
+                            className="text-muted-foreground hover:text-destructive flex-shrink-0"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* ── Step 2: Preview ─────────────────────────── */
+              <div className="flex-1 flex flex-col min-h-0">
+                <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-border">
+                  <p className="text-sm">
+                    <span className="font-semibold text-green-600 dark:text-green-400">
+                      ✓ {extractedRows.length} sailing{extractedRows.length !== 1 ? "s" : ""} extracted
+                    </span>
+                    <span className="text-muted-foreground ml-2">
+                      from {extractFiles.length} image{extractFiles.length !== 1 ? "s" : ""}
+                    </span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">Edit any cell, delete wrong rows, then import</p>
+                </div>
+                <div className="flex-1 overflow-auto">
+                  <table className="w-full text-xs border-collapse">
+                    <thead className="sticky top-0 bg-muted/90 backdrop-blur-sm">
+                      <tr>
+                        {["Vessel", "Voyage", "ETD", "ETA", "Transit", "Via", "Gate-in", ""].map(h => (
+                          <th key={h} className="text-left px-2.5 py-2 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {extractedRows.map((row, i) => (
+                        <tr key={i} className={cn("border-b border-border/50", i % 2 === 0 ? "" : "bg-muted/20")}>
+                          {(["vessel_name", "voyage_no", "etd", "eta", "transit_days", "via_port", "gate_in"] as (keyof ExtractedSailing)[]).map(field => (
+                            <td key={field} className="px-1.5 py-1">
+                              <Input
+                                value={row[field]}
+                                onChange={e => setExtractedRows(prev =>
+                                  prev.map((r, j) => j === i ? { ...r, [field]: e.target.value } : r)
+                                )}
+                                className="h-7 text-xs"
+                                style={{ minWidth: field === "vessel_name" ? "130px" : field === "via_port" ? "110px" : "90px" }}
+                                placeholder="—"
+                              />
+                            </td>
+                          ))}
+                          <td className="px-1.5 py-1">
+                            <button
+                              onClick={() => setExtractedRows(prev => prev.filter((_, j) => j !== i))}
+                              className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-destructive"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {extractedRows.length === 0 && (
+                    <p className="text-center text-xs text-muted-foreground py-8">
+                      All rows deleted. Go back to re-extract.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Footer */}
+            <div className="px-5 py-3 border-t border-border flex items-center justify-between">
+              {extractStep === "upload" ? (
+                <>
+                  <Button variant="ghost" size="sm" onClick={resetExtract}>Cancel</Button>
+                  <Button
+                    size="sm"
+                    onClick={runExtraction}
+                    disabled={!extractCarrier || extractFiles.length === 0 || extracting}
+                  >
+                    {extracting
+                      ? `Extracting from ${extractFiles.length} image${extractFiles.length !== 1 ? "s" : ""}…`
+                      : `Extract from ${extractFiles.length || "—"} image${extractFiles.length !== 1 ? "s" : ""} →`}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="ghost" size="sm" onClick={() => setExtractStep("upload")}>← Back</Button>
+                  <Button
+                    size="sm"
+                    onClick={importExtracted}
+                    disabled={extractedRows.length === 0 || importingExtract}
+                  >
+                    {importingExtract
+                      ? "Importing…"
+                      : `Import ${extractedRows.length} sailing${extractedRows.length !== 1 ? "s" : ""} →`}
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
