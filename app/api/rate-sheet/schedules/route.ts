@@ -9,17 +9,22 @@ export async function GET(req: NextRequest) {
   const destId = req.nextUrl.searchParams.get("dest_id")
   if (!destId) return NextResponse.json({ error: "dest_id required" }, { status: 400 })
 
-  const pool = await getPool(auth.company)
-  const result = await pool.request()
-    .input("dest_id", sql.Int, parseInt(destId))
-    .query(`
-      SELECT SCHED_ID, DEST_ID, CARRIER, VESSEL_NAME, VOYAGE_NO,
-             ETD, ETA, TRANSIT_DAYS, VIA_PORT, GATE_IN, SORT_ORDER, CREATED_AT
-      FROM [dbo].[TBL_RATE_SHEET_SCHEDULES]
-      WHERE DEST_ID = @dest_id
-      ORDER BY CARRIER, SORT_ORDER, CREATED_AT
-    `)
-  return NextResponse.json(result.recordset)
+  try {
+    const pool = await getPool(auth.company)
+    const result = await pool.request()
+      .input("dest_id", parseInt(destId))
+      .query(`
+        SELECT SCHED_ID, DEST_ID, CARRIER, VESSEL_NAME, VOYAGE_NO,
+               ETD, ETA, TRANSIT_DAYS, VIA_PORT, GATE_IN, SORT_ORDER, CREATED_AT
+        FROM [dbo].[TBL_RATE_SHEET_SCHEDULES]
+        WHERE DEST_ID = @dest_id
+        ORDER BY CARRIER, SORT_ORDER, CREATED_AT
+      `)
+    return NextResponse.json(result.recordset)
+  } catch (e) {
+    console.error("[rate-sheet/schedules GET]", e)
+    return NextResponse.json({ error: String(e) }, { status: 500 })
+  }
 }
 
 export async function POST(req: NextRequest) {

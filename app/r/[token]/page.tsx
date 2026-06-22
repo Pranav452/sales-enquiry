@@ -54,7 +54,7 @@ export default async function ClientRatePage({ params }: { params: Promise<{ tok
   try { pool = await getPool(company) } catch { notFound() }
 
   const tokenResult = await pool!.request()
-    .input("token", sql.NVarChar(100), token)
+    .input("token", token)
     .query(`SELECT TOKEN_ID, DEST_ID, CLIENT_NAME, ACTIVE FROM [dbo].[TBL_RATE_SHEET_TOKENS] WHERE TOKEN = @token`)
 
   const tok = tokenResult.recordset[0]
@@ -63,16 +63,16 @@ export default async function ClientRatePage({ params }: { params: Promise<{ tok
   const destId: number = tok.DEST_ID
 
   pool!.request()
-    .input("token", sql.NVarChar(100), token)
+    .input("token", token)
     .query(`UPDATE [dbo].[TBL_RATE_SHEET_TOKENS] SET LAST_VIEWED = GETDATE() WHERE TOKEN = @token`)
     .catch(() => {})
 
   const [destRes, ratesRes, schedRes] = await Promise.all([
-    pool!.request().input("dest_id", sql.Int, destId)
+    pool!.request().input("dest_id", destId)
       .query(`SELECT DEST_NAME, PORT_NAME, CONTINENT, REQUIREMENTS FROM [dbo].[TBL_RATE_SHEET_DESTINATIONS] WHERE DEST_ID = @dest_id AND ACTIVE = 1`),
-    pool!.request().input("dest_id", sql.Int, destId)
+    pool!.request().input("dest_id", destId)
       .query(`SELECT RATE_ID, CARRIER, CONTAINER_TYPE, RATE_USD, FREE_DAYS, VALIDITY, IS_SUSPENDED, UPDATED_AT FROM [dbo].[TBL_RATE_SHEET_RATES] WHERE DEST_ID = @dest_id ORDER BY CARRIER`),
-    pool!.request().input("dest_id", sql.Int, destId)
+    pool!.request().input("dest_id", destId)
       .query(`SELECT SCHED_ID, CARRIER, VESSEL_NAME, VOYAGE_NO, ETD, ETA, TRANSIT_DAYS, VIA_PORT, GATE_IN FROM [dbo].[TBL_RATE_SHEET_SCHEDULES] WHERE DEST_ID = @dest_id ORDER BY CARRIER, SORT_ORDER, CREATED_AT`),
   ])
 

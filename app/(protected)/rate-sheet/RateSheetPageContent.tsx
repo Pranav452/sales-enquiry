@@ -145,8 +145,18 @@ export default function RateSheetPageContent({ company }: { company: string }) {
       fetch(`/api/rate-sheet/schedules?dest_id=${destId}`),
       fetch("/api/rate-sheet/tokens"),
     ])
-    if (rRes.ok) setRates(await rRes.json())
-    if (sRes.ok) setSchedules(await sRes.json())
+    if (rRes.ok) {
+      setRates(await rRes.json())
+    } else {
+      const txt = await rRes.text().catch(() => rRes.status.toString())
+      setError(`Rates load failed (${rRes.status}): ${txt}`)
+    }
+    if (sRes.ok) {
+      setSchedules(await sRes.json())
+    } else {
+      const txt = await sRes.text().catch(() => sRes.status.toString())
+      setError(prev => prev || `Schedules load failed (${sRes.status}): ${txt}`)
+    }
     if (tRes.ok) {
       const all: Token[] = await tRes.json()
       setTokens(all.filter(t => t.DEST_ID === destId && t.ACTIVE))

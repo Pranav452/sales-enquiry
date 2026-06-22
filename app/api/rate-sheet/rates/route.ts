@@ -9,17 +9,22 @@ export async function GET(req: NextRequest) {
   const destId = req.nextUrl.searchParams.get("dest_id")
   if (!destId) return NextResponse.json({ error: "dest_id required" }, { status: 400 })
 
-  const pool = await getPool(auth.company)
-  const result = await pool.request()
-    .input("dest_id", sql.Int, parseInt(destId))
-    .query(`
-      SELECT RATE_ID, DEST_ID, CARRIER, CONTAINER_TYPE, RATE_USD,
-             FREE_DAYS, VALIDITY, IS_SUSPENDED, UPDATED_AT, UPDATED_BY
-      FROM [dbo].[TBL_RATE_SHEET_RATES]
-      WHERE DEST_ID = @dest_id
-      ORDER BY CARRIER
-    `)
-  return NextResponse.json(result.recordset)
+  try {
+    const pool = await getPool(auth.company)
+    const result = await pool.request()
+      .input("dest_id", parseInt(destId))
+      .query(`
+        SELECT RATE_ID, DEST_ID, CARRIER, CONTAINER_TYPE, RATE_USD,
+               FREE_DAYS, VALIDITY, IS_SUSPENDED, UPDATED_AT, UPDATED_BY
+        FROM [dbo].[TBL_RATE_SHEET_RATES]
+        WHERE DEST_ID = @dest_id
+        ORDER BY CARRIER
+      `)
+    return NextResponse.json(result.recordset)
+  } catch (e) {
+    console.error("[rate-sheet/rates GET]", e)
+    return NextResponse.json({ error: String(e) }, { status: 500 })
+  }
 }
 
 export async function POST(req: NextRequest) {
