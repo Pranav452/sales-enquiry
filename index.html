@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>House Air Waybill 1022600138</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; background: #e8e8e8; display: flex; flex-direction: column; align-items: center; padding: 20px 0; color: #000; }
+  .page { width: 210mm; min-height: 297mm; background: #fff; padding: 7mm 8mm; margin-bottom: 20px; position: relative; }
+  .lbl { font-size: 6.5pt; line-height: 1.2; padding: 1px 2px; }
+  .data { font-size: 8pt; line-height: 1.3; padding: 1px 3px; white-space: pre-wrap; }
+  .b { font-weight: bold; }
+  .center { text-align: center; }
+  .small { font-size: 6pt; line-height: 1.25; text-align: justify; }
+  .grid { border: 1px solid #000; }
+  .row { display: flex; border-bottom: 1px solid #000; }
+  .row:last-child { border-bottom: none; }
+  .cell { border-right: 1px solid #000; }
+  .cell:last-child { border-right: none; }
+  .topstrip { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1px; }
+  .ticks { display: flex; }
+  .ticks div { border-left: 1px solid #000; border-right: 1px solid #000; height: 5mm; width: 12mm; margin-right: 4mm; }
+  .hawbno-top { font-size: 10pt; font-weight: bold; padding-right: 2mm; }
+  .goods-table { width: 100%; border-collapse: collapse; }
+  .goods-table th { font-size: 6.5pt; font-weight: normal; border: 1px solid #000; border-top: none; padding: 1px 2px; vertical-align: top; }
+  .goods-table th:first-child { border-left: none; }
+  .goods-table th:last-child { border-right: none; }
+  .goods-table td { font-size: 8pt; border-left: 1px solid #000; border-right: 1px solid #000; padding: 2px 3px; vertical-align: top; white-space: pre-wrap; }
+  .goods-table td:first-child { border-left: none; }
+  .goods-table td:last-child { border-right: none; }
+  .dotline { border-bottom: 1px dashed #000; }
+  .p2-head { text-align: center; margin-bottom: 2mm; }
+  .p2-head .iata { width: 18mm; margin: 0 auto 1mm auto; display: block; }
+  .p2-title { font-size: 8.5pt; font-weight: bold; text-align: center; margin: 2mm 0 1.5mm 0; }
+  .p2-notice { font-size: 6.8pt; line-height: 1.35; margin: 0 6mm; }
+  .p2-cols { display: flex; gap: 6mm; margin-top: 2mm; }
+  .p2-col { width: 50%; font-size: 6.3pt; line-height: 1.35; text-align: justify; }
+  .p2-col p { margin-bottom: 1.6mm; }
+  @media print {
+    body { background: #fff; padding: 0; }
+    .page { margin: 0; page-break-after: always; }
+    .page:last-child { page-break-after: auto; }
+    @page { size: A4 portrait; margin: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="topstrip">
+    <div class="ticks"><div></div><div></div></div>
+    <div class="hawbno-top">HAWB NO :&nbsp;&nbsp;&nbsp;{{data.HAWBNO}}</div>
+  </div>
+  <div class="grid">
+    <div class="row">
+      <div class="cell" style="width:48%;">
+        <div class="row" style="border-bottom:none;">
+          <div class="cell" style="width:55%; border-bottom:1px solid #000;"><div class="lbl">Shipper's Name and Address</div></div>
+          <div class="cell" style="width:45%; border-bottom:1px solid #000;"><div class="lbl">Shipper's Account Number</div></div>
+        </div>
+        <div class="data" style="min-height:20mm;">{{data.SHPR}}</div>
+      </div>
+      <div class="cell" style="width:52%; display:flex; flex-direction:column;">
+        <div style="display:flex; flex:1;">
+          <div style="width:30%;"><div class="lbl">Not Negotiable</div></div>
+          <div style="width:70%;"><div class="lbl b">House Air Waybill</div></div>
+        </div>
+        <div style="display:flex;">
+          <div class="lbl" style="width:18%;">Issued by</div>
+          <div style="width:82%; text-align:center;">
+            <div class="data b" style="font-size:8.5pt;">{{data.COM_NAME}}</div>
+            <div class="data b" style="margin-top:2mm;">{{data.CMP_CITY}}</div>
+            <div class="data b" style="margin-top:2mm;"> {{ getVatId(data.CMP_CITY) }}</div>
+
+          </div>
+        </div>
+        <div style="flex:1;"></div>
+        <div class="lbl" style="border-top:1px solid #000;">Copies 1,2 and 3 of this Air Waybill are originals and have the same validity</div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="cell" style="width:48%;">
+        <div class="row" style="border-bottom:none;">
+          <div class="cell" style="width:55%; border-bottom:1px solid #000;"><div class="lbl">Consignee's Name Address</div></div>
+          <div class="cell" style="width:45%; border-bottom:1px solid #000;"><div class="lbl">Consignee's Account Number</div></div>
+        </div>
+        <div class="data" style="min-height:24mm;">{{data.CNSEE}}</div>
+      </div>
+      <div class="cell" style="width:52%;">
+        <div class="small" style="padding:1.5px 3px;">It is agreed that the goods declared herein are accepted in apparent good order and condition(except as noted) for carriage SUBJECT TO THE CONDITIONS OF CONTRACT ON THE REVERSE HEREOF. ALL GOODS MAY BE CARRIED BY ANY OTHER MEANS INCLUDING ROAD OR ANY OTHER CARRIER UNLESS SPECIFIC CONTRARY INSTRUCTIONS ARE GIVEN HEREON BY THE SHIPPER, AND SHIPPER AGREES THAT THE SHIPMENT MAY BE CARRIED VIA INTERMEDIATE STOPPING PLACES WHICH THE CARRIER DEEMS APPROPRIATE. THE SHIPPER'S ATTENTION IS DRAWN TO THE NOTICE CONCERNING CARRIER'S LIMITATION OF LIABILITY. Shipper may increase such limitation of liability by declaring a higher value for carriage and paying a supplemental charge if required.</div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="cell" style="width:48%; border-right:1px solid #000;">
+        <div style="border-bottom:1px solid #000;">
+          <div class="lbl">Issuing Carrier's Agent Name and City</div>
+          <div class="data" style="min-height:7mm;">{{data.AGTNAME}}</div>
+        </div>
+        <div style="display:flex; border-bottom:1px solid #000;">
+          <div style="width:48%; border-right:1px solid #000;"><div class="lbl">Agent's IATA Code</div><div class="data b">{{data.IATA}}</div></div>
+          <div style="width:52%;"><div class="lbl">Account No.</div><div class="data">{{data.AGTACNO}}</div></div>
+        </div>
+        <div><div class="lbl">Airport of Departure(Addr. of First Carrier) and Requested</div><div class="data">{{data.DEPARTURE}}</div></div>
+      </div>
+      <div class="cell" style="width:52%;">
+        <div class="lbl">Accounting</div>
+        <div class="data" style="min-height:24mm;">{{data.ACINFO}}</div>
+      </div>
+    </div>
+    <div class="row" style="min-height:11mm;">
+      <div class="cell" style="width:5%;"><div class="lbl">To</div><div class="data">{{data.IMP_TO}}</div></div>
+      <div class="cell" style="width:11%;"><div class="lbl">By First Carrier</div><div class="data">{{data.FRSTCARR}}</div></div>
+      <div class="cell" style="width:13%;"><div class="lbl">Routing and</div></div>
+      <div class="cell" style="width:4.5%;"><div class="lbl">to</div><div class="data">{{data.TO1}}</div></div>
+      <div class="cell" style="width:4.5%;"><div class="lbl">by</div><div class="data">{{data.IMP_BY}}</div></div>
+      <div class="cell" style="width:4.5%;"><div class="lbl">to</div><div class="data">{{data.TO2}}</div></div>
+      <div class="cell" style="width:4.5%;"><div class="lbl">by</div><div class="data">{{data.BY1}}</div></div>
+      <div class="cell" style="width:9%;"><div class="lbl">Currency&nbsp; CHGS</div><div class="data">{{data.CURR}}</div></div>
+      <div class="cell" style="width:5%; padding:0;"><div class="lbl center" style="border-bottom:1px solid #000;">PPD</div><div class="data center">{{data.PPDWT}}</div></div>
+      <div class="cell" style="width:5%; padding:0;"><div class="lbl center" style="border-bottom:1px solid #000;">COLL</div><div class="data center">{{data.COLLWT}}</div></div>
+      <div class="cell" style="width:5%; padding:0;"><div class="lbl center" style="border-bottom:1px solid #000;">PPD</div><div class="data center">{{data.OTHRPPD}}</div></div>
+      <div class="cell" style="width:5%; padding:0;"><div class="lbl center" style="border-bottom:1px solid #000;">COLL</div><div class="data center">{{data.OTHRCOLL}}</div></div>
+      <div class="cell" style="width:12%;"><div class="lbl center">Declare Value for Carriage</div><div class="data">{{data.CARRVAL}}</div></div>
+      <div class="cell" style="width:12%;"><div class="lbl center">Delcare Value for Customs</div><div class="data">{{data.CUSTVAL}}</div></div>
+    </div>
+    <div class="row" style="min-height:11mm;">
+      <div class="cell" style="width:17%;"><div class="lbl">Airport of Destination</div><div class="data">{{data.DEST}}</div></div>
+      <div class="cell" style="width:11%;"><div class="lbl">Flight/Date</div><div class="data">{{data.FLT1}}</div></div>
+      <div class="cell" style="width:13%;"><div class="lbl">For Carrier Use Only</div></div>
+      <div class="cell" style="width:11%;"><div class="lbl">Flight/Date</div><div class="data">{{data.FLT2}}</div></div>
+      <div class="cell" style="width:14%;"><div class="lbl">Amount of Insurance</div><div class="data">{{data.INSAMT}}</div></div>
+      <div class="cell" style="width:34%;"><div class="small" style="padding:1.5px 3px;">INSURANCE - If carrier offers insurance, and such insurance is requested in accordance with the conditions thereof, indicate amount to be insured in figures in box marked "Amount of Insurance".</div></div>
+    </div>
+    <div class="row">
+      <div class="cell" style="width:100%; min-height:14mm; position:relative;">
+        <div class="lbl">Handling Information</div>
+        <div class="data" style="font-size:7.5pt;">{{data.HANDINFO}}</div>
+        <div style="position:absolute; right:0; top:0; width:9mm; height:9mm; border-left:1px solid #000; border-bottom:1px solid #000;"></div>
+      </div>
+    </div>
+    <div class="row">
+      <table class="goods-table">
+        <tr>
+          <th style="width:6%;">No.of Pieces RCP</th>
+          <th style="width:7%;">Gross Weight</th>
+          <th style="width:3.5%;">kg lb</th>
+          <th style="width:11%;">Rate Class<div style="border-top:1px solid #000; margin-top:1px; padding-top:1px;">Commodity Item No.</div></th>
+          <th style="width:9%;">Chargeable Weight</th>
+          <th style="width:8%;">Rate / Charge</th>
+          <th style="width:11%;">Total</th>
+          <th style="width:44.5%;">Nature and Quantity of Goods<br>(incl. Dimensions or Volume)</th>
+        </tr>
+        <tr style="height:62mm;">
+          <td>{{data.PCS}}</td>
+          <td>{{data.GRWT}}</td>
+          <td>{{data.KG}}</td>
+          <td>{{data.RTCL}} {{data.ITMNO}}</td>
+          <td>{{data.CHRGWT}}</td>
+          <td>{{data.RATE}}</td>
+          <td>{{data.TOT}}</td>
+          <td ><span class="p2-notice">{{data.IDESC}}</span></td>
+        </tr>
+      </table>
+    </div>
+    <div class="row">
+      <div class="cell" style="width:45%;">
+        <div class="row" style="min-height:11mm;">
+          <div class="cell" style="width:50%;"><div class="lbl">Prepaid&nbsp;&nbsp;&nbsp;Weight Charge</div><div class="data">{{data?.PPCHRG}}</div></div>
+          <div style="width:50%;"><div class="lbl">Collect</div><div class="data">{{data?.CCCHRG}}</div></div>
+        </div>
+        <div class="row" style="min-height:9mm;">
+          <div class="cell" style="width:50%;"><div class="lbl">Valuation Charge</div></div>
+          <div style="width:50%;"><div class="data">{{data?.PPVAL}}</div>  <div class="data">{{data?.CCVAL}}</div></div>
+        </div>
+        <div class="row" style="min-height:9mm;">
+          <div class="cell" style="width:50%;"><div class="lbl">Tax</div></div>
+          <div style="width:50%;"><div class="data">{{data?.PPTAX}}</div>  <div class="data">{{data?.CCTAX}}</div></div>
+        </div>
+        <div class="row" style="min-height:9mm;">
+          <div class="cell" style="width:50%;"><div class="lbl">Total Other Charges Due Agent</div></div>
+          <div style="width:50%;"><div class="data">{{data?.PPTOTAGT}}</div>  <div class="data">{{data?.CCTOTAGT}}</div></div>
+        </div>
+        <div class="row" style="min-height:9mm;">
+          <div class="cell" style="width:50%;"><div class="lbl">Total Other Charges Due Carrier</div></div>
+          <div style="width:50%;"><div class="data">{{data?.PPTOTCARR}}</div>  <div class="data">{{data?.CCTOTCARR}}</div></div>
+        </div>
+        <div class="row" style="min-height:9mm;">
+          <div class="cell" style="width:50%;"><div class="lbl">Total Prepaid</div><div class="data">{{data?.PPTOT}}</div>  </div>
+          <div style="width:50%;"><div class="lbl">Total Collect</div><div class="data">{{data?.CCTOT}}</div>  </div>
+        </div>
+        <div class="row" style="min-height:9mm;">
+          <div class="cell" style="width:50%;"><div class="lbl">Currency Conversion Rates</div><div class="data">{{data?.PPCURRATE}}</div></div>
+          <div style="width:50%;"><div class="lbl">CC Charges in Dest. Currency</div><div class="data">{{data.CCURRATE}}</div></div>
+        </div>
+        <div class="row" style="min-height:9mm; border-bottom:none;">
+          <div class="cell" style="width:50%;"><div class="lbl">For Carrier use only at Destination</div></div>
+          <div style="width:50%;"><div class="lbl">Charges at Destination</div><div class="data">{{data?.DESTCHRG}}</div></div>
+        </div>
+      </div>
+      <div style="width:55%; display:flex; flex-direction:column;">
+        <div style="min-height:20mm;"><div class="lbl">Other Charges</div><div class="data">{{data.OTHCHRG}}</div></div>
+        <div class="data b" style="font-size:7.5pt; text-align:justify; padding:2px 4px;"></div>
+        <div class="p2-notice" style="flex:1;">{{getDeclaration(data.HAWBNO)}}</div>
+        <div class="data b center" style="font-size:9pt;">{{data.AGTNAME1}}</div>
+        <div class="lbl center" style="padding-bottom:2mm;">Signature of Shipper or his Agent</div>
+         <div class="p2-notice" style="flex:1;">{{data.BOTTOM}}</div>
+      </div>
+    </div>
+    <div class="row" style="min-height:13mm;">
+      <div class="cell" style="width:32%;"><div class="lbl">Executed on (date)</div><div class="data b center" style="font-size:10pt; margin-top:3mm;"></div></div>
+      <div class="cell" style="width:23%;"><div class="lbl">at (place)</div><div class="data b center" style="font-size:10pt; margin-top:3mm;"></div></div>
+      <div style="width:45%;"><div class="lbl">Signature of Issuing Carrier or its Agent</div><div class="data b center" style="font-size:8.5pt; margin-top:3mm;"></div></div>
+    </div>
+    <div class="row" style="border-bottom:none;">
+      <div class="cell" style="width:32%;"><div class="lbl">Total Collect Charges</div></div>
+      <div class="cell" style="width:36%; display:flex; align-items:center; justify-content:center;"><div class="data b center" style="font-size:8.5pt;">ORIGINAL 3 (FOR SHIPPER)</div></div>
+      <div style="width:32%; display:flex; align-items:center; justify-content:center;"><div class="data b center" style="font-size:11pt;">HAWB NO {{data.HAWBNO}}</div></div>
+      <!-- 1022600138 -->
+    </div>
+  </div>
+</div>
+
+
+<div class="page">
+  <div class="p2-head">
+    <svg class="iata" viewBox="0 0 60 36" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="30" cy="14" rx="16" ry="11" fill="none" stroke="#000" stroke-width="1.2"/>
+      <path d="M14 14 Q30 4 46 14" fill="none" stroke="#000" stroke-width="0.8"/>
+      <path d="M22 9 L30 19 L38 9" fill="none" stroke="#000" stroke-width="1.4"/>
+      <text x="30" y="33" text-anchor="middle" font-size="9" font-weight="bold" font-family="Arial">IATA</text>
+    </svg>
+  </div>
+  <div class="p2-title">NOTICE CONCERNING CARRIER'S LIMITATION OF LIABILITY</div>
+  <div class="p2-notice">
+    IF THE CARRIAGE INVOLVES AN ULTIMATE DESTINATION OR STOP IN A COUNTRY OTHER THAN THE COUNTRY OF DEPARTURE, THE WARSAW CONVENTION MAY BE APPLICABLE AND THE CONVENTION GOVERNS AND IN MOST CASES LIMITS THE LIABILITY OF THE CARRIER IN RESPECT OF LOSS, DAMAGE OR DELAY TO CARGO TO 250 FRENCH GOLD FRANCS PER KILOGRAM UNLESS A HIGHER VALUE IS DECLARED IN ADVANCE BY THE SHIPPER AND A SUPPLEMENTARY CHARGE PAID IF REQUIRED. THE LIABILITY LIMIT OF 250 FRENCH GOLD FRANCS PER KILOGRAMME IS APPROXIMATELY US 20 USD PER KILOGRAMME ON THE BASIS OF US 42.22 USD PER OUNCE OF GOLD.
+  </div>
+  <div class="p2-title">CONDITIONS OF CONTRACT</div>
+  <div class="p2-cols">
+    <div class="p2-col">
+      <p>1. As used in this contract "Carrier" means all air carriers that carry or undertake to carry the goods hereunder or perform any other services incidental to such air carriage. "Warsaw Convention" means the Convention for the Unification of certain Rules relating to International Carriage by Air, signed at Warsaw, 12 October 1929, or that Convention as amended at The Hague, 28 September 1955, which ever may be applicable, and "French gold francs" consisting of 65 1/2 milligrams of gold with a fineness of nine hundred thousandths.</p>
+      <p>2.(2.1) Carriage hereunder is subject to the rules relating to liability established by the Warsaw Convention unless such carriage is not "international carriage" as defined by that convention;<br>(2.2) To the extent not in conflict with the foregoing, carriage hereunder and other services performed by each Carrier are subject to:<br>(2.2.1) Applicable laws (including national laws implementing the Convention), government regulations, orders and requirements;<br>(2.2.2) Provisions herein set forth, and<br>(2.2.3) Applicable tariffs, rules, conditions of carriage, regulations and timetables (but not the times of departure and arrival therein) of such carrier, which are made part hereof and which may be inspected at any of its offices and at airports from which it operates regular services. In transportation between a place in the United States or Canada and any place outside thereof the applicable tariffs are the tariffs in force in those countries.</p>
+      <p>3. The first Carrier's name may be abbreviated on the face hereof, the full name and its abbreviation being set forth in such Carrier's tariffs, conditions of carriage, regulations and timetables. The first Carrier's address is the airport of departure shown on the face hereof. The agreed stopping places (which may be altered by Carrier in case of necessity) are those places, except the place of departure and the place of destination, set forth on the face hereof or shown in Carrier's timetables as scheduled stopping places for the route. Carriage to be performed hereunder by several successive carriers is regarded as a single operation.</p>
+      <p>4. For carriage to which the Montreal Convention does not apply, Carrier's liability limitation for cargo lost, damaged or delayed shall be 26 SDRs per kilogram, unless a greater per-kilogram monetary limit is provided in any applicable convention or in Carrier's tariff or general conditions of carriage.</p>
+      <p>5. If the sum entered on the face of the Air Waybill as "Declared Value for Carriage" represents an amount in excess of the applicable limits of liability referred to in the above Notice and in these Conditions and if the shipper has paid any supplementary charge that may be required by the Carrier's tariffs, conditions of carriage or regulations, this shall constitute a special declaration of value and in this case Carrier's limit of liability shall be the sum so declared. Payment of claims shall be subject to proof of actual damages suffered.</p>
+      <p>6. In cases of loss, damage or delay of part of the consignment, the weight to be taken into account in determining Carrier's limit of liability shall be only the weight of the package or packages concerned.<br>Note: Notwithstanding any other provision, for foreign air transportation as defined in the U.S. Federal Aviation Act, as amended, in the case of loss or damage or delay of a shipment or part thereof, the weight to be used in determining the carrier's limit of liability shall be the weight which is used (or a pro rata share in the case of a part shipment loss, damaged or delay) to determine the transportation charge for such shipment.</p>
+      <p>7. Any exclusion or limitation of liability applicable to Carrier shall apply to and be for the benefit of Carrier's agents, servants and representatives and any person whose aircraft is used by Carrier for carriage and its agents, servants and representatives. For purposes of this provision Carrier acts herein as agent for all such persons.</p>
+      <p>8. (8.1) Carrier undertakes to complete the carriage hereunder with reasonable dispatch. Carrier may substitute alternate carriers or aircraft and may without notice and with due regard to the interests of the shipper substitute other means of transportation. Carrier is authorized to select the routing or to change or deviate from the routing shown on the face hereof. This Subparagraph is not applicable to/from USA;</p>
+    </div>
+    <div class="p2-col">
+      <p>(8.2) Carrier undertakes to complete the carriage hereunder with reasonable dispatch. Except within USA where carrier tariffs will apply, Carrier may substitute alternate carriers or aircraft and may without notice and with due regard to the interests of the shipper substitute other means of transportation. Carrier is authorized to select the routing or to change or deviate from the routing shown on the face hereof. This Subparagraph is applicable only to/from USA.</p>
+      <p>9. Subject to the conditions herein, the Carrier shall be liable for the goods during the period they are in its charge or the charge of its agent.</p>
+      <p>10. (10.1) Except when the Carrier has extended credit to the consignee without the written consent of the shipper, the shipper guarantees payment of all charges for carriage due in accordance with Carrier's tariffs, conditions of carriage and related regulations, applicable laws (including national laws implementing the Convention), government regulations, orders and requirements<br>(10.2) When no part of the consignment is delivered, a claim with respect to such consignment will be entertained even though transportation charges thereon are unpaid.</p>
+      <p>11. Notice of arrival of goods will be given promptly to the consignee or to the person indicated on the face hereof as the person to be notified. On arrival of the goods at the place of destination, subject to the acceptance of other instructions from the shipper prior to arrival of the goods at the place of destination, delivery will be made to, or in accordance with the instructions of the consignee. If the consignee declines to accept the goods or cannot be communicated with, disposition will be in accordance with instructions of the shipper</p>
+      <p>12. (12.1) The person entitled to delivery must make a complaint to the Carrier in writing in the case<br>(12.1.1) Of visible damage to the goods, immediately after discovery of the damage and at the latest within 14 days from receipt of the goods.<br>(12.1.2) Of other damage to the goods, within 14 days from the date of receipt of the goods.<br>(12.1.3) Of delay, within 21 days of the date the goods are placed at his disposal, and<br>(12.1.4) Of non-delivery of the goods, within 120 days from the date of the issue of the Air Waybill;<br>(12.2) For the purpose of Subparagraph (a) above complaint in writing may be made to the Carrier whose Air Waybill was used, or to the first Carrier or to the last Carrier or to the Carrier who performed the transportation during which the loss, damage or delay took place;(c) any rights to damages against Carrier shall be extinguished unless an action is brought within two years from the date of arrival at the destination, or from the date on which the aircraft ought to have arrived, or from the date on which the transportation stopped.</p>
+      <p>13. The shipper shall comply with all applicable laws, and government regulations of any country to, from, through or over which the goods may be carried, including those relating to the packing, carriage or delivery of the goods, and shall furnish such information and attach such documents to the Air Waybill as may be necessary to comply with such laws and regulations, Carrier is not liable to the shipper for loss or expense due to the shipper's failure to comply with this provision.</p>
+      <p>14. No agent, servant or representative of Carrier has authority to alter, modify or waive any provisions of this contract.</p>
+      <p>15. If Carrier offers insurance, and such insurance is requested and if the appropriate premium is paid and the fact recorded on the face hereof, the goods covered by this Air Waybill are insured under an open policy for the amount requested as set out on the face hereof (recovery being limited to the actual value of goods lost or damaged provided that such amount does not exceed the insured value). The insurance is subject to the terms, conditions and coverage (from which certain risks are excluded) of the open policy, which is available for inspection at an office of the issuing Carrier by the interested party. Claims under such policy must be reported immediately to an office of Carrier.</p>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

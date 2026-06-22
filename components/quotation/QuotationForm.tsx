@@ -780,18 +780,20 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
       let natH: number
 
       if (isLinks) {
-        const pdfjsLib = await import("pdfjs-dist")
-        pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs"
-        const pdf = await pdfjsLib.getDocument({ url: "/Links logo (3).pdf" }).promise
-        const page = await pdf.getPage(1)
-        const viewport = page.getViewport({ scale: 3 })
-        const canvas = document.createElement("canvas")
-        canvas.width = viewport.width
-        canvas.height = viewport.height
-        await page.render({ canvas, canvasContext: canvas.getContext("2d")!, viewport }).promise
-        logoDataUrl = canvas.toDataURL("image/png")
-        natW = canvas.width
-        natH = canvas.height
+        const blob = await fetch("/linkslogo.png").then((r) => r.blob())
+        logoDataUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve(reader.result as string)
+          reader.readAsDataURL(blob)
+        })
+        const img = new Image()
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve()
+          img.onerror = reject
+          img.src = logoDataUrl
+        })
+        natW = img.naturalWidth || maxLogoW
+        natH = img.naturalHeight || maxLogoH
       } else {
         const blob = await fetch("/logo.jpeg").then((r) => r.blob())
         logoDataUrl = await new Promise<string>((resolve) => {
@@ -831,14 +833,8 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
     doc.text(`Ref: ${refLabel}`, pageW - margin, y, { align: "right" })
     y += 5
     doc.text(`Date: ${form.quot_date}`, pageW - margin, y, { align: "right" })
-    doc.text(
-      `USD / INR: ${usdInr.toFixed(2)}`,
-      pageW - margin,
-      y + 5,
-      { align: "right" }
-    )
     doc.setTextColor(0)
-    y += 20
+    y += 15
 
     // ── Shipment details ──────────────────────────────────
     const details: [string, string][] = [
@@ -1030,27 +1026,17 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
     }
 
     // ── Total ─────────────────────────────────────────────
-    // Show the total in the user-selected display currency. INR stays the
-    // canonical figure, so when the display currency isn't INR we keep an
-    // INR-equivalent line beneath the rate for reference.
     const total = totalInr()
     const totalDisplay = displayTotal(total, displayCurrency)
     const fmtMoney = (n: number) =>
       n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
     const totalRows: RowInput[] = [
-      [{ content: `Exchange Rate: 1 USD = ${usdInr.toFixed(2)} INR`, colSpan: 2, styles: { fontSize: 8, textColor: [100, 100, 100] } }],
+      [
+        { content: "TOTAL COST", styles: { fontStyle: "bold", fontSize: 10 } },
+        { content: `${displayCurrency} ${fmtMoney(totalDisplay)}`, styles: { fontStyle: "bold", fontSize: 10, halign: "right" } },
+      ],
     ]
-    if (displayCurrency !== "INR") {
-      totalRows.push([
-        { content: "Equivalent (INR)", styles: { fontSize: 8, textColor: [100, 100, 100] } },
-        { content: `INR ${fmtMoney(total)}`, styles: { fontSize: 8, textColor: [100, 100, 100], halign: "right" } },
-      ])
-    }
-    totalRows.push([
-      { content: "TOTAL COST", styles: { fontStyle: "bold", fontSize: 10 } },
-      { content: `${displayCurrency} ${fmtMoney(totalDisplay)}`, styles: { fontStyle: "bold", fontSize: 10, halign: "right" } },
-    ])
 
     autoTable(doc, {
       startY: y,
