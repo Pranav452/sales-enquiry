@@ -31,6 +31,11 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
+  // Public client-facing rate sheet pages — no login required
+  if (pathname.startsWith("/r/")) {
+    return supabaseResponse
+  }
+
   // Not logged in — send to login (unless already there)
   if (!user && pathname !== "/login") {
     const url = request.nextUrl.clone()

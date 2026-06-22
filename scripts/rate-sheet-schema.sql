@@ -1,0 +1,72 @@
+-- ============================================================
+-- Rate Sheet Schema — run on BOTH manilal and LinksDB20
+-- Idempotent: safe to run multiple times
+-- ============================================================
+
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'TBL_RATE_SHEET_DESTINATIONS')
+BEGIN
+  CREATE TABLE [dbo].[TBL_RATE_SHEET_DESTINATIONS] (
+    DEST_ID        INT            IDENTITY(1,1) PRIMARY KEY,
+    DEST_NAME      NVARCHAR(100)  NOT NULL,
+    PORT_NAME      NVARCHAR(100)  NULL,
+    CONTINENT      NVARCHAR(50)   NULL,
+    REQUIREMENTS   NVARCHAR(MAX)  NULL,  -- newline-separated list
+    ACTIVE         BIT            NOT NULL DEFAULT 1,
+    CREATED_AT     DATETIME       NOT NULL DEFAULT GETDATE()
+  )
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'TBL_RATE_SHEET_RATES')
+BEGIN
+  CREATE TABLE [dbo].[TBL_RATE_SHEET_RATES] (
+    RATE_ID        INT            IDENTITY(1,1) PRIMARY KEY,
+    DEST_ID        INT            NOT NULL,
+    CARRIER        NVARCHAR(50)   NOT NULL,
+    CONTAINER_TYPE NVARCHAR(20)   NOT NULL DEFAULT '40HC',
+    RATE_USD       NVARCHAR(300)  NULL,
+    FREE_DAYS      NVARCHAR(100)  NULL,
+    VALIDITY       NVARCHAR(200)  NULL,
+    IS_SUSPENDED   BIT            NOT NULL DEFAULT 0,
+    UPDATED_AT     DATETIME       NOT NULL DEFAULT GETDATE(),
+    UPDATED_BY     NVARCHAR(200)  NULL
+  )
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'TBL_RATE_SHEET_SCHEDULES')
+BEGIN
+  CREATE TABLE [dbo].[TBL_RATE_SHEET_SCHEDULES] (
+    SCHED_ID       INT            IDENTITY(1,1) PRIMARY KEY,
+    DEST_ID        INT            NOT NULL,
+    CARRIER        NVARCHAR(50)   NOT NULL,
+    VESSEL_NAME    NVARCHAR(200)  NULL,
+    VOYAGE_NO      NVARCHAR(50)   NULL,
+    ETD            NVARCHAR(30)   NULL,
+    ETA            NVARCHAR(30)   NULL,
+    TRANSIT_DAYS   NVARCHAR(30)   NULL,
+    VIA_PORT       NVARCHAR(100)  NULL,
+    GATE_IN        NVARCHAR(30)   NULL,
+    SORT_ORDER     INT            NOT NULL DEFAULT 0,
+    CREATED_AT     DATETIME       NOT NULL DEFAULT GETDATE()
+  )
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'TBL_RATE_SHEET_TOKENS')
+BEGIN
+  CREATE TABLE [dbo].[TBL_RATE_SHEET_TOKENS] (
+    TOKEN_ID       INT            IDENTITY(1,1) PRIMARY KEY,
+    TOKEN          NVARCHAR(100)  NOT NULL,
+    COMPANY        NVARCHAR(20)   NOT NULL,  -- 'manilal' or 'links'
+    DEST_ID        INT            NOT NULL,
+    CLIENT_NAME    NVARCHAR(200)  NULL,
+    CLIENT_EMAIL   NVARCHAR(200)  NULL,
+    CREATED_BY     NVARCHAR(200)  NULL,
+    CREATED_AT     DATETIME       NOT NULL DEFAULT GETDATE(),
+    LAST_VIEWED    DATETIME       NULL,
+    ACTIVE         BIT            NOT NULL DEFAULT 1,
+    CONSTRAINT UQ_RATE_TOKEN UNIQUE (TOKEN)
+  )
+END
+GO

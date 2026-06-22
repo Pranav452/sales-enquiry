@@ -28,6 +28,7 @@ import {
   Target,
   X,
   FileText,
+  Globe,
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
@@ -413,6 +414,7 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
           { label: "Lead Dashboard",     href: "/sales-leads/dashboard", icon: BarChart2 },
           { label: "Audit Log",          href: "/audit",               icon: ScrollText },
           { label: "Manage Rates",       href: "/rates/manage",        icon: Settings2 },
+          { label: "Rate Sheet",         href: "/rate-sheet",          icon: Globe },
         ]
       : []),
     ...(email === "sales2.bom@manilal.com"
