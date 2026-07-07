@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Plus, X, List } from "lucide-react"
 
-interface UserInfo { role: string; salesperson: string | null }
+interface UserInfo { role: string; salesperson: string | null; company: string }
 
 function MiniStat({ label, value }: { label: string; value: number }) {
   return (
@@ -36,10 +36,14 @@ export default function SalesLeadsPage() {
       if (!user) return
       const { data } = await supabase
         .from("user_profiles")
-        .select("role, salesperson")
+        .select("role, salesperson, company")
         .eq("id", user.id)
         .single()
-      setUserInfo({ role: data?.role ?? "sales", salesperson: data?.salesperson ?? null })
+      setUserInfo({
+        role:        data?.role ?? "sales",
+        salesperson: data?.salesperson ?? null,
+        company:     data?.company ?? "manilal",
+      })
     })
   }, [])
 
@@ -140,6 +144,7 @@ export default function SalesLeadsPage() {
           <SalesLeadForm
             editing={editing}
             defaultSalesPerson={userInfo?.salesperson ?? undefined}
+            company={userInfo?.company}
             onSuccess={handleSuccess}
             onCancel={() => { setShowForm(false); setEditing(null) }}
           />
@@ -163,6 +168,7 @@ export default function SalesLeadsPage() {
         <SalesLeadList
           rows={rows}
           loading={loading}
+          company={userInfo?.company}
           onEdit={(l) => {
             setEditing(l)
             setShowForm(false)

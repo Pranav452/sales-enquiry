@@ -24,6 +24,7 @@ import {
   expandPortCity,
 } from "@/lib/constants/dropdowns"
 import { RotateCcw, FileDown, Save, Plus, X, Loader2 } from "lucide-react"
+import { drawCompanyLogo } from "@/lib/pdf-logo"
 import type { RowInput } from "jspdf-autotable"
 
 // Port list is static — expand it once at module load, not on every
@@ -765,59 +766,9 @@ export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuc
     let y = 14
 
     // ── Logo ──────────────────────────────────────────────
-    // Fit the logo inside a max box preserving its native aspect ratio.
-    // The two source assets have different shapes (manilal logo.jpeg is
-    // ~square, the Links PDF is ~2:1), so a fixed 40x16 box stretched both.
-    const maxLogoW = 40
-    const maxLogoH = 16
-    // Width actually drawn — used to place the title clear of the logo.
-    // Defaults to maxLogoW so the title position is sane if the logo fails.
-    let drawnLogoW = maxLogoW
-    try {
-      const isLinks = company === "links"
-      let logoDataUrl: string
-      let natW: number
-      let natH: number
-      const img = new Image()
-
-      const blob = await fetch(isLinks ? "/linkslogo.png" : "/logo.jpeg").then((r) => r.blob())
-      logoDataUrl = await new Promise<string>((resolve) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve(reader.result as string)
-        reader.readAsDataURL(blob)
-      })
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve()
-        img.onerror = reject
-        img.src = logoDataUrl
-      })
-      natW = img.naturalWidth || maxLogoW
-      natH = img.naturalHeight || maxLogoH
-
-      // Contain-fit: scale down to fit the box, keep aspect ratio.
-      const scale = Math.min(maxLogoW / natW, maxLogoH / natH)
-      const logoW = natW * scale
-      const logoH = natH * scale
-      drawnLogoW = logoW
-
-      // Resize to actual display dimensions before embedding.
-      // Without this, jsPDF stores the full 2022×1020 PNG as raw RGBA pixel
-      // data (~8 MB), bloating a simple quotation PDF to 6+ MB. A canvas
-      // downscale to the drawn size (2× for crispness) + JPEG export drops
-      // the embedded image to ~30 KB and the final PDF to under 300 KB.
-      const PX_PER_MM = 96 / 25.4
-      const cw = Math.max(1, Math.round(logoW * PX_PER_MM * 2))
-      const ch = Math.max(1, Math.round(logoH * PX_PER_MM * 2))
-      const tmpCanvas = document.createElement("canvas")
-      tmpCanvas.width = cw
-      tmpCanvas.height = ch
-      const ctx = tmpCanvas.getContext("2d")!
-      ctx.fillStyle = "#ffffff"
-      ctx.fillRect(0, 0, cw, ch)
-      ctx.drawImage(img, 0, 0, cw, ch)
-      const smallDataUrl = tmpCanvas.toDataURL("image/jpeg", 0.92)
-      doc.addImage(smallDataUrl, "JPEG", margin, y, logoW, logoH)
-    } catch { /* logo load failed — continue without */ }
+    // Company-aware logo (Manilal / Links), contain-fit + downscaled before
+    // embed. Returns the drawn width so the title clears the logo.
+    const drawnLogoW = await drawCompanyLogo(doc, company, margin, y)
 
     // ── Header ────────────────────────────────────────────
     // Place the title 4mm to the right of the actual logo width so it

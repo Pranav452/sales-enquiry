@@ -85,8 +85,9 @@ function FilterSelect({
   )
 }
 
-function LeadRow({ r, onEdit, onConvert, converting }: {
+function LeadRow({ r, company, onEdit, onConvert, converting }: {
   r: SalesLead
+  company?: string | null
   onEdit?: (l: SalesLead) => void
   onConvert?: (l: SalesLead) => void
   converting?: boolean
@@ -97,7 +98,7 @@ function LeadRow({ r, onEdit, onConvert, converting }: {
   async function handleDownload() {
     setDownloading(true)
     try {
-      await generateSalesLeadPdf(r)
+      await generateSalesLeadPdf(r, company)
     } finally {
       setDownloading(false)
     }
@@ -217,12 +218,13 @@ function LeadRow({ r, onEdit, onConvert, converting }: {
 interface Props {
   rows:          SalesLead[]
   loading:       boolean
+  company?:      string | null
   onEdit?:       (l: SalesLead) => void
   onConvert?:    (l: SalesLead) => void
   convertingId?: string | null
 }
 
-export function SalesLeadList({ rows, loading, onEdit, onConvert, convertingId }: Props) {
+export function SalesLeadList({ rows, loading, company, onEdit, onConvert, convertingId }: Props) {
   const [search, setSearch]           = useState("")
   const [page, setPage]               = useState(1)
   const [filterStatus, setFilterStatus] = useState("")
@@ -307,7 +309,7 @@ export function SalesLeadList({ rows, loading, onEdit, onConvert, convertingId }
           <div className="py-10 text-sm text-center text-muted-foreground">No leads found.</div>
         ) : (
           paginated.map((r) => (
-            <LeadRow key={r.id} r={r} onEdit={onEdit} onConvert={onConvert} converting={convertingId === r.id} />
+            <LeadRow key={r.id} r={r} company={company} onEdit={onEdit} onConvert={onConvert} converting={convertingId === r.id} />
           ))
         )}
       </div>

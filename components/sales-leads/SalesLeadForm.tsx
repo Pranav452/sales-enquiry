@@ -16,6 +16,7 @@ const ALL_SALES_PERSONS = [...new Set([...MANILAL_SALES_PERSONS, ...LINKS_SALES_
 interface Props {
   editing?:            SalesLead | null
   defaultSalesPerson?: string
+  company?:            string | null
   onSuccess:           (id: string, refCode: string | undefined, isEdit: boolean) => void
   onCancel?:           () => void
 }
@@ -79,7 +80,7 @@ const textareaCls = cn(
   "text-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-y"
 )
 
-export function SalesLeadForm({ editing, defaultSalesPerson, onSuccess, onCancel }: Props) {
+export function SalesLeadForm({ editing, defaultSalesPerson, company, onSuccess, onCancel }: Props) {
   const [form, setForm]       = useState<FormState>(EMPTY)
   const [saving, setSaving]   = useState(false)
   const [error, setError]     = useState<string | null>(null)
@@ -155,7 +156,7 @@ export function SalesLeadForm({ editing, defaultSalesPerson, onSuccess, onCancel
   }
 
   async function handleDownloadPdf() {
-    await generateSalesLeadPdf({ ...form, ref_code: editing?.ref_code ?? null })
+    await generateSalesLeadPdf({ ...form, ref_code: editing?.ref_code ?? null }, company)
   }
 
   return (

@@ -1,5 +1,7 @@
 // Shared Sales Lead PDF generator — used by both the edit form and the list view.
 
+import { drawCompanyLogo } from "@/lib/pdf-logo"
+
 export interface SalesLeadPdfData {
   ref_code?:             string | null
   date_sent?:            string | null
@@ -31,7 +33,10 @@ export interface SalesLeadPdfData {
 
 type WithAutoTable = { lastAutoTable: { finalY: number } }
 
-export async function generateSalesLeadPdf(lead: SalesLeadPdfData): Promise<void> {
+export async function generateSalesLeadPdf(
+  lead: SalesLeadPdfData,
+  company?: string | null,
+): Promise<void> {
   const { jsPDF } = await import("jspdf")
   const autoTable = (await import("jspdf-autotable")).default
 
@@ -40,19 +45,11 @@ export async function generateSalesLeadPdf(lead: SalesLeadPdfData): Promise<void
   const margin = 14
   let y = 14
 
-  try {
-    const blob = await fetch("/logo.jpeg").then((r) => r.blob())
-    const logoDataUrl = await new Promise<string>((resolve) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result as string)
-      reader.readAsDataURL(blob)
-    })
-    doc.addImage(logoDataUrl, "JPEG", margin, y, 40, 16)
-  } catch { /* skip logo */ }
+  const drawnLogoW = await drawCompanyLogo(doc, company, margin, y)
 
   doc.setFontSize(14)
   doc.setFont("helvetica", "bold")
-  doc.text("SALES LEAD", margin + 46, y + 8)
+  doc.text("SALES LEAD", margin + drawnLogoW + 6, y + 8)
   if (lead.ref_code) {
     doc.setFontSize(9)
     doc.setFont("helvetica", "normal")
@@ -199,7 +196,10 @@ export async function generateSalesLeadPdf(lead: SalesLeadPdfData): Promise<void
   doc.setTextColor(80)
   const footerY = doc.internal.pageSize.getHeight() - 20
   doc.line(margin, footerY - 2, pageW - margin, footerY - 2)
-  doc.text(`${lead.sent_by || "Sales"} · MP Cargo · www.manilal.com`, margin, footerY + 2)
+  const companyLine = company === "links"
+    ? "Links Cargo"
+    : "MP Cargo · www.manilal.com"
+  doc.text(`${lead.sent_by || "Sales"} · ${companyLine}`, margin, footerY + 2)
   doc.setTextColor(0)
 
   const filename = `SalesLead_${lead.ref_code ?? "Draft"}_${lead.date_sent || "today"}.pdf`
