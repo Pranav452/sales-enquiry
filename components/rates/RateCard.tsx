@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ValidityBadge } from "./ValidityBadge"
@@ -8,6 +9,23 @@ import { ExternalLink } from "lucide-react"
 interface Props {
   line: string
   rates: FreightRate[]
+}
+
+// Builds a /quotation link that seeds the form from this rate row so a
+// sales person can go from "found a rate" to "drafted a quote" in one click.
+function quotationHref(rate: FreightRate, size: "20" | "40"): string {
+  const amount = size === "20" ? rate.rate_20 : rate.rate_40
+  const params = new URLSearchParams()
+  if (rate.origin_port) params.set("pol", rate.origin_port)
+  if (rate.dest_port) params.set("pod", rate.dest_port)
+  params.set("container_type", size === "20" ? "20GP" : "40HC")
+  if (amount != null) params.set("freight_amount", String(amount))
+  params.set("freight_currency", rate.currency)
+  if (rate.shipping_line) params.set("carrier", rate.shipping_line)
+  if (rate.transit_days != null) params.set("transit_time", `${rate.transit_days} days`)
+  if (rate.valid_to) params.set("freight_validity_date", rate.valid_to)
+  if (rate.surcharges) params.set("surcharges", rate.surcharges)
+  return `/quotation?${params.toString()}`
 }
 
 export function RateCard({ line, rates }: Props) {
@@ -52,8 +70,18 @@ export function RateCard({ line, rates }: Props) {
       <CardContent className="flex flex-col gap-3">
         {/* Rates */}
         <div className="grid grid-cols-2 gap-3">
-          <RateBox label="20' Rate" value={primary.rate_20} currency={primary.currency} />
-          <RateBox label="40' Rate" value={primary.rate_40} currency={primary.currency} />
+          <RateBox
+            label="20' Rate"
+            value={primary.rate_20}
+            currency={primary.currency}
+            href={primary.rate_20 != null ? quotationHref(primary, "20") : undefined}
+          />
+          <RateBox
+            label="40' Rate"
+            value={primary.rate_40}
+            currency={primary.currency}
+            href={primary.rate_40 != null ? quotationHref(primary, "40") : undefined}
+          />
         </div>
 
         {/* Transit + via */}
@@ -87,10 +115,18 @@ export function RateCard({ line, rates }: Props) {
                 <span className="text-muted-foreground">{r.dest_port ?? "—"}</span>
                 <div className="flex items-center gap-2 flex-wrap">
                   {r.rate_20 != null && (
-                    <Badge variant="outline" className="font-normal text-xs">20': {r.currency} {r.rate_20.toLocaleString()}</Badge>
+                    <Link href={quotationHref(r, "20")} title="Use this rate in a new quotation">
+                      <Badge variant="outline" className="font-normal text-xs cursor-pointer transition-colors hover:bg-blue-50 hover:border-blue-300 dark:hover:bg-blue-950/30">
+                        20': {r.currency} {r.rate_20.toLocaleString()}
+                      </Badge>
+                    </Link>
                   )}
                   {r.rate_40 != null && (
-                    <Badge variant="outline" className="font-normal text-xs">40': {r.currency} {r.rate_40.toLocaleString()}</Badge>
+                    <Link href={quotationHref(r, "40")} title="Use this rate in a new quotation">
+                      <Badge variant="outline" className="font-normal text-xs cursor-pointer transition-colors hover:bg-blue-50 hover:border-blue-300 dark:hover:bg-blue-950/30">
+                        40': {r.currency} {r.rate_40.toLocaleString()}
+                      </Badge>
+                    </Link>
                   )}
                   <ValidityBadge valid_from={r.valid_from} valid_to={r.valid_to} />
                   {r.pdf_url && (
@@ -114,14 +150,30 @@ export function RateCard({ line, rates }: Props) {
   )
 }
 
-function RateBox({ label, value, currency }: { label: string; value: number | null; currency: string }) {
-  return (
-    <div className="rounded-lg bg-muted/50 p-3">
+function RateBox({
+  label, value, currency, href,
+}: { label: string; value: number | null; currency: string; href?: string }) {
+  const content = (
+    <>
       <p className="text-xs text-muted-foreground mb-1">{label}</p>
       {value != null
         ? <p className="text-lg font-semibold">{currency} {value.toLocaleString()}</p>
         : <p className="text-sm text-muted-foreground">—</p>
       }
-    </div>
+    </>
   )
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        title="Use this rate in a new quotation"
+        className="block rounded-lg bg-muted/50 p-3 cursor-pointer transition-colors hover:bg-blue-50 hover:ring-1 hover:ring-blue-300 dark:hover:bg-blue-950/30"
+      >
+        {content}
+      </Link>
+    )
+  }
+
+  return <div className="rounded-lg bg-muted/50 p-3">{content}</div>
 }

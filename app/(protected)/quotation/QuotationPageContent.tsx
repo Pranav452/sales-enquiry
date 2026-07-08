@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
-import { QuotationForm, QuotationEditing } from "@/components/quotation/QuotationForm"
+import { QuotationForm, QuotationEditing, RatePrefill } from "@/components/quotation/QuotationForm"
 
 interface Props {
   company: string
@@ -14,6 +14,28 @@ export function QuotationPageContent({ company }: Props) {
   const editId = searchParams.get("edit")
   const dupId = searchParams.get("dup")
   const enqId = searchParams.get("enq")
+
+  // Seeded from a Rate Explorer card click (?pol=&pod=&container_type=&
+  // freight_amount=&freight_currency=&carrier=&transit_time=&
+  // freight_validity_date=&surcharges=). Ignored once an edit/dup is loading.
+  const rPol = searchParams.get("pol")
+  const rPod = searchParams.get("pod")
+  const rContainer = searchParams.get("container_type")
+  const rAmount = searchParams.get("freight_amount")
+  const ratePrefill: RatePrefill | null =
+    !editId && !dupId && (rPol || rPod || rContainer || rAmount)
+      ? {
+          carrier: searchParams.get("carrier") ?? "",
+          pol: rPol,
+          pod: rPod,
+          container_type: rContainer ?? "",
+          amount: rAmount ? Number(rAmount) : null,
+          currency: searchParams.get("freight_currency") ?? "USD",
+          transit_time: searchParams.get("transit_time"),
+          freight_validity_date: searchParams.get("freight_validity_date"),
+          surcharges: searchParams.get("surcharges"),
+        }
+      : null
 
   const [editing, setEditing] = useState<QuotationEditing | null>(null)
   const [loading, setLoading] = useState(false)
@@ -76,6 +98,7 @@ export function QuotationPageContent({ company }: Props) {
   }
 
   const title = editId ? "Edit Quotation" : dupId ? "Duplicate Quotation" : "New Quotation"
+  const formKey = editId ?? dupId ?? (ratePrefill ? searchParams.toString() : "new")
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
@@ -91,9 +114,10 @@ export function QuotationPageContent({ company }: Props) {
         <p className="text-sm text-muted-foreground py-8 text-center">Loading...</p>
       ) : (
         <QuotationForm
-          key={editId ?? dupId ?? "new"}
+          key={formKey}
           company={company}
           editingQuotation={editing}
+          ratePrefill={ratePrefill}
           prefilledEnqId={enqId}
           onSuccess={handleSuccess}
         />

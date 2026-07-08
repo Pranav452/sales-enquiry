@@ -26,6 +26,7 @@ import {
 import { RotateCcw, FileDown, Save, Plus, X, Loader2 } from "lucide-react"
 import { drawCompanyLogo } from "@/lib/pdf-logo"
 import type { RowInput } from "jspdf-autotable"
+import { parseSurcharges } from "@/lib/utils/surcharges"
 
 // Port list is static — expand it once at module load, not on every
 // render. (Re-mapping ~600 entries on each keystroke made the form janky.)
@@ -231,6 +232,46 @@ function formFromQuotation(q: QuotationEditing): FormData {
   }
 }
 
+// Prefill source when a form is seeded from a Rate Explorer card click
+// rather than an existing quotation — no id/ref, just lane + rate.
+export interface RatePrefill {
+  carrier: string
+  pol: string | null
+  pod: string | null
+  container_type: string
+  amount: number | null
+  currency: string
+  transit_time: string | null
+  freight_validity_date: string | null
+  surcharges: string | null
+}
+
+function formFromRatePrefill(p: RatePrefill): FormData {
+  const base = getDefaultForm()
+  const extraFreight: ExtraCharge[] = parseSurcharges(p.surcharges).map((s) => ({
+    label: s.name,
+    amount: /^\d+(\.\d+)?$/.test(s.value) ? s.value : "",
+    currency: p.currency,
+    remarks: s.value === "included" ? "included" : "",
+  }))
+  return {
+    ...base,
+    mode: "SEA",
+    pol: p.pol ?? "",
+    pod: p.pod ?? "",
+    container_type: p.container_type,
+    shipment_type: "freight",
+    freight_charge: {
+      amount: p.amount != null ? String(p.amount) : "",
+      currency: p.currency,
+      remarks: p.carrier ? `${p.carrier} rate` : "",
+    },
+    extra_freight: extraFreight,
+    transit_time: p.transit_time ?? "",
+    freight_validity_date: p.freight_validity_date ?? "",
+  }
+}
+
 export interface QuotationEditing {
   id: string
   quot_ref_no: string
@@ -274,6 +315,7 @@ export interface QuotationEditing {
 interface Props {
   company: string
   editingQuotation?: QuotationEditing | null
+  ratePrefill?: RatePrefill | null
   prefilledEnqId?: string | null
   onSuccess?: (id: string, refNo: string) => void
 }
@@ -496,14 +538,16 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
 
 // ─── Main component ───────────────────────────────────────────
 
-export function QuotationForm({ company, editingQuotation, prefilledEnqId, onSuccess }: Props) {
+export function QuotationForm({ company, editingQuotation, ratePrefill, prefilledEnqId, onSuccess }: Props) {
   const router = useRouter()
   const exchange = useExchangeRate()
   // Lazy-init from editing data so controlled Radix Selects mount with
   // the correct value (a value applied async after an empty mount is
   // not reliably reflected by the Select trigger under React 19).
-  const [form, setForm] = useState<FormData>(
-    () => editingQuotation ? formFromQuotation(editingQuotation) : getDefaultForm()
+  const [form, setForm] = useState<FormData>(() =>
+    editingQuotation ? formFromQuotation(editingQuotation)
+      : ratePrefill ? formFromRatePrefill(ratePrefill)
+      : getDefaultForm()
   )
   const [submitting, setSubmitting] = useState(false)
   const [pdfGenerating, setPdfGenerating] = useState(false)
