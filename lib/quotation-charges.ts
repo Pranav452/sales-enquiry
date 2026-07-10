@@ -12,6 +12,7 @@ interface ChargeBody {
   extra_cc?: unknown[] | null
   freight_validity?: string | null
   freight_validity_date?: string | null
+  routing?: string | null
 }
 
 function hasItems(a: unknown[] | null | undefined): boolean {
@@ -32,6 +33,7 @@ export function buildLocalBlob(body: ChargeBody): string | null {
     __extra_local: body.extra_local ?? [],
     __freight_validity: body.freight_validity ?? null,
     __freight_validity_date: body.freight_validity_date ?? null,
+    __routing: body.routing ?? null,
   })
 }
 
@@ -52,10 +54,11 @@ interface ParsedLocal {
   extra_local: unknown[]
   freight_validity: string | null
   freight_validity_date: string | null
+  routing: string | null
 }
 
 export function parseLocalBlob(raw: string | null): ParsedLocal {
-  if (!raw) return { local_charges: null, freight_charge: null, extra_freight: [], extra_local: [], freight_validity: null, freight_validity_date: null }
+  if (!raw) return { local_charges: null, freight_charge: null, extra_freight: [], extra_local: [], freight_validity: null, freight_validity_date: null, routing: null }
   const p = JSON.parse(raw) as Record<string, unknown>
   const {
     __freight_charge = null,
@@ -63,6 +66,7 @@ export function parseLocalBlob(raw: string | null): ParsedLocal {
     __extra_local = [],
     __freight_validity = null,
     __freight_validity_date = null,
+    __routing = null,
     ...local
   } = p
   return {
@@ -72,6 +76,7 @@ export function parseLocalBlob(raw: string | null): ParsedLocal {
     extra_local: (__extra_local as unknown[]) ?? [],
     freight_validity: (__freight_validity as string | null) ?? null,
     freight_validity_date: (__freight_validity_date as string | null) ?? null,
+    routing: (__routing as string | null) ?? null,
   }
 }
 

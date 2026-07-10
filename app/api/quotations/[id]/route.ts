@@ -48,6 +48,7 @@ export async function GET(
     extra_local:            local.extra_local,
     freight_validity:       local.freight_validity,
     freight_validity_date:  local.freight_validity_date,
+    routing:                local.routing,
     cc_charges:             cc.cc_charges,
     extra_cc:               cc.extra_cc,
     transport_cost:         row.TRANSPORT_COST ? JSON.parse(row.TRANSPORT_COST) : null,

@@ -107,6 +107,7 @@ interface FormData {
   eta: string
   transit_time: string
   free_time: string
+  routing: string
   local_charges: LocalCharges
   stuffing_type: "doc" | "factory" | ""
   doc_charges: DocCharges
@@ -177,6 +178,7 @@ function getDefaultForm(): FormData {
     eta: "",
     transit_time: "",
     free_time: "",
+    routing: "",
     local_charges: defaultLocalCharges(),
     stuffing_type: "",
     doc_charges: defaultDocCharges(),
@@ -218,6 +220,7 @@ function formFromQuotation(q: QuotationEditing): FormData {
     eta: normDate(q.eta),
     transit_time: q.transit_time ?? "",
     free_time: q.free_time ?? "",
+    routing: q.routing ?? "",
     local_charges: q.local_charges ?? defaultLocalCharges(),
     stuffing_type: stuffType,
     doc_charges: (stuffType === "doc" ? (q.cc_charges as DocCharges) : null) ?? defaultDocCharges(),
@@ -292,6 +295,7 @@ export interface QuotationEditing {
   eta: string | null
   transit_time: string | null
   free_time: string | null
+  routing?: string | null
   local_charges: LocalCharges | null
   stuffing_type: string | null
   cc_charges: (DocCharges | FactoryCharges) | null
@@ -738,6 +742,7 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
       eta: showFreight && form.eta ? form.eta : null,
       transit_time: showFreight ? form.transit_time : null,
       free_time: showFreight ? form.free_time : null,
+      routing: showFreight ? form.routing : null,
       local_charges: showFreight ? form.local_charges : null,
       stuffing_type: showCC ? form.stuffing_type : null,
       cc_charges: showCC ? ccCharges : null,
@@ -804,6 +809,16 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
     const { jsPDF } = await import("jspdf")
     const autoTable = (await import("jspdf-autotable")).default
 
+    // Only charges the user actually filled in make it onto the PDF — a
+    // row counts as filled when it has an amount or a remark.
+    const isFilled = (f: { amount: string; remarks: string }) =>
+      Boolean(f.amount || f.remarks)
+    const chargeRow = (
+      label: string,
+      f: { amount: string; currency: string; remarks: string }
+    ): [string, string, string, string] =>
+      [label, f.amount || "-", f.currency, f.remarks || ""]
+
     const doc = new jsPDF({ unit: "mm", format: "a4" })
     const pageW = doc.internal.pageSize.getWidth()
     const margin = 14
@@ -867,13 +882,14 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
 
       autoTable(doc, {
         startY: y,
-        head: [["Vessel Name", "ETD", "ETA", "Transit Time", "Free Time"]],
+        head: [["Vessel Name", "ETD", "ETA", "Transit Time", "Free Time", "Routing"]],
         body: [[
           form.vessel_name || "-",
           form.etd || "-",
           form.eta || "-",
           form.transit_time || "-",
           form.free_time || "-",
+          form.routing || "-",
         ]],
         theme: "grid",
         headStyles: { fillColor: [71, 85, 105], fontSize: 9 },
@@ -882,28 +898,32 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
       })
       y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6
 
-      // Freight charge
-      doc.setFontSize(10)
-      doc.setFont("helvetica", "bold")
-      doc.text("Freight Charge", margin, y)
-      y += 2
+      // Freight charge — only rows the user actually filled in
+      const freightRows: [string, string, string, string][] = [
+        ...(isFilled(form.freight_charge) ? [chargeRow("Freight", form.freight_charge)] : []),
+        ...form.extra_freight
+          .filter(isFilled)
+          .map((x) => chargeRow(x.label || "-", x)),
+      ]
 
-      autoTable(doc, {
-        startY: y,
-        head: [["Charge", "Amount", "Currency", "Remarks"]],
-        body: [
-          ["Freight", form.freight_charge.amount || "-", form.freight_charge.currency, form.freight_charge.remarks || ""],
-          ...form.extra_freight
-            .filter((x) => x.label || x.amount)
-            .map((x): [string, string, string, string] => [x.label || "-", x.amount || "-", x.currency, x.remarks || ""]),
-        ],
-        theme: "grid",
-        headStyles: { fillColor: [30, 64, 175], fontSize: 9 },
-        bodyStyles: { fontSize: 9 },
-        columnStyles: { 1: { halign: "right" } },
-        margin: { left: margin, right: margin },
-      })
-      y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6
+      if (freightRows.length > 0) {
+        doc.setFontSize(10)
+        doc.setFont("helvetica", "bold")
+        doc.text("Freight Charge", margin, y)
+        y += 2
+
+        autoTable(doc, {
+          startY: y,
+          head: [["Charge", "Amount", "Currency", "Remarks"]],
+          body: freightRows,
+          theme: "grid",
+          headStyles: { fillColor: [30, 64, 175], fontSize: 9 },
+          bodyStyles: { fontSize: 9 },
+          columnStyles: { 1: { halign: "right" } },
+          margin: { left: margin, right: margin },
+        })
+        y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6
+      }
 
       if (form.freight_validity || form.freight_validity_date) {
         const validityParts = []
@@ -917,87 +937,93 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
         y += 5
       }
 
-      // Local charges
-      doc.setFontSize(10)
-      doc.setFont("helvetica", "bold")
-      doc.text("Origin Local Charges", margin, y)
-      y += 2
-
+      // Local charges — only rows the user actually filled in
+      const localPairs: [string, ChargeField][] = [
+        ["BL Fee", form.local_charges.bl_fee],
+        ["THC", form.local_charges.thc],
+        ["Seal Charges", form.local_charges.seal_charges],
+        ["MUC", form.local_charges.muc],
+        ["Toll", form.local_charges.toll],
+        ["BL Surrendered / Seaway Bill", form.local_charges.bl_surrendered],
+      ]
       const localRows: [string, string, string, string][] = [
-        ["BL Fee", form.local_charges.bl_fee.amount || "-", form.local_charges.bl_fee.currency, form.local_charges.bl_fee.remarks || ""],
-        ["THC", form.local_charges.thc.amount || "-", form.local_charges.thc.currency, form.local_charges.thc.remarks || ""],
-        ["Seal Charges", form.local_charges.seal_charges.amount || "-", form.local_charges.seal_charges.currency, form.local_charges.seal_charges.remarks || ""],
-        ["MUC", form.local_charges.muc.amount || "-", form.local_charges.muc.currency, form.local_charges.muc.remarks || ""],
-        ["Toll", form.local_charges.toll.amount || "-", form.local_charges.toll.currency, form.local_charges.toll.remarks || ""],
-        ["BL Surrendered / Seaway Bill", form.local_charges.bl_surrendered.amount || "-", form.local_charges.bl_surrendered.currency, form.local_charges.bl_surrendered.remarks || ""],
+        ...localPairs.filter(([, f]) => isFilled(f)).map(([label, f]) => chargeRow(label, f)),
         ...form.extra_local
-          .filter((x) => x.label || x.amount)
-          .map((x): [string, string, string, string] => [x.label || "-", x.amount || "-", x.currency, x.remarks || ""]),
+          .filter(isFilled)
+          .map((x) => chargeRow(x.label || "-", x)),
       ]
 
-      autoTable(doc, {
-        startY: y,
-        head: [["Charge", "Amount", "Currency", "Remarks"]],
-        body: localRows,
-        theme: "grid",
-        headStyles: { fillColor: [71, 85, 105], fontSize: 9 },
-        bodyStyles: { fontSize: 9 },
-        columnStyles: { 1: { halign: "right" } },
-        margin: { left: margin, right: margin },
-      })
-      y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6
+      if (localRows.length > 0) {
+        doc.setFontSize(10)
+        doc.setFont("helvetica", "bold")
+        doc.text("Origin Local Charges", margin, y)
+        y += 2
+
+        autoTable(doc, {
+          startY: y,
+          head: [["Charge", "Amount", "Currency", "Remarks"]],
+          body: localRows,
+          theme: "grid",
+          headStyles: { fillColor: [71, 85, 105], fontSize: 9 },
+          bodyStyles: { fontSize: 9 },
+          columnStyles: { 1: { halign: "right" } },
+          margin: { left: margin, right: margin },
+        })
+        y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6
+      }
     }
 
     // ── CC Charges ────────────────────────────────────────
     if (showCC) {
-      doc.setFontSize(10)
-      doc.setFont("helvetica", "bold")
-      doc.text(`Custom Clearance — ${form.stuffing_type === "doc" ? "DOC Stuffing" : "Factory Stuffing"}`, margin, y)
-      y += 2
-
-      let ccRows: [string, string, string, string][] = []
+      let ccPairs: [string, ChargeField][] = []
 
       if (form.stuffing_type === "doc") {
         const dc = form.doc_charges
-        ccRows = [
-          ["Agency Charges", dc.agency_charges.amount || "-", dc.agency_charges.currency, dc.agency_charges.remarks || ""],
-          ["Customs Clearance Charges", dc.customs_clearance.amount || "-", dc.customs_clearance.currency, dc.customs_clearance.remarks || ""],
-          ["Doc & Examine", dc.doc_examine.amount || "-", dc.doc_examine.currency, dc.doc_examine.remarks || ""],
-          ["CFS Onwheel Party Vehicle Charges", dc.cfs_onwheel.amount || "-", dc.cfs_onwheel.currency, dc.cfs_onwheel.remarks || ""],
-          ["VGM Charges", dc.vgm_charges.amount || "-", dc.vgm_charges.currency, dc.vgm_charges.remarks || ""],
-          ["Warai Charges", dc.warai_charges.amount || "-", dc.warai_charges.currency, dc.warai_charges.remarks || ""],
-          ["Loading & Unloading", dc.loading_unloading.amount || "-", dc.loading_unloading.currency, dc.loading_unloading.remarks || ""],
-          ["CFS Stuffing Charges", dc.cfs_stuffing.amount || "-", dc.cfs_stuffing.currency, dc.cfs_stuffing.remarks || ""],
+        ccPairs = [
+          ["Agency Charges", dc.agency_charges],
+          ["Customs Clearance Charges", dc.customs_clearance],
+          ["Doc & Examine", dc.doc_examine],
+          ["CFS Onwheel Party Vehicle Charges", dc.cfs_onwheel],
+          ["VGM Charges", dc.vgm_charges],
+          ["Warai Charges", dc.warai_charges],
+          ["Loading & Unloading", dc.loading_unloading],
+          ["CFS Stuffing Charges", dc.cfs_stuffing],
         ]
       } else if (form.stuffing_type === "factory") {
-        const fc = form.factory_charges
-        ccRows = [
-          ["Customs Clearance Charges", fc.customs_clearance.amount || "-", fc.customs_clearance.currency, fc.customs_clearance.remarks || ""],
+        ccPairs = [
+          ["Customs Clearance Charges", form.factory_charges.customs_clearance],
         ]
       }
 
-      ccRows = [
-        ...ccRows,
+      const ccRows: [string, string, string, string][] = [
+        ...ccPairs.filter(([, f]) => isFilled(f)).map(([label, f]) => chargeRow(label, f)),
         ...form.extra_cc
-          .filter((x) => x.label || x.amount)
-          .map((x): [string, string, string, string] => [x.label || "-", x.amount || "-", x.currency, x.remarks || ""]),
+          .filter(isFilled)
+          .map((x) => chargeRow(x.label || "-", x)),
       ]
 
-      autoTable(doc, {
-        startY: y,
-        head: [["Charge", "Amount", "Currency", "Remarks"]],
-        body: ccRows,
-        theme: "grid",
-        headStyles: { fillColor: [71, 85, 105], fontSize: 9 },
-        bodyStyles: { fontSize: 9 },
-        columnStyles: { 1: { halign: "right" } },
-        margin: { left: margin, right: margin },
-      })
-      y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6
+      if (ccRows.length > 0) {
+        doc.setFontSize(10)
+        doc.setFont("helvetica", "bold")
+        doc.text(`Custom Clearance — ${form.stuffing_type === "doc" ? "DOC Stuffing" : "Factory Stuffing"}`, margin, y)
+        y += 2
+
+        autoTable(doc, {
+          startY: y,
+          head: [["Charge", "Amount", "Currency", "Remarks"]],
+          body: ccRows,
+          theme: "grid",
+          headStyles: { fillColor: [71, 85, 105], fontSize: 9 },
+          bodyStyles: { fontSize: 9 },
+          columnStyles: { 1: { halign: "right" } },
+          margin: { left: margin, right: margin },
+        })
+        y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6
+      }
     }
 
     // ── Transportation ────────────────────────────────────
-    if (form.transport_enabled) {
+    if (form.transport_enabled && (form.transport_cost.amount || form.transport_cost.description)) {
       doc.setFontSize(10)
       doc.setFont("helvetica", "bold")
       doc.text("Transportation Cost", margin, y)
@@ -1344,6 +1370,10 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
             <div className="space-y-1">
               <Label>Free Time</Label>
               <Input value={form.free_time} onChange={(e) => set("free_time", e.target.value)} placeholder="e.g. 7 days" />
+            </div>
+            <div className="space-y-1">
+              <Label>Routing</Label>
+              <Input value={form.routing} onChange={(e) => set("routing", e.target.value)} placeholder="e.g. Direct / Via Singapore" />
             </div>
           </div>
 

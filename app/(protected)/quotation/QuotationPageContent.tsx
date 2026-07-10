@@ -70,6 +70,7 @@ export function QuotationPageContent({ company }: Props) {
           eta: data.ETA ?? null,
           transit_time: data.TRANSIT_TIME ?? null,
           free_time: data.FREE_TIME ?? null,
+          routing: data.routing ?? null,
           local_charges: data.local_charges ?? null,
           stuffing_type: data.STUFFING_TYPE ?? null,
           cc_charges: data.cc_charges ?? null,
@@ -86,6 +87,8 @@ export function QuotationPageContent({ company }: Props) {
           extra_freight: data.extra_freight ?? [],
           extra_local: data.extra_local ?? [],
           extra_cc: data.extra_cc ?? [],
+          freight_validity: data.freight_validity ?? null,
+          freight_validity_date: data.freight_validity_date ?? null,
         }
         setEditing(q)
       })
