@@ -68,17 +68,21 @@ export async function generateSalesLeadPdf(
     ["Agent Email", lead.agent_email || "—"],
   ].filter((r): r is [string, string] => Boolean(r[1] && r[1] !== "—"))
 
-  autoTable(doc, {
-    startY: y,
-    head: [["Field", "Value"]],
-    body: basicRows,
-    theme: "grid",
-    headStyles: { fillColor: [30, 64, 175], fontSize: 9 },
-    bodyStyles: { fontSize: 9 },
-    columnStyles: { 0: { cellWidth: 50, fontStyle: "bold" } },
-    margin: { left: margin, right: margin },
-  })
-  y = (doc as unknown as WithAutoTable).lastAutoTable.finalY + 6
+  if (basicRows.length) {
+    doc.setFontSize(10)
+    doc.setFont("helvetica", "bold")
+    doc.text("Lead Details", margin, y)
+    y += 2
+    autoTable(doc, {
+      startY: y,
+      body: basicRows,
+      theme: "grid",
+      bodyStyles: { fontSize: 9 },
+      columnStyles: { 0: { cellWidth: 50, fontStyle: "bold" } },
+      margin: { left: margin, right: margin },
+    })
+    y = (doc as unknown as WithAutoTable).lastAutoTable.finalY + 6
+  }
 
   const shipperRows: [string, string][] = [
     ["Shipper", lead.shipper || "—"],
