@@ -32,7 +32,6 @@
     "openai": "^6.33.0",
     "pdf-parse": "^1.1.1",
     "pdfjs-dist": "^6.0.227",
-    "playwright": "^1.61.1",
     "react": "19.2.3",
     "react-confetti": "^6.4.0",
     "react-dom": "19.2.3",
@@ -44,6 +43,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "playwright": "^1.61.1",
     "@types/mssql": "^9.1.9",
     "@types/node": "^20",
     "@types/nodemailer": "^8.0.0",

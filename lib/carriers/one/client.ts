@@ -6,7 +6,15 @@
 // SERVER-SIDE ONLY. Never import from a client component.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { getOneBearer, invalidateOneBearer } from "./auth"
+// ── Auth switch point ─────────────────────────────────────────────────────────
+// Default to the browserless HTTP login (Vercel serverless can't run Playwright).
+// Set ONE_AUTH_MODE="browser" to fall back to the Playwright login (local capture).
+import { getOneBearerHttp, invalidateOneBearerHttp } from "./auth-http"
+import { getOneBearer as getOneBearerBrowser, invalidateOneBearer as invalidateOneBearerBrowser } from "./auth"
+
+const USE_BROWSER_AUTH = process.env.ONE_AUTH_MODE === "browser"
+const getOneBearer = USE_BROWSER_AUTH ? getOneBearerBrowser : getOneBearerHttp
+const invalidateOneBearer = USE_BROWSER_AUTH ? invalidateOneBearerBrowser : invalidateOneBearerHttp
 
 export const ONE_BASE = "https://ecomm.one-line.com"
 

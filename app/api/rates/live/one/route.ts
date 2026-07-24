@@ -47,6 +47,9 @@ export async function POST(req: NextRequest) {
     const result = await getVesselDates({
       originLocationCode,
       destinationLocationCode,
+      originLocationType: body.originLocationType?.trim() || "CY",
+      destinationLocationType: body.destinationLocationType?.trim() || "CY",
+      originRhqCode: body.originRhqCode?.trim() || undefined,
       equipment,
       quantity,
       cargoWeight,

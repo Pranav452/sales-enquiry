@@ -43,6 +43,9 @@ export function LiveQuoteForm({ onResult }: Props) {
         body: JSON.stringify({
           originLocationCode: origin.code,
           destinationLocationCode: dest.code,
+          originLocationType: origin.locationType ?? "CY",
+          destinationLocationType: dest.locationType ?? "CY",
+          originRhqCode: origin.rhqCode,
           equipment,
           quantity,
           cargoWeight: weight,

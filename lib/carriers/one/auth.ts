@@ -81,6 +81,7 @@ async function login(): Promise<string> {
   const dlog = (...a: unknown[]) => debug && console.log("[one/auth]", ...a)
 
   let browser: Browser | null = null
+  const trace: unknown[] = [] // ONE_CAPTURE trace, read in finally
   try {
     browser = await chromium.launch({ headless: !headful })
     const context = await browser.newContext()
@@ -100,6 +101,41 @@ async function login(): Promise<string> {
         dlog("bearer captured from", req.url())
       }
     })
+
+    // ONE_CAPTURE=1 → record the full Auth0 login network trace so the flow can be
+    // rebuilt as browserless fetch() calls (Vercel serverless can't run Playwright).
+    // Password value is REDACTED; only request/response shape is written to disk.
+    const capture = process.env.ONE_CAPTURE === "1"
+    if (capture) {
+      const redact = (s: string | null) =>
+        !s ? s : s.replace(new RegExp(encodeURIComponent(password).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"), "«PW»")
+              .replace(new RegExp(password.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"), "«PW»")
+      page.on("request", (req) => {
+        const u = req.url()
+        if (!/auth\.one-line\.com|o-callback|\/oauth\/|\/authorize|\/login|\/usernamepassword/.test(u)) return
+        trace.push({
+          kind: "request",
+          method: req.method(),
+          url: u,
+          resourceType: req.resourceType(),
+          headers: req.headers(),
+          postData: redact(req.postData()),
+        })
+      })
+      page.on("response", async (res) => {
+        const u = res.url()
+        if (!/auth\.one-line\.com|o-callback|\/oauth\/|\/authorize|\/login|\/usernamepassword/.test(u)) return
+        const h = res.headers()
+        trace.push({
+          kind: "response",
+          status: res.status(),
+          url: u,
+          location: h["location"] || null,
+          setCookie: h["set-cookie"] ? "«present»" : null,
+          contentType: h["content-type"] || null,
+        })
+      })
+    }
 
     // 1) Navigate to the quote page — Auth0 redirects to auth.one-line.com login.
     await page.goto(QUOTE_PAGE_URL, { waitUntil: "domcontentloaded", timeout: 60_000 })
@@ -232,6 +268,15 @@ async function login(): Promise<string> {
     dlog("SUCCESS — bearer length", capturedToken.length)
     return capturedToken
   } finally {
+    if (process.env.ONE_CAPTURE === "1" && trace.length) {
+      try {
+        const fs = await import("fs")
+        fs.writeFileSync("one-auth-trace.json", JSON.stringify(trace, null, 2))
+        console.log(`[one/auth] wrote ${trace.length} trace entries → one-auth-trace.json`)
+      } catch (e) {
+        console.log("[one/auth] failed to write trace:", e)
+      }
+    }
     await browser?.close().catch(() => {})
   }
 }
