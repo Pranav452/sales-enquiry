@@ -15,15 +15,16 @@ const page = await ctx.newPage()
 let got = 0
 page.on("request", (req) => {
   const u = req.url()
-  // The pricing grid call + a couple of sibling calls worth seeing.
+  // Pricing grid call + commodity search/select calls + siblings.
   if (
     /\/api\/v2\/quotation\/schedules\/(vessel-dates-booking|schedule-rates-information)/.test(u) ||
-    /\/api\/v2\/quotation\/trips/.test(u)
+    /\/api\/v2\/quotation\/trips/.test(u) ||
+    /\/api\/v2\/quotation\/commodity(\b|-groups|-history)/.test(u)
   ) {
     got++
     console.log("\n=== CAPTURED", req.method(), u)
     const body = req.postData()
-    if (body) console.log("BODY:", body)
+    if (body) console.log("BODY:", body.slice(0, 2500))
     else console.log("(no body — GET query is in the URL above)")
     console.log("=== end capture", got, "\n")
   }
@@ -39,15 +40,15 @@ page.on("response", async (res) => {
   const isLoc = /\/api\/v2\/quotation\/locations\?/.test(u)
   const isTrips = /\/api\/v2\/quotation\/trips\?/.test(u)
   const isRates = /\/api\/v2\/quotation\/schedules\/schedule-rates-information/.test(u)
-  if (!isLoc && !isTrips && !isRates) return
+  const isCommodity = /\/api\/v2\/quotation\/commodity(\b|-groups|-history)/.test(u)
+  if (!isLoc && !isTrips && !isRates && !isCommodity) return
   if (isLoc && loc >= 1) return
   try {
     const text = await res.text()
     if (isLoc) loc++
-    const label = isLoc ? "LOCATIONS" : isTrips ? "TRIPS" : "SCHEDULE-RATES-INFO"
+    const label = isLoc ? "LOCATIONS" : isTrips ? "TRIPS" : isRates ? "SCHEDULE-RATES-INFO" : "COMMODITY"
     console.log(`\n=== ${label} RESPONSE`, u)
-    // trips/rates can be large; trim but keep enough to see structure.
-    console.log(text.slice(0, isRates ? 2500 : 1500))
+    console.log(text.slice(0, isCommodity ? 1500 : isRates ? 2500 : 1500))
     console.log(`=== end ${label}\n`)
   } catch {
     /* ignore */

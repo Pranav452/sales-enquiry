@@ -57,6 +57,12 @@ export interface OneLocation {
   rhqCode?: string      // regionHeadQuarter, e.g. "DXBHQ" — needed as porRhqCode in the rate call
 }
 
+// ── Commodity autocomplete ─────────────────────────────────────
+export interface OneCommodity {
+  code: string          // commodityCode / HS code, e.g. "120721"
+  name: string          // commodityName, e.g. "COTTON,SESAM,MUSTARD SEED,PALM NUTS,  SEED"
+}
+
 // ── Quote request (params our API route accepts) ───────────────
 export interface OneQuoteRequest {
   originLocationCode: string        // UN/LOCODE from autocomplete
@@ -68,6 +74,7 @@ export interface OneQuoteRequest {
   quantity: number
   cargoWeight: number               // per-container weight
   commodityGroup?: string           // default "FAK DRY"
+  commodityCode?: string            // picked HS code — overrides sri default commodityCode when set
   date?: string                     // optional target sailing date (YYYY-MM-DD)
 }
 

@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { EQUIPMENT_LABEL, type EquipmentKey, type OneLocation, type OneQuoteResult } from "@/lib/carriers/one/types"
+import { EQUIPMENT_LABEL, type EquipmentKey, type OneLocation, type OneCommodity, type OneQuoteResult } from "@/lib/carriers/one/types"
 
 interface Props {
   onResult: (result: OneQuoteResult) => void
@@ -25,7 +25,7 @@ export function LiveQuoteForm({ onResult }: Props) {
   const [equipment, setEquipment] = useState<EquipmentKey>("DRY20")
   const [quantity, setQuantity] = useState(1)
   const [weight, setWeight] = useState(18000)
-  const [commodity, setCommodity] = useState("FAK DRY")
+  const [commodity, setCommodity] = useState<OneCommodity | null>(null)
   const [date, setDate] = useState("")
 
   const [loading, setLoading] = useState(false)
@@ -49,7 +49,7 @@ export function LiveQuoteForm({ onResult }: Props) {
           equipment,
           quantity,
           cargoWeight: weight,
-          commodityGroup: commodity.trim() || "FAK DRY",
+          commodityCode: commodity?.code || undefined,
           date: date || undefined,
         }),
       })
@@ -103,8 +103,10 @@ export function LiveQuoteForm({ onResult }: Props) {
           <Input type="number" min={1} value={weight} onChange={(e) => setWeight(Math.max(0, Number(e.target.value) || 0))} />
         </div>
         <div>
-          <Label className="mb-1.5 block text-sm">Commodity</Label>
-          <Input value={commodity} onChange={(e) => setCommodity(e.target.value)} placeholder="FAK DRY" />
+          <Label className="mb-1.5 block text-sm">
+            Commodity <span className="text-xs text-muted-foreground">(optional — defaults to FAK DRY)</span>
+          </Label>
+          <CommodityAutocomplete value={commodity} onSelect={setCommodity} placeholder="Search name or HS code" />
         </div>
       </div>
 
@@ -219,6 +221,101 @@ function LocationAutocomplete({
             >
               <span className="truncate text-foreground">{loc.name}</span>
               <span className="shrink-0 text-xs text-muted-foreground">{loc.code}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Debounced commodity autocomplete hitting our server-side proxy ───────────
+function CommodityAutocomplete({
+  value,
+  onSelect,
+  placeholder,
+}: {
+  value: OneCommodity | null
+  onSelect: (commodity: OneCommodity | null) => void
+  placeholder?: string
+}) {
+  const [query, setQuery] = useState(value ? `${value.name} (${value.code})` : "")
+  const [options, setOptions] = useState<OneCommodity[]>([])
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const boxRef = useRef<HTMLDivElement>(null)
+
+  // Debounced fetch
+  useEffect(() => {
+    if (query.trim().length < 2) {
+      setOptions([])
+      return
+    }
+    // If the query matches the current selection label, don't re-search.
+    if (value && query === `${value.name} (${value.code})`) return
+
+    const ctrl = new AbortController()
+    const t = setTimeout(async () => {
+      setLoading(true)
+      try {
+        const res = await fetch(
+          `/api/rates/live/one/commodity?q=${encodeURIComponent(query.trim())}`,
+          { signal: ctrl.signal }
+        )
+        const data = await res.json()
+        if (Array.isArray(data)) {
+          setOptions(data)
+          setOpen(true)
+        }
+      } catch {
+        /* aborted or failed — ignore */
+      } finally {
+        setLoading(false)
+      }
+    }, 350)
+    return () => {
+      clearTimeout(t)
+      ctrl.abort()
+    }
+  }, [query, value])
+
+  // Close on outside click
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener("mousedown", onDocClick)
+    return () => document.removeEventListener("mousedown", onDocClick)
+  }, [])
+
+  return (
+    <div ref={boxRef} className="relative">
+      <Input
+        value={query}
+        placeholder={placeholder}
+        onChange={(e) => {
+          setQuery(e.target.value)
+          onSelect(null)
+        }}
+        onFocus={() => options.length && setOpen(true)}
+        autoComplete="off"
+      />
+      {open && (options.length > 0 || loading) && (
+        <div className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-md border border-border bg-popover shadow-md">
+          {loading && <div className="px-3 py-2 text-sm text-muted-foreground">Searching…</div>}
+          {options.map((c) => (
+            <button
+              key={c.code}
+              type="button"
+              onClick={() => {
+                onSelect(c)
+                setQuery(`${c.name} (${c.code})`)
+                setOpen(false)
+              }}
+              className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-accent"
+            >
+              <span className="truncate text-foreground">{c.name}</span>
+              <span className="shrink-0 text-xs text-muted-foreground">{c.code}</span>
             </button>
           ))}
         </div>

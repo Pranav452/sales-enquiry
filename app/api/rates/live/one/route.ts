@@ -1,5 +1,5 @@
 // POST /api/rates/live/one
-// Body: { originLocationCode, destinationLocationCode, equipment, quantity, cargoWeight, commodityGroup?, date? }
+// Body: { originLocationCode, destinationLocationCode, equipment, quantity, cargoWeight, commodityGroup?, commodityCode?, date? }
 // → normalized OneQuoteResult { fetchedAt, sailings:[...] }
 //
 // All ONE calls (headless login + quote) run here on the server — the bearer
@@ -54,6 +54,7 @@ export async function POST(req: NextRequest) {
       quantity,
       cargoWeight,
       commodityGroup: body.commodityGroup?.trim() || "FAK DRY",
+      commodityCode: body.commodityCode?.trim() || undefined,
       date: body.date?.trim() || undefined,
     })
     return NextResponse.json(result)

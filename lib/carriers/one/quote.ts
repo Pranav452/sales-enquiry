@@ -10,6 +10,7 @@ import {
   EQUIPMENT_SPEC,
   type EquipmentKey,
   type OneLocation,
+  type OneCommodity,
   type OneQuoteRequest,
   type OneQuoteResult,
   type OneSailing,
@@ -59,6 +60,34 @@ export async function searchLocations(
     if (!prev || (loc.locationType === "CY" && prev.locationType !== "CY")) byCode.set(loc.code, loc)
   }
   return [...byCode.values()]
+}
+
+// ── Commodity autocomplete ───────────────────────────────────────────────────
+// POST /api/v2/quotation/commodity (bearer) — search by name or HS code.
+export async function searchCommodities(text: string): Promise<OneCommodity[]> {
+  if (!text.trim()) return []
+
+  const raw = await oneFetch<{ data?: unknown[] }>("/api/v2/quotation/commodity", {
+    method: "POST",
+    body: {
+      commodityName: text.trim(),
+      commodityCode: "",
+      page: "1",
+      limit: "20",
+      include: "",
+      exclude: "",
+    },
+  })
+
+  const list = (raw.data ?? []) as Record<string, unknown>[]
+  return list
+    .map((c) => {
+      const code = String(c.commodityCode ?? "").trim()
+      const name = String(c.commodityName ?? "").trim()
+      if (!code) return null
+      return { code, name: name || code } as OneCommodity
+    })
+    .filter((x): x is OneCommodity => x !== null)
 }
 
 // ── Raw ONE sailing shape (only the fields we read; verified 2026-07-22) ─────
@@ -265,6 +294,12 @@ export async function getVesselDates(req: OneQuoteRequest): Promise<OneQuoteResu
     includeSvcScopeCd: sri.includeSvcScopeCd,
     sessionId,
     isInlandProcess: false,
+  }
+
+  // If the user picked a specific commodity, override the sri default HS code.
+  // The container's commodityGroups (FAK DRY + exclude) stays unchanged.
+  if (typeof req.commodityCode === "string" && req.commodityCode.trim()) {
+    body.commodityCode = req.commodityCode.trim()
   }
 
   // POST returns { data: [ SAILING, ... ] } (verified shape).
