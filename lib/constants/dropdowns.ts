@@ -121,7 +121,10 @@ export const STATUSES = [
 ]
 
 export const INCOTERMS = [
+  "CFR",
   "CIF",
+  "CIP",
+  "CPT",
   "CUSTOM CLEARANCE",
   "DAP",
   "DDP",
