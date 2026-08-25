@@ -382,12 +382,13 @@ export function ActivityForm({ editingId, defaultSalesPerson, defaultBranch, def
         <div className="flex flex-col gap-1.5">
           <Label className="text-xs">Email</Label>
           <Input
-            type="email"
+            type="text"
             value={form.email}
             onChange={(e) => set("email", e.target.value)}
-            placeholder="contact@company.com"
+            placeholder="contact@company.com, another@company.com"
             className="h-9 text-sm"
           />
+          <p className="text-[11px] text-muted-foreground">Multiple emails? Separate with commas.</p>
         </div>
       </div>
 
