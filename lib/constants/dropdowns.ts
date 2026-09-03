@@ -120,6 +120,13 @@ export const STATUSES = [
   "QUOTED",
 ]
 
+// UI label overrides — DB keeps legacy value, screens/exports show requested wording
+export const STATUS_LABELS: Record<string, string> = { LOSE: "LOST" }
+export function displayStatus(s: string | null | undefined): string {
+  const key = (s ?? "").toUpperCase()
+  return STATUS_LABELS[key] ?? (s ?? "")
+}
+
 export const INCOTERMS = [
   "CFR",
   "CIF",

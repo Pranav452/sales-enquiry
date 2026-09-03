@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { getAuthContext } from "@/lib/api-auth"
 import { getPool } from "@/lib/mssql/client"
-import { SALESPERSON_CODE_MAP } from "@/lib/constants/dropdowns"
+import { SALESPERSON_CODE_MAP, displayStatus } from "@/lib/constants/dropdowns"
 
 interface EnqRow {
   enq_ref_no: string | null
@@ -149,7 +149,7 @@ function buildHtml(persons: PersonData[], dateFrom: string, dateTo: string, comp
         new Chart(ctx1, {
           type: 'doughnut',
           data: {
-            labels: ${JSON.stringify(statusKeys)},
+            labels: ${JSON.stringify(statusKeys.map(displayStatus))},
             datasets: [{ data: ${JSON.stringify(statusKeys.map((k) => p.statusCounts[k]))}, backgroundColor: ${JSON.stringify(statusKeys.map(statusColor))}, borderWidth: 2, borderColor: '#fff' }]
           },
           options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 8 } } }, cutout: '55%' }
@@ -167,7 +167,7 @@ function buildHtml(persons: PersonData[], dateFrom: string, dateTo: string, comp
         new Chart(ctx3, {
           type: 'bar',
           data: {
-            labels: ${JSON.stringify(statusKeys)},
+            labels: ${JSON.stringify(statusKeys.map(displayStatus))},
             datasets: [{ label: 'Count', data: ${JSON.stringify(statusKeys.map((k) => p.statusCounts[k]))}, backgroundColor: ${JSON.stringify(statusKeys.map(statusColor))}, borderRadius: 4 }]
           },
           options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
@@ -281,7 +281,7 @@ function buildHtml(persons: PersonData[], dateFrom: string, dateTo: string, comp
     <table>
       <thead>
         <tr>
-          <th>Salesperson</th><th>Total</th><th>Win</th><th>Lose</th>
+          <th>Salesperson</th><th>Total</th><th>Win</th><th>Lost</th>
           <th>Follow Up</th><th>Quoted</th><th>No Feedback</th>
         </tr>
       </thead>
@@ -296,7 +296,7 @@ function buildHtml(persons: PersonData[], dateFrom: string, dateTo: string, comp
   new Chart(ctx, {
     type: 'doughnut',
     data: {
-      labels: ${JSON.stringify(Object.keys(allStatus))},
+      labels: ${JSON.stringify(Object.keys(allStatus).map(displayStatus))},
       datasets: [{ data: ${JSON.stringify(Object.values(allStatus))}, backgroundColor: ${JSON.stringify(statusColors)}, borderWidth: 2, borderColor: '#fff' }]
     },
     options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 8 } } }, cutout: '55%' }

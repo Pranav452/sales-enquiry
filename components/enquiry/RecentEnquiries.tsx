@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
-import { SALESPERSON_CODE_MAP } from "@/lib/constants/dropdowns"
+import { SALESPERSON_CODE_MAP, displayStatus } from "@/lib/constants/dropdowns"
 
 interface RecentEnquiry {
   id: string
@@ -182,7 +182,7 @@ export function RecentEnquiries({ refreshKey }: RecentEnquiriesProps) {
                             | "secondary"
                         }
                       >
-                        {r.status ?? "—"}
+                        {r.status ? displayStatus(r.status) : "—"}
                       </Badge>
                     </td>
                   </tr>

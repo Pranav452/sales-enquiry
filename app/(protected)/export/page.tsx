@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import * as XLSX from "xlsx"
+import * as XLSX from "xlsx-js-style"
 import { Download, Eye, EyeOff, FileText, Filter, RefreshCw, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,6 +14,7 @@ import {
   LINKS_SALES_PERSONS,
   PORT_CITIES,
   expandPortCity,
+  displayStatus,
 } from "@/lib/constants/dropdowns"
 
 // ─── Types ─────────────────────────────────────────────────────
@@ -45,12 +46,15 @@ interface Row {
   gop: string | null
   assigned_user: string | null
   assigned_date: string | null
+  due_date: string | null
 }
 
 // ─── Column definitions ─────────────────────────────────────────
 
+type ColKey = keyof Row | "days_to_quote"
+
 interface ColDef {
-  key: keyof Row
+  key: ColKey
   label: string
   defaultOn: boolean
   format?: (v: string | null, row?: Row) => string
@@ -58,7 +62,7 @@ interface ColDef {
 
 const ALL_COLUMNS: ColDef[] = [
   { key: "enq_ref_no",        label: "Enq Ref No",        defaultOn: true },
-  { key: "enq_receipt_date",  label: "Receipt Date",       defaultOn: true,
+  { key: "enq_receipt_date",  label: "Enquiry Received Date", defaultOn: true,
     format: (v) => v ? new Date(v).toLocaleDateString("en-GB") : "" },
   { key: "mode",              label: "Mode",               defaultOn: true },
   { key: "enq_type",          label: "Enquiry Type",       defaultOn: true },
@@ -77,15 +81,24 @@ const ALL_COLUMNS: ColDef[] = [
   { key: "network",           label: "Network",            defaultOn: false },
   { key: "incoterms",         label: "Incoterms",          defaultOn: false },
   { key: "container_type",    label: "Container Type",     defaultOn: false },
-  { key: "status",            label: "Status",             defaultOn: true },
+  { key: "status",            label: "Status",             defaultOn: true,
+    format: (v) => displayStatus(v) },
   { key: "email_subject_line",label: "Email Subject",      defaultOn: false },
   { key: "remarks",           label: "Remarks",            defaultOn: true },
   { key: "mbl_awb_no",        label: "MBL/AWB No",         defaultOn: false },
   { key: "job_invoice_no",    label: "Job/Invoice No",     defaultOn: false },
   { key: "gop",               label: "GOP",                defaultOn: false },
-  { key: "assigned_user",     label: "Assigned User",      defaultOn: false },
-  { key: "assigned_date",     label: "Assigned Date",      defaultOn: false,
+  { key: "assigned_user",     label: "Assigned User",      defaultOn: true },
+  { key: "assigned_date",     label: "Quotation Given Date", defaultOn: true,
     format: (v) => v ? new Date(v).toLocaleDateString("en-GB") : "" },
+  { key: "due_date",          label: "Due Date",           defaultOn: true,
+    format: (v) => v ? new Date(v).toLocaleDateString("en-GB") : "" },
+  { key: "days_to_quote",     label: "Days to Quote",      defaultOn: true,
+    format: (_v, row) => {
+      if (!row?.enq_receipt_date || !row.assigned_date) return ""
+      const ms = new Date(row.assigned_date).getTime() - new Date(row.enq_receipt_date).getTime()
+      return Number.isFinite(ms) ? String(Math.max(0, Math.round(ms / 86_400_000))) : ""
+    } },
 ]
 
 const ALL_SALES_PERSONS = [...new Set([...LINKS_SALES_PERSONS, ...MANILAL_SALES_PERSONS])].sort()
@@ -105,21 +118,37 @@ function statusVariant(s: string | null) {
   }
 }
 
+// Excel cell styles (xlsx-js-style)
+const HEADER_STYLE = {
+  font: { bold: true, color: { rgb: "FFFFFF" } },
+  fill: { patternType: "solid", fgColor: { rgb: "1E3A8A" } },
+  alignment: { horizontal: "center", vertical: "center" },
+}
+const STATUS_CELL_STYLES: Record<string, object> = {
+  "WIN":         { font: { bold: true, color: { rgb: "006100" } }, fill: { patternType: "solid", fgColor: { rgb: "C6EFCE" } } },
+  "LOSE":        { font: { bold: true, color: { rgb: "9C0006" } }, fill: { patternType: "solid", fgColor: { rgb: "FFC7CE" } } },
+  "FOLLOW UP":   { font: { bold: true, color: { rgb: "9C5700" } }, fill: { patternType: "solid", fgColor: { rgb: "FFEB9C" } } },
+  "QUOTED":      { font: { bold: true, color: { rgb: "1F4E79" } }, fill: { patternType: "solid", fgColor: { rgb: "DDEBF7" } } },
+  "PENDING":     { font: { bold: true, color: { rgb: "5B2C6F" } }, fill: { patternType: "solid", fgColor: { rgb: "E4DFEC" } } },
+  "NO FEEDBACK": { font: { bold: true, color: { rgb: "3A3A3A" } }, fill: { patternType: "solid", fgColor: { rgb: "E7E6E6" } } },
+}
+
 function fmt(col: ColDef, row: Row): string {
-  const v = row[col.key] as string | null
+  const v = (col.key in row ? row[col.key as keyof Row] : null) as string | null
   return col.format ? col.format(v, row) : (v ?? "")
 }
 
 // ─── Select component (simple native) ──────────────────────────
 
 function FilterSelect({
-  label, value, options, onChange, placeholder,
+  label, value, options, onChange, placeholder, labelFor,
 }: {
   label: string
   value: string
   options: string[]
   onChange: (v: string) => void
   placeholder?: string
+  labelFor?: (o: string) => string
 }) {
   return (
     <div className="flex flex-col gap-1">
@@ -135,7 +164,7 @@ function FilterSelect({
       >
         <option value="">{placeholder ?? `All ${label}`}</option>
         {options.map((o) => (
-          <option key={o} value={o}>{o}</option>
+          <option key={o} value={o}>{labelFor ? labelFor(o) : o}</option>
         ))}
       </select>
     </div>
@@ -165,7 +194,7 @@ export default function ExportPage() {
   const [error, setError]   = useState<string | null>(null)
 
   // — Column visibility
-  const [visibleCols, setVisibleCols] = useState<Set<keyof Row>>(
+  const [visibleCols, setVisibleCols] = useState<Set<ColKey>>(
     () => new Set(ALL_COLUMNS.filter((c) => c.defaultOn).map((c) => c.key))
   )
 
@@ -287,7 +316,7 @@ export default function ExportPage() {
     })
   }
 
-  function toggleCol(key: keyof Row) {
+  function toggleCol(key: ColKey) {
     setVisibleCols((prev) => {
       const next = new Set(prev)
       next.has(key) ? next.delete(key) : next.add(key)
@@ -308,6 +337,22 @@ export default function ExportPage() {
     })
 
     const ws = XLSX.utils.json_to_sheet(data)
+
+    // Header row styling
+    const range = XLSX.utils.decode_range(ws["!ref"] ?? "A1")
+    for (let c = range.s.c; c <= range.e.c; c++) {
+      const cell = ws[XLSX.utils.encode_cell({ r: 0, c })]
+      if (cell) cell.s = HEADER_STYLE
+    }
+    // Status column colour coding (sheet rows follow exportRows order)
+    const statusIdx = activeColumns.findIndex((col) => col.key === "status")
+    if (statusIdx >= 0) {
+      exportRows.forEach((row, i) => {
+        const cell = ws[XLSX.utils.encode_cell({ r: i + 1, c: statusIdx })]
+        const style = STATUS_CELL_STYLES[(row.status ?? "").toUpperCase()]
+        if (cell && style) cell.s = style
+      })
+    }
 
     // Column widths
     const colWidths = activeColumns.map((col) => {
@@ -465,7 +510,7 @@ export default function ExportPage() {
           <FilterSelect label="Mode"         value={mode}        options={MODES}              onChange={setMode} />
           <FilterSelect label="EXIM"         value={exim}        options={EXIM_OPTIONS}       onChange={setExim} />
           <FilterSelect label="Branch"       value={branch}      options={BRANCHES}           onChange={setBranch} />
-          <FilterSelect label="Status"       value={status}      options={STATUSES}           onChange={setStatus} />
+          <FilterSelect label="Status"       value={status}      options={STATUSES}           onChange={setStatus} labelFor={displayStatus} />
           <FilterSelect label="Enquiry Type" value={enqType}     options={ENQ_TYPES}          onChange={setEnqType} />
           <FilterSelect label="POL"          value={pol}         options={PORT_CITIES}        onChange={setPol} />
           <FilterSelect label="POD"          value={pod}         options={PORT_CITIES}        onChange={setPod} />

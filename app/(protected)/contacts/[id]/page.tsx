@@ -12,6 +12,7 @@ import {
   FileText, IndianRupee, PhoneCall, Target,
 } from "lucide-react"
 import { LEAD_STATUS_MAP } from "@/lib/constants/sales-leads"
+import { displayStatus } from "@/lib/constants/dropdowns"
 
 interface Contact360 {
   contact: {
@@ -193,7 +194,7 @@ export default function Contact360Page() {
                 </Link>
                 {e.mode && <Badge variant="outline" className="text-[10px]">{e.mode}</Badge>}
                 <span className="text-muted-foreground truncate">{e.pol || "—"} → {e.pod || "—"}</span>
-                {e.status && <span className="text-muted-foreground">{e.status}</span>}
+                {e.status && <span className="text-muted-foreground">{displayStatus(e.status)}</span>}
                 <span className="ml-auto text-muted-foreground shrink-0">{fmtDate(e.enq_receipt_date)}</span>
               </div>
             ))}

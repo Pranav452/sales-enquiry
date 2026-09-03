@@ -32,6 +32,23 @@ declare global {
 }
 if (!global.__mssqlPools) global.__mssqlPools = {}
 
+// Idempotent, additive-only schema patches so a deploy never races a manual migration.
+// Mirrors scripts/add-enquiry-due-date.sql.
+const SCHEMA_PATCHES = [
+  `IF COL_LENGTH('dbo.TBL_ADMIN_SALESENQUIRY', 'DUE_DATE') IS NULL
+     ALTER TABLE [dbo].[TBL_ADMIN_SALESENQUIRY] ADD DUE_DATE DATETIME NULL`,
+]
+
+async function ensureSchema(pool: sql.ConnectionPool) {
+  for (const patch of SCHEMA_PATCHES) {
+    try {
+      await pool.request().batch(patch)
+    } catch (err) {
+      console.warn("[mssql] schema patch skipped:", err instanceof Error ? err.message : err)
+    }
+  }
+}
+
 export async function getPool(company: string): Promise<sql.ConnectionPool> {
   const key: CompanyKey = company === "links" ? "links" : "manilal"
   const pools = global.__mssqlPools!
@@ -39,6 +56,7 @@ export async function getPool(company: string): Promise<sql.ConnectionPool> {
   if (!pools[key] || !pools[key]!.connected) {
     const pool = new sql.ConnectionPool(makeConfig(key))
     await pool.connect()
+    await ensureSchema(pool)
     pools[key] = pool
   }
 

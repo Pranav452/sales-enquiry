@@ -35,6 +35,7 @@ const SELECT_COLS = `
   GOP                         AS gop,
   ASSIGNED_USER               AS assigned_user,
   CONVERT(varchar(10), ASSIGNED_DATE, 120) AS assigned_date,
+  CONVERT(varchar(10), DUE_DATE, 120)      AS due_date,
   BUY_RATE_FILE               AS buy_rate_file,
   SELL_RATE_FILE              AS sell_rate_file,
   CAST(CONTACT_ID AS varchar(20)) AS contact_id,
@@ -142,6 +143,7 @@ export async function PATCH(
       .input("gop",           truncate(body.gop, 50))
       .input("assigned_user", truncate(body.assigned_user, 100))
       .input("assigned_date", sql.DateTime,     body.assigned_date ? new Date(body.assigned_date as string) : null)
+      .input("due_date",      sql.DateTime,     body.due_date ? new Date(body.due_date as string) : null)
       .input("buy_rate_file", body.buy_rate_file ?? null)
       .input("sell_rate_file",body.sell_rate_file ?? null)
       .input("updated_at",    sql.DateTime,     new Date())
@@ -172,6 +174,7 @@ export async function PATCH(
           GOP           = @gop,
           ASSIGNED_USER = @assigned_user,
           ASSIGNED_DATE = @assigned_date,
+          DUE_DATE      = @due_date,
           BUY_RATE_FILE = @buy_rate_file,
           SELL_RATE_FILE= @sell_rate_file,
           UPDATED_AT    = @updated_at
@@ -209,6 +212,7 @@ export async function PATCH(
       gop: { apiKey: "gop", dbCol: "GOP" },
       assigned_user: { apiKey: "assigned_user", dbCol: "ASSIGNED_USER" },
       assigned_date: { apiKey: "assigned_date", dbCol: "ASSIGNED_DATE" },
+      due_date: { apiKey: "due_date", dbCol: "DUE_DATE" },
       buy_rate_file: { apiKey: "buy_rate_file", dbCol: "BUY_RATE_FILE" },
       sell_rate_file: { apiKey: "sell_rate_file", dbCol: "SELL_RATE_FILE" },
     }

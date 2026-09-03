@@ -37,6 +37,7 @@ const SELECT_COLS = `
   GOP                         AS gop,
   ASSIGNED_USER               AS assigned_user,
   CONVERT(varchar(10), ASSIGNED_DATE, 120) AS assigned_date,
+  CONVERT(varchar(10), DUE_DATE, 120)      AS due_date,
   BUY_RATE_FILE               AS buy_rate_file,
   SELL_RATE_FILE              AS sell_rate_file,
   CAST(CONTACT_ID AS varchar(20)) AS contact_id,
@@ -144,6 +145,7 @@ export async function POST(req: NextRequest) {
       .input("gop",           truncate(body.gop, 50))
       .input("assigned_user", truncate(body.assigned_user, 100))
       .input("assigned_date", sql.DateTime,     body.assigned_date ? new Date(body.assigned_date) : null)
+      .input("due_date",      sql.DateTime,     body.due_date ? new Date(body.due_date) : null)
       .input("buy_rate_file", body.buy_rate_file ?? null)
       .input("sell_rate_file",body.sell_rate_file ?? null)
       .input("contact_id",    sql.Int, body.contact_id ? parseInt(body.contact_id) : null)
@@ -157,7 +159,7 @@ export async function POST(req: NextRequest) {
           SALESPERSON, AGENT_NAME, COUNTRY_CODE, BRANCH, NETWORK,
           POL, POD, INCOTERM, DIMENSION, STATUS, EMAIL_SUBJECT,
           SHIPPER, CONSIGNEE, REMARK, MBL_AWB_NO, JOB_INVOICE_NO, GOP,
-          ASSIGNED_USER, ASSIGNED_DATE, BUY_RATE_FILE, SELL_RATE_FILE,
+          ASSIGNED_USER, ASSIGNED_DATE, DUE_DATE, BUY_RATE_FILE, SELL_RATE_FILE,
           CONTACT_ID, LEAD_ID, CREATED_BY, MAKERDT, UPDATED_AT
         )
         OUTPUT inserted.PK_ID
@@ -166,7 +168,7 @@ export async function POST(req: NextRequest) {
           @salesperson, @agent_name, @country_code, @branch, @network,
           @pol, @pod, @incoterm, @dimension, @status, @email_subject,
           @shipper, @consignee, @remark, @mbl_awb_no, @job_invoice_no, @gop,
-          @assigned_user, @assigned_date, @buy_rate_file, @sell_rate_file,
+          @assigned_user, @assigned_date, @due_date, @buy_rate_file, @sell_rate_file,
           @contact_id, @lead_id, @created_by, @makerdt, @updated_at
         )
       `)
@@ -213,6 +215,7 @@ interface EnquiryPayload {
   gop?: string | null
   assigned_user?: string | null
   assigned_date?: string | null
+  due_date?: string | null
   buy_rate_file?: string | null
   sell_rate_file?: string | null
   contact_id?: string | null

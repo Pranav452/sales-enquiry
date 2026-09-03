@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Badge } from "@/components/ui/badge"
+import { displayStatus } from "@/lib/constants/dropdowns"
 
 interface AuditSummary {
   enquiry_id: number
@@ -164,7 +165,7 @@ export default function AuditPage() {
                   {row.enq_ref_no ?? `#${row.enquiry_id}`}
                 </span>
                 <Badge variant={statusVariant(row.status) as "success" | "danger" | "warning" | "info" | "secondary"} className="text-[10px] px-1.5 py-0">
-                  {row.status ?? "—"}
+                  {row.status ? displayStatus(row.status) : "—"}
                 </Badge>
               </div>
               <div className="text-xs text-foreground truncate mb-1">
@@ -195,7 +196,7 @@ export default function AuditPage() {
                   {selected.enq_ref_no ?? `Enquiry #${selected.enquiry_id}`}
                 </h2>
                 <Badge variant={statusVariant(selected.status) as "success" | "danger" | "warning" | "info" | "secondary"}>
-                  {selected.status ?? "—"}
+                  {selected.status ? displayStatus(selected.status) : "—"}
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground">

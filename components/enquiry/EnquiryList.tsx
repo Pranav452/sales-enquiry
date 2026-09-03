@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
-import { SALESPERSON_CODE_MAP, expandPortCity } from "@/lib/constants/dropdowns"
+import { SALESPERSON_CODE_MAP, expandPortCity, displayStatus } from "@/lib/constants/dropdowns"
 
 export interface Enquiry {
   id: string
@@ -210,7 +210,7 @@ export function EnquiryList({ onSelectEnquiry, editingId, navigateOnEdit }: Enqu
                           | "secondary"
                       }
                     >
-                      {r.status ?? "—"}
+                      {r.status ? displayStatus(r.status) : "—"}
                     </Badge>
                   </td>
                 </tr>

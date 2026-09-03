@@ -24,6 +24,7 @@ import {
   Zap,
   ChevronRight,
 } from "lucide-react"
+import { displayStatus } from "@/lib/constants/dropdowns"
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -135,7 +136,7 @@ function statusBadge(status: string | null) {
       "inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide",
       map[key] ?? "bg-muted text-muted-foreground"
     )}>
-      {status ?? "—"}
+      {status ? displayStatus(status) : "—"}
     </span>
   )
 }
