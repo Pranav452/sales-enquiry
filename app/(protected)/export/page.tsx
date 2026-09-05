@@ -46,7 +46,6 @@ interface Row {
   gop: string | null
   assigned_user: string | null
   assigned_date: string | null
-  due_date: string | null
 }
 
 // ─── Column definitions ─────────────────────────────────────────
@@ -90,8 +89,6 @@ const ALL_COLUMNS: ColDef[] = [
   { key: "gop",               label: "GOP",                defaultOn: false },
   { key: "assigned_user",     label: "Assigned User",      defaultOn: true },
   { key: "assigned_date",     label: "Quotation Given Date", defaultOn: true,
-    format: (v) => v ? new Date(v).toLocaleDateString("en-GB") : "" },
-  { key: "due_date",          label: "Due Date",           defaultOn: true,
     format: (v) => v ? new Date(v).toLocaleDateString("en-GB") : "" },
   { key: "days_to_quote",     label: "Days to Quote",      defaultOn: true,
     format: (_v, row) => {

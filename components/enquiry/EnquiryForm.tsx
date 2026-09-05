@@ -58,7 +58,6 @@ interface FormData {
   gop: string
   assigned_user: string
   assigned_date: string
-  due_date: string
   buy_rate_file: string
   sell_rate_file: string
 }
@@ -78,7 +77,7 @@ function getDefaultForm(): FormData {
     container_type: "", status: "PENDING",
     email_subject_line: "", shipper: "", consignee: "",
     remarks: "", mbl_awb_no: "", job_invoice_no: "", gop: "",
-    assigned_user: "", assigned_date: "", due_date: "",
+    assigned_user: "", assigned_date: "",
     buy_rate_file: "", sell_rate_file: "",
   }
 }
@@ -110,7 +109,6 @@ export interface EnquiryFormEditing {
   gop?: string | null
   assigned_user?: string | null
   assigned_date?: string | null
-  due_date?: string | null
   buy_rate_file?: string | null
   sell_rate_file?: string | null
 }
@@ -216,7 +214,6 @@ function populateFromEditing(e: EnquiryFormEditing): FormData {
     job_invoice_no: e.job_invoice_no ?? "", gop: e.gop ?? "",
     assigned_user: e.assigned_user ?? "",
     assigned_date: e.assigned_date ? e.assigned_date.split("T")[0] : "",
-    due_date: e.due_date ? e.due_date.split("T")[0] : "",
     buy_rate_file: e.buy_rate_file ?? "",
     sell_rate_file: e.sell_rate_file ?? "",
   }
@@ -539,7 +536,6 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete, prefill
       job_invoice_no: form.job_invoice_no || null, gop: form.gop || null,
       assigned_user: form.assigned_user || null,
       assigned_date: form.assigned_date || null,
-      due_date: form.due_date || null,
       buy_rate_file: form.buy_rate_file || null,
       sell_rate_file: form.sell_rate_file || null,
       contact_id: linkContactId ?? null,
@@ -874,11 +870,6 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete, prefill
         <div className="space-y-1.5">
           <Label htmlFor="assigned_date">Quotation Given Date</Label>
           <Input id="assigned_date" type="date" value={form.assigned_date} onChange={(e) => setField("assigned_date", e.target.value)} />
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="due_date">Due Date</Label>
-          <Input id="due_date" type="date" value={form.due_date} onChange={(e) => setField("due_date", e.target.value)} />
         </div>
 
         {/* SECTION: Rate Notes */}

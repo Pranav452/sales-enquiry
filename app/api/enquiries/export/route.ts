@@ -29,8 +29,7 @@ const SELECT_COLS = `
   JOB_INVOICE_NO                   AS job_invoice_no,
   GOP                              AS gop,
   ASSIGNED_USER                    AS assigned_user,
-  CONVERT(varchar(10), ASSIGNED_DATE, 120) AS assigned_date,
-  CONVERT(varchar(10), DUE_DATE, 120)      AS due_date
+  CONVERT(varchar(10), ASSIGNED_DATE, 120) AS assigned_date
 `
 
 // GET /api/enquiries/export
