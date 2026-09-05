@@ -63,6 +63,10 @@ interface LocalCharges {
   muc: ChargeField
   toll: ChargeField
   bl_surrendered: ChargeField
+  // ON = itemised rows (local clients); OFF = single all-inclusive USD
+  // figure (overseas clients). Persisted inside the LOCAL_CHARGES blob.
+  detailed: boolean
+  all_inclusive: ChargeField
 }
 
 interface DocCharges {
@@ -134,6 +138,8 @@ function defaultLocalCharges(): LocalCharges {
     muc: emptyCharge(),
     toll: emptyCharge(),
     bl_surrendered: emptyCharge(),
+    detailed: true,
+    all_inclusive: emptyCharge("USD"),
   }
 }
 
@@ -221,7 +227,7 @@ function formFromQuotation(q: QuotationEditing): FormData {
     transit_time: q.transit_time ?? "",
     free_time: q.free_time ?? "",
     routing: q.routing ?? "",
-    local_charges: q.local_charges ?? defaultLocalCharges(),
+    local_charges: { ...defaultLocalCharges(), ...(q.local_charges ?? {}) },
     stuffing_type: stuffType,
     doc_charges: (stuffType === "doc" ? (q.cc_charges as DocCharges) : null) ?? defaultDocCharges(),
     factory_charges: (stuffType === "factory" ? (q.cc_charges as FactoryCharges) : null) ?? defaultFactoryCharges(),
@@ -665,14 +671,18 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
     if (showFreight) {
       sum += toInr(form.freight_charge.amount, form.freight_charge.currency, r)
       const lc = form.local_charges
-      sum += toInr(lc.bl_fee.amount, lc.bl_fee.currency, r)
-      sum += toInr(lc.thc.amount, lc.thc.currency, r)
-      sum += toInr(lc.seal_charges.amount, lc.seal_charges.currency, r)
-      sum += toInr(lc.muc.amount, lc.muc.currency, r)
-      sum += toInr(lc.toll.amount, lc.toll.currency, r)
-      sum += toInr(lc.bl_surrendered.amount, lc.bl_surrendered.currency, r)
       form.extra_freight.forEach((x) => { sum += toInr(x.amount, x.currency, r) })
-      form.extra_local.forEach((x) => { sum += toInr(x.amount, x.currency, r) })
+      if (lc.detailed) {
+        sum += toInr(lc.bl_fee.amount, lc.bl_fee.currency, r)
+        sum += toInr(lc.thc.amount, lc.thc.currency, r)
+        sum += toInr(lc.seal_charges.amount, lc.seal_charges.currency, r)
+        sum += toInr(lc.muc.amount, lc.muc.currency, r)
+        sum += toInr(lc.toll.amount, lc.toll.currency, r)
+        sum += toInr(lc.bl_surrendered.amount, lc.bl_surrendered.currency, r)
+        form.extra_local.forEach((x) => { sum += toInr(x.amount, x.currency, r) })
+      } else {
+        sum += toInr(lc.all_inclusive.amount, lc.all_inclusive.currency, r)
+      }
     }
 
     if (showCC) {
@@ -735,7 +745,7 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
       shipment_type: form.shipment_type,
       freight_charge: showFreight ? form.freight_charge : null,
       extra_freight: showFreight ? form.extra_freight : [],
-      extra_local: showFreight ? form.extra_local : [],
+      extra_local: showFreight && form.local_charges.detailed ? form.extra_local : [],
       extra_cc: showCC ? form.extra_cc : [],
       vessel_name: showFreight ? form.vessel_name : null,
       etd: showFreight && form.etd ? form.etd : null,
@@ -946,12 +956,16 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
         ["Toll", form.local_charges.toll],
         ["BL Surrendered / Seaway Bill", form.local_charges.bl_surrendered],
       ]
-      const localRows: [string, string, string, string][] = [
-        ...localPairs.filter(([, f]) => isFilled(f)).map(([label, f]) => chargeRow(label, f)),
-        ...form.extra_local
-          .filter(isFilled)
-          .map((x) => chargeRow(x.label || "-", x)),
-      ]
+      const localRows: [string, string, string, string][] = form.local_charges.detailed
+        ? [
+            ...localPairs.filter(([, f]) => isFilled(f)).map(([label, f]) => chargeRow(label, f)),
+            ...form.extra_local
+              .filter(isFilled)
+              .map((x) => chargeRow(x.label || "-", x)),
+          ]
+        : isFilled(form.local_charges.all_inclusive)
+          ? [chargeRow("Add charges - All Inclusive", form.local_charges.all_inclusive)]
+          : []
 
       if (localRows.length > 0) {
         doc.setFontSize(10)
@@ -1379,6 +1393,23 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
 
           <SectionHeader>Origin Local Charges</SectionHeader>
 
+          {/* Detailed (local client) vs all-inclusive (overseas client) */}
+          <div className="flex items-center gap-3 mb-3">
+            <input
+              id="local-charges-toggle"
+              type="checkbox"
+              checked={form.local_charges.detailed}
+              onChange={(e) => setForm((f) => ({ ...f, local_charges: { ...f.local_charges, detailed: e.target.checked } }))}
+              className="h-4 w-4 rounded border-border"
+            />
+            <Label htmlFor="local-charges-toggle" className="text-sm font-semibold cursor-pointer">
+              Show detailed Origin Local Charges
+            </Label>
+            <span className="text-xs text-muted-foreground">
+              {form.local_charges.detailed ? "ON - local client format" : "OFF - overseas client format (single all-inclusive figure)"}
+            </span>
+          </div>
+
           {/* Column headers */}
           <div className="grid grid-cols-[minmax(140px,1fr)_120px_96px_minmax(120px,1fr)] gap-2 px-0 mb-1">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Charge</span>
@@ -1387,6 +1418,13 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Remarks</span>
           </div>
 
+          {!form.local_charges.detailed && (
+            <div className="space-y-2">
+              <ChargeRow label="Add charges - All Inclusive" field={form.local_charges.all_inclusive} onChange={(f) => setLocalCharge("all_inclusive", f)} currencyList={currencyList} />
+            </div>
+          )}
+
+          {form.local_charges.detailed && (<>
           <div className="space-y-2">
             <ChargeRow label="BL Fee" field={form.local_charges.bl_fee} onChange={(f) => setLocalCharge("bl_fee", f)} currencyList={currencyList} />
             <ChargeRow label="THC" field={form.local_charges.thc} onChange={(f) => setLocalCharge("thc", f)} currencyList={currencyList} />
@@ -1411,6 +1449,7 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
           >
             <Plus className="h-3.5 w-3.5" /> Add charge
           </button>
+          </>)}
         </div>
       )}
 
