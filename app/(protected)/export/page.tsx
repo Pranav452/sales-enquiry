@@ -90,7 +90,7 @@ const ALL_COLUMNS: ColDef[] = [
   { key: "assigned_user",     label: "Assigned User",      defaultOn: true },
   { key: "assigned_date",     label: "Quotation Given Date", defaultOn: true,
     format: (v) => v ? new Date(v).toLocaleDateString("en-GB") : "" },
-  { key: "days_to_quote",     label: "Days to Quote",      defaultOn: true,
+  { key: "days_to_quote",     label: "Days taken to quote",      defaultOn: true,
     format: (_v, row) => {
       if (!row?.enq_receipt_date || !row.assigned_date) return ""
       const ms = new Date(row.assigned_date).getTime() - new Date(row.enq_receipt_date).getTime()
