@@ -56,18 +56,49 @@ function emptyExtra(currency = "INR"): ExtraCharge {
   return { label: "", amount: "", currency, remarks: "" }
 }
 
-interface LocalCharges {
+// One set of itemised origin local charges. Kept separately per
+// container size because 20ft and 40ft attract different charges.
+interface LocalChargeRows {
   bl_fee: ChargeField
   thc: ChargeField
   seal_charges: ChargeField
   muc: ChargeField
   toll: ChargeField
   bl_surrendered: ChargeField
+  extra: ExtraCharge[]
+}
+
+type ContainerSize = "20" | "40"
+
+interface LocalCharges {
+  size20: LocalChargeRows
+  size40: LocalChargeRows
   // ON = itemised rows (local clients); OFF = single all-inclusive USD
   // figure (overseas clients). Persisted inside the LOCAL_CHARGES blob.
   detailed: boolean
   all_inclusive: ChargeField
 }
+
+// Legacy blob shape (before per-size split): flat rows at top level.
+type LegacyLocalCharges = Partial<Omit<LocalChargeRows, "extra">> &
+  Partial<Pick<LocalCharges, "detailed" | "all_inclusive">> & {
+    size20?: Partial<LocalChargeRows>
+    size40?: Partial<LocalChargeRows>
+  }
+
+// Which local-charge sets apply for the selected equipment. "20GP" -> 20ft
+// only, "40HC" -> 40ft only, "20GP/40HC" -> both. Anything else (LCL, tank,
+// unset...) shows both so nothing is hidden from the sales person.
+function applicableSizes(containerType: string): ContainerSize[] {
+  const ct = (containerType ?? "").toUpperCase()
+  const has20 = /\b20/.test(ct)
+  const has40 = /\b4[05]/.test(ct)
+  if (has20 && !has40) return ["20"]
+  if (has40 && !has20) return ["40"]
+  return ["20", "40"]
+}
+
+const SIZE_LABEL: Record<ContainerSize, string> = { "20": "20ft Container", "40": "40ft Container" }
 
 interface DocCharges {
   agency_charges: ChargeField
@@ -130,7 +161,7 @@ Request you to please confirm to proceed for Booking release
 Hope you find our quote up to your mark
 Awaiting for response to proceed further`
 
-function defaultLocalCharges(): LocalCharges {
+function defaultLocalChargeRows(): LocalChargeRows {
   return {
     bl_fee: emptyCharge(),
     thc: emptyCharge(),
@@ -138,9 +169,50 @@ function defaultLocalCharges(): LocalCharges {
     muc: emptyCharge(),
     toll: emptyCharge(),
     bl_surrendered: emptyCharge(),
+    extra: [],
+  }
+}
+
+function defaultLocalCharges(): LocalCharges {
+  return {
+    size20: defaultLocalChargeRows(),
+    size40: defaultLocalChargeRows(),
     detailed: true,
     all_inclusive: emptyCharge("USD"),
   }
+}
+
+// Normalise a stored local_charges blob (new per-size or legacy flat) into
+// the current shape. Legacy flat rows + legacy extra_local are moved into
+// the first size applicable to the quotation's container type.
+function normaliseLocalCharges(
+  raw: LegacyLocalCharges | null | undefined,
+  legacyExtra: ExtraCharge[] | null | undefined,
+  containerType: string,
+): LocalCharges {
+  const base = defaultLocalCharges()
+  if (!raw) return base
+  const out: LocalCharges = {
+    ...base,
+    detailed: raw.detailed ?? base.detailed,
+    all_inclusive: raw.all_inclusive ?? base.all_inclusive,
+  }
+  if (raw.size20 || raw.size40) {
+    out.size20 = { ...defaultLocalChargeRows(), ...(raw.size20 ?? {}) }
+    out.size40 = { ...defaultLocalChargeRows(), ...(raw.size40 ?? {}) }
+    return out
+  }
+  const { size20: _s20, size40: _s40, detailed: _d, all_inclusive: _a, ...flat } = raw
+  void _s20; void _s40; void _d; void _a
+  const target = applicableSizes(containerType)[0]
+  const rows: LocalChargeRows = {
+    ...defaultLocalChargeRows(),
+    ...(flat as Partial<LocalChargeRows>),
+    extra: legacyExtra ?? [],
+  }
+  if (target === "40") out.size40 = rows
+  else out.size20 = rows
+  return out
 }
 
 function defaultDocCharges(): DocCharges {
@@ -227,7 +299,7 @@ function formFromQuotation(q: QuotationEditing): FormData {
     transit_time: q.transit_time ?? "",
     free_time: q.free_time ?? "",
     routing: q.routing ?? "",
-    local_charges: { ...defaultLocalCharges(), ...(q.local_charges ?? {}) },
+    local_charges: normaliseLocalCharges(q.local_charges as LegacyLocalCharges | null, q.extra_local, q.container_type ?? ""),
     stuffing_type: stuffType,
     doc_charges: (stuffType === "doc" ? (q.cc_charges as DocCharges) : null) ?? defaultDocCharges(),
     factory_charges: (stuffType === "factory" ? (q.cc_charges as FactoryCharges) : null) ?? defaultFactoryCharges(),
@@ -538,6 +610,17 @@ function ExtraChargeRow({
   )
 }
 
+function ChargeColumnHeaders() {
+  return (
+    <div className="grid grid-cols-[minmax(140px,1fr)_120px_96px_minmax(120px,1fr)] gap-2 px-0 mb-1">
+      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Charge</span>
+      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide text-right">Amount</span>
+      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Currency</span>
+      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Remarks</span>
+    </div>
+  )
+}
+
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
     <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground border-b border-border pb-1 mb-3 mt-6">
@@ -635,8 +718,18 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
     setForm((f) => ({ ...f, [key]: value }))
   }
 
-  function setLocalCharge(key: keyof LocalCharges, value: ChargeField) {
+  function setLocalCharge(key: "all_inclusive", value: ChargeField) {
     setForm((f) => ({ ...f, local_charges: { ...f.local_charges, [key]: value } }))
+  }
+
+  // Per-size itemised rows (20ft / 40ft)
+  function setSizeCharge(size: ContainerSize, key: Exclude<keyof LocalChargeRows, "extra">, value: ChargeField) {
+    const sk = `size${size}` as const
+    setForm((f) => ({ ...f, local_charges: { ...f.local_charges, [sk]: { ...f.local_charges[sk], [key]: value } } }))
+  }
+  function setSizeExtra(size: ContainerSize, next: (rows: ExtraCharge[]) => ExtraCharge[]) {
+    const sk = `size${size}` as const
+    setForm((f) => ({ ...f, local_charges: { ...f.local_charges, [sk]: { ...f.local_charges[sk], extra: next(f.local_charges[sk].extra) } } }))
   }
 
   function setDocCharge(key: keyof DocCharges, value: ChargeField) {
@@ -661,6 +754,8 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
 
   const showFreight = form.shipment_type === "freight" || form.shipment_type === "both"
   const showCC = form.shipment_type === "custom_clearance" || form.shipment_type === "both"
+  // Local-charge sets that apply for the selected equipment
+  const activeSizes = useMemo(() => applicableSizes(form.container_type), [form.container_type])
 
   // ─── Total calculation ────────────────────────────────────
 
@@ -673,13 +768,17 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
       const lc = form.local_charges
       form.extra_freight.forEach((x) => { sum += toInr(x.amount, x.currency, r) })
       if (lc.detailed) {
-        sum += toInr(lc.bl_fee.amount, lc.bl_fee.currency, r)
-        sum += toInr(lc.thc.amount, lc.thc.currency, r)
-        sum += toInr(lc.seal_charges.amount, lc.seal_charges.currency, r)
-        sum += toInr(lc.muc.amount, lc.muc.currency, r)
-        sum += toInr(lc.toll.amount, lc.toll.currency, r)
-        sum += toInr(lc.bl_surrendered.amount, lc.bl_surrendered.currency, r)
-        form.extra_local.forEach((x) => { sum += toInr(x.amount, x.currency, r) })
+        // Only the sizes applicable to the selected container type count
+        activeSizes.forEach((size) => {
+          const rows = lc[`size${size}` as const]
+          sum += toInr(rows.bl_fee.amount, rows.bl_fee.currency, r)
+          sum += toInr(rows.thc.amount, rows.thc.currency, r)
+          sum += toInr(rows.seal_charges.amount, rows.seal_charges.currency, r)
+          sum += toInr(rows.muc.amount, rows.muc.currency, r)
+          sum += toInr(rows.toll.amount, rows.toll.currency, r)
+          sum += toInr(rows.bl_surrendered.amount, rows.bl_surrendered.currency, r)
+          rows.extra.forEach((x) => { sum += toInr(x.amount, x.currency, r) })
+        })
       } else {
         sum += toInr(lc.all_inclusive.amount, lc.all_inclusive.currency, r)
       }
@@ -708,7 +807,7 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
     }
 
     return sum
-  }, [form, effectiveRates, showFreight, showCC])
+  }, [form, effectiveRates, showFreight, showCC, activeSizes])
 
   // Convert an INR total into the display currency. For the originally-saved
   // currency we use the frozen rate so the on-screen total, the PDF and the
@@ -745,7 +844,8 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
       shipment_type: form.shipment_type,
       freight_charge: showFreight ? form.freight_charge : null,
       extra_freight: showFreight ? form.extra_freight : [],
-      extra_local: showFreight && form.local_charges.detailed ? form.extra_local : [],
+      // Per-size extras now live inside local_charges.size20/size40
+      extra_local: [],
       extra_cc: showCC ? form.extra_cc : [],
       vessel_name: showFreight ? form.vessel_name : null,
       etd: showFreight && form.etd ? form.etd : null,
@@ -947,30 +1047,36 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
         y += 5
       }
 
-      // Local charges — only rows the user actually filled in
-      const localPairs: [string, ChargeField][] = [
-        ["BL Fee", form.local_charges.bl_fee],
-        ["THC", form.local_charges.thc],
-        ["Seal Charges", form.local_charges.seal_charges],
-        ["MUC", form.local_charges.muc],
-        ["Toll", form.local_charges.toll],
-        ["BL Surrendered / Seaway Bill", form.local_charges.bl_surrendered],
-      ]
-      const localRows: [string, string, string, string][] = form.local_charges.detailed
-        ? [
-            ...localPairs.filter(([, f]) => isFilled(f)).map(([label, f]) => chargeRow(label, f)),
-            ...form.extra_local
-              .filter(isFilled)
-              .map((x) => chargeRow(x.label || "-", x)),
-          ]
+      // Local charges — only rows the user actually filled in. One table per
+      // applicable container size (20ft / 40ft) so charges never get mixed.
+      const sizeRows = (rows: LocalChargeRows): [string, string, string, string][] => {
+        const pairs: [string, ChargeField][] = [
+          ["BL Fee", rows.bl_fee],
+          ["THC", rows.thc],
+          ["Seal Charges", rows.seal_charges],
+          ["MUC", rows.muc],
+          ["Toll", rows.toll],
+          ["BL Surrendered / Seaway Bill", rows.bl_surrendered],
+        ]
+        return [
+          ...pairs.filter(([, f]) => isFilled(f)).map(([label, f]) => chargeRow(label, f)),
+          ...rows.extra.filter(isFilled).map((x) => chargeRow(x.label || "-", x)),
+        ]
+      }
+      const localTables: [string, [string, string, string, string][]][] = form.local_charges.detailed
+        ? activeSizes.map((size) => [
+            `Origin Local Charges - ${SIZE_LABEL[size]}`,
+            sizeRows(form.local_charges[`size${size}` as const]),
+          ])
         : isFilled(form.local_charges.all_inclusive)
-          ? [chargeRow("Add charges - All Inclusive", form.local_charges.all_inclusive)]
+          ? [["Origin Local Charges", [chargeRow("Add charges - All Inclusive", form.local_charges.all_inclusive)]]]
           : []
 
-      if (localRows.length > 0) {
+      for (const [title, localRows] of localTables) {
+        if (localRows.length === 0) continue
         doc.setFontSize(10)
         doc.setFont("helvetica", "bold")
-        doc.text("Origin Local Charges", margin, y)
+        doc.text(title, margin, y)
         y += 2
 
         autoTable(doc, {
@@ -1410,46 +1516,55 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
             </span>
           </div>
 
-          {/* Column headers */}
-          <div className="grid grid-cols-[minmax(140px,1fr)_120px_96px_minmax(120px,1fr)] gap-2 px-0 mb-1">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Charge</span>
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide text-right">Amount</span>
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Currency</span>
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Remarks</span>
-          </div>
-
-          {!form.local_charges.detailed && (
+          {!form.local_charges.detailed && (<>
+            <ChargeColumnHeaders />
             <div className="space-y-2">
               <ChargeRow label="Add charges - All Inclusive" field={form.local_charges.all_inclusive} onChange={(f) => setLocalCharge("all_inclusive", f)} currencyList={currencyList} />
             </div>
-          )}
-
-          {form.local_charges.detailed && (<>
-          <div className="space-y-2">
-            <ChargeRow label="BL Fee" field={form.local_charges.bl_fee} onChange={(f) => setLocalCharge("bl_fee", f)} currencyList={currencyList} />
-            <ChargeRow label="THC" field={form.local_charges.thc} onChange={(f) => setLocalCharge("thc", f)} currencyList={currencyList} />
-            <ChargeRow label="Seal Charges" field={form.local_charges.seal_charges} onChange={(f) => setLocalCharge("seal_charges", f)} currencyList={currencyList} />
-            <ChargeRow label="MUC" field={form.local_charges.muc} onChange={(f) => setLocalCharge("muc", f)} currencyList={currencyList} />
-            <ChargeRow label="Toll" field={form.local_charges.toll} onChange={(f) => setLocalCharge("toll", f)} currencyList={currencyList} />
-            <ChargeRow label="BL Surrendered / Seaway Bill" field={form.local_charges.bl_surrendered} onChange={(f) => setLocalCharge("bl_surrendered", f)} currencyList={currencyList} />
-            {form.extra_local.map((row, i) => (
-              <ExtraChargeRow
-                key={i}
-                field={row}
-                onChange={(f) => updateExtra("extra_local", i, f)}
-                onRemove={() => removeExtra("extra_local", i)}
-                currencyList={currencyList}
-              />
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => addExtra("extra_local")}
-            className="mt-2 flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline"
-          >
-            <Plus className="h-3.5 w-3.5" /> Add charge
-          </button>
           </>)}
+
+          {form.local_charges.detailed && (
+            <div className="space-y-5">
+              <p className="text-xs text-muted-foreground">
+                {form.container_type
+                  ? <>Container Type <span className="font-semibold text-foreground">{form.container_type}</span> selected: showing {activeSizes.map((s) => SIZE_LABEL[s]).join(" and ")} local charges. Only these are included in the total and PDF.</>
+                  : <>Select a Container Type above to show only the applicable local charges. Both sizes are shown until then.</>}
+              </p>
+              {activeSizes.map((size) => {
+                const rows = form.local_charges[`size${size}` as const]
+                return (
+                  <div key={size} className="rounded-md border border-border/70 bg-muted/20 p-3">
+                    <h4 className="text-sm font-semibold mb-2">{SIZE_LABEL[size]} - Local Charges</h4>
+                    <ChargeColumnHeaders />
+                    <div className="space-y-2">
+                      <ChargeRow label="BL Fee" field={rows.bl_fee} onChange={(f) => setSizeCharge(size, "bl_fee", f)} currencyList={currencyList} />
+                      <ChargeRow label="THC" field={rows.thc} onChange={(f) => setSizeCharge(size, "thc", f)} currencyList={currencyList} />
+                      <ChargeRow label="Seal Charges" field={rows.seal_charges} onChange={(f) => setSizeCharge(size, "seal_charges", f)} currencyList={currencyList} />
+                      <ChargeRow label="MUC" field={rows.muc} onChange={(f) => setSizeCharge(size, "muc", f)} currencyList={currencyList} />
+                      <ChargeRow label="Toll" field={rows.toll} onChange={(f) => setSizeCharge(size, "toll", f)} currencyList={currencyList} />
+                      <ChargeRow label="BL Surrendered / Seaway Bill" field={rows.bl_surrendered} onChange={(f) => setSizeCharge(size, "bl_surrendered", f)} currencyList={currencyList} />
+                      {rows.extra.map((row, i) => (
+                        <ExtraChargeRow
+                          key={i}
+                          field={row}
+                          onChange={(f) => setSizeExtra(size, (list) => list.map((r, j) => (j === i ? f : r)))}
+                          onRemove={() => setSizeExtra(size, (list) => list.filter((_, j) => j !== i))}
+                          currencyList={currencyList}
+                        />
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSizeExtra(size, (list) => [...list, emptyExtra()])}
+                      className="mt-2 flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline"
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Add charge
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
 
