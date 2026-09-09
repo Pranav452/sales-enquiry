@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { SALESPERSON_CODE_MAP, expandPortCity, displayStatus } from "@/lib/constants/dropdowns"
+import { quotationStatusLabel, quotationStatusVariant } from "@/lib/constants/quotation-status"
 
 export interface Enquiry {
   id: string
@@ -37,6 +38,11 @@ export interface Enquiry {
   assigned_date?: string | null
   buy_rate_file?: string | null
   sell_rate_file?: string | null
+  /** Derived server-side: 'NOT_PREPARED' when no quotation row exists yet. */
+  quotation_status?: string | null
+  quotation_id?: string | null
+  quotation_ref_no?: string | null
+  quotation_count?: number | null
 }
 
 const PAGE_SIZE = 20
@@ -107,6 +113,16 @@ export function EnquiryList({ onSelectEnquiry, editingId, navigateOnEdit }: Enqu
     load()
   }, [])
 
+  function handleQuotationClick(r: Enquiry) {
+    // No quotation yet → create one pre-linked to this enquiry.
+    // Otherwise open the latest quotation for this enquiry.
+    if (r.quotation_id) {
+      router.push(`/quotation?edit=${r.quotation_id}`)
+    } else {
+      router.push(`/quotation?enq=${r.id}`)
+    }
+  }
+
   function handleRowClick(r: Enquiry) {
     if (navigateOnEdit) {
       router.push(`/enquiry?edit=${r.id}`)
@@ -132,7 +148,7 @@ export function EnquiryList({ onSelectEnquiry, editingId, navigateOnEdit }: Enqu
     )
   }
 
-  const COLS = ["Enq No", "Date", "Shipper", "POL", "POD", "Sales Person", "Remarks", "Status"]
+  const COLS = ["Enq No", "Date", "Shipper", "POL", "POD", "Sales Person", "Remarks", "Status", "Quotation"]
 
   return (
     <div>
@@ -164,7 +180,7 @@ export function EnquiryList({ onSelectEnquiry, editingId, navigateOnEdit }: Enqu
           <tbody>
             {paginatedRows.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-6 py-8 text-sm text-muted-foreground text-center">
+                <td colSpan={9} className="px-6 py-8 text-sm text-muted-foreground text-center">
                   No enquiries match your search.
                 </td>
               </tr>
@@ -212,6 +228,28 @@ export function EnquiryList({ onSelectEnquiry, editingId, navigateOnEdit }: Enqu
                     >
                       {r.status ? displayStatus(r.status) : "—"}
                     </Badge>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <button
+                      type="button"
+                      onClick={() => handleQuotationClick(r)}
+                      className="cursor-pointer"
+                      title={
+                        r.quotation_id
+                          ? `Open quotation ${r.quotation_ref_no ?? ""}`.trim()
+                          : "Create a quotation for this enquiry"
+                      }
+                      aria-label={
+                        r.quotation_id
+                          ? `Open quotation for enquiry ${r.enq_ref_no ?? r.id}`
+                          : `Create quotation for enquiry ${r.enq_ref_no ?? r.id}`
+                      }
+                    >
+                      <Badge variant={quotationStatusVariant(r.quotation_status)}>
+                        {quotationStatusLabel(r.quotation_status)}
+                        {(r.quotation_count ?? 0) > 1 ? ` (${r.quotation_count})` : ""}
+                      </Badge>
+                    </button>
                   </td>
                 </tr>
               ))

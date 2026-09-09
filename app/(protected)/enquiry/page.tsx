@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { EnquiryForm, type EnquiryFormEditing } from "@/components/enquiry/EnquiryForm"
 import { RecentEnquiries } from "@/components/enquiry/RecentEnquiries"
+import { EnquiryQuotations } from "@/components/enquiry/EnquiryQuotations"
 
 function normalizeMode(raw: string | null | undefined): string {
   const v = (raw ?? "").trim().toUpperCase()
@@ -145,6 +146,13 @@ function EnquiryPageContent() {
         linkContactId={prefill?.contactId ?? null}
         linkLeadId={prefill?.leadId ?? null}
       />
+
+      {editingEnquiry && (
+        <EnquiryQuotations
+          enquiryId={editingEnquiry.id}
+          enqRefNo={editingEnquiry.enq_ref_no}
+        />
+      )}
 
       <RecentEnquiries refreshKey={refreshKey} />
     </div>

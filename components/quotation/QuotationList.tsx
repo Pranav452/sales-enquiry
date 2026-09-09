@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { CheckCircle2, Copy, FileDown, Pencil } from "lucide-react"
+import { CheckCircle2, Copy, FileDown, Pencil, Send, XCircle } from "lucide-react"
+import { quotationStatusLabel, quotationStatusVariant } from "@/lib/constants/quotation-status"
 
 interface Quotation {
   QUOT_ID: number
@@ -35,6 +36,7 @@ export function QuotationList() {
   const [search, setSearch] = useState("")
   const [page, setPage] = useState(1)
   const [approvingId, setApprovingId] = useState<number | null>(null)
+  const [actingId, setActingId] = useState<number | null>(null)
   const PER_PAGE = 20
 
   async function handleApprove(q: Quotation) {
@@ -50,6 +52,22 @@ export function QuotationList() {
       }
     } finally {
       setApprovingId(null)
+    }
+  }
+
+  async function handleTransition(q: Quotation, action: "submit" | "close", confirmMsg: string) {
+    if (!window.confirm(confirmMsg)) return
+    setActingId(q.QUOT_ID)
+    try {
+      const res = await fetch(`/api/quotations/${q.QUOT_ID}/${action}`, { method: "PATCH" })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) {
+        alert(data?.error ?? `Failed to ${action} quotation`)
+      } else {
+        await load()
+      }
+    } finally {
+      setActingId(null)
     }
   }
 
@@ -163,17 +181,37 @@ export function QuotationList() {
                   </td>
                   <td className="px-3 py-2 text-muted-foreground text-xs">{q.SALES_PERSON || "-"}</td>
                   <td className="px-3 py-2">
-                    {q.STATUS === "APPROVED" ? (
-                      <span className="inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 whitespace-nowrap">
-                        Approved
-                      </span>
-                    ) : (
-                      <Badge variant="outline" className="text-xs">Draft</Badge>
-                    )}
+                    <Badge variant={quotationStatusVariant(q.STATUS)} className="text-xs">
+                      {quotationStatusLabel(q.STATUS)}
+                    </Badge>
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-1 justify-end">
-                      {q.STATUS !== "APPROVED" && (
+                      {(q.STATUS ?? "DRAFT") === "DRAFT" && (
+                        <button
+                          type="button"
+                          title="Submit"
+                          disabled={actingId === q.QUOT_ID}
+                          onClick={() => handleTransition(q, "submit", `Submit ${q.QUOT_REF_NO} for approval?`)}
+                          className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-blue-600 transition-colors disabled:opacity-50"
+                        >
+                          <Send className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                      {q.STATUS !== "CLOSED_NOT_QUOTED" && (
+                        <button
+                          type="button"
+                          title="Close - Not Quoted"
+                          disabled={actingId === q.QUOT_ID}
+                          onClick={() =>
+                            handleTransition(q, "close", `Close ${q.QUOT_REF_NO} as Not Quoted?`)
+                          }
+                          className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
+                        >
+                          <XCircle className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                      {q.STATUS !== "APPROVED" && q.STATUS !== "CLOSED_NOT_QUOTED" && (
                         <button
                           type="button"
                           title="Approve"

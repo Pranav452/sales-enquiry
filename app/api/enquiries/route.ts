@@ -43,6 +43,29 @@ const SELECT_COLS = `
   CAST(LEAD_ID AS varchar(20))    AS lead_id
 `
 
+// Derived quotation state for an enquiry row. Resolved in a single
+// OUTER APPLY (latest quotation) plus one correlated count — no N+1.
+// 'NOT_PREPARED' is not a stored status: it means no quotation row
+// exists for this enquiry yet.
+const QUOTATION_COLS = `
+  ISNULL(q.STATUS, 'NOT_PREPARED')  AS quotation_status,
+  q.quot_id                         AS quotation_id,
+  q.QUOT_REF_NO                     AS quotation_ref_no,
+  (SELECT COUNT(*) FROM [dbo].[TBL_QUOTATIONS] qc WHERE qc.ENQ_ID = e.PK_ID) AS quotation_count
+`
+
+const QUOTATION_APPLY = `
+  OUTER APPLY (
+    SELECT TOP 1
+      CAST(qq.QUOT_ID AS varchar(20)) AS quot_id,
+      qq.QUOT_REF_NO,
+      ISNULL(qq.STATUS, 'DRAFT')      AS STATUS
+    FROM [dbo].[TBL_QUOTATIONS] qq
+    WHERE qq.ENQ_ID = e.PK_ID
+    ORDER BY qq.QUOT_ID DESC
+  ) q
+`
+
 // ─── GET /api/enquiries ───────────────────────────────────────
 export async function GET(_req: NextRequest) {
   const auth = await getAuthContext()
@@ -77,10 +100,12 @@ export async function GET(_req: NextRequest) {
     }
 
     const result = await req.query(`
-      SELECT ${SELECT_COLS}
-      FROM [dbo].[TBL_ADMIN_SALESENQUIRY]
+      SELECT ${SELECT_COLS},
+      ${QUOTATION_COLS}
+      FROM [dbo].[TBL_ADMIN_SALESENQUIRY] e
+      ${QUOTATION_APPLY}
       ${where}
-      ORDER BY PK_ID DESC
+      ORDER BY e.PK_ID DESC
     `)
 
     return NextResponse.json(result.recordset)
