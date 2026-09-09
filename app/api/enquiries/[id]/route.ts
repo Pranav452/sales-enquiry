@@ -44,18 +44,21 @@ const SELECT_COLS = `
 // Derived quotation state — see /api/enquiries for the same shape.
 // 'NOT_PREPARED' means no quotation row exists for this enquiry yet.
 const QUOTATION_COLS = `
-  ISNULL(q.STATUS, 'NOT_PREPARED')  AS quotation_status,
-  q.quot_id                         AS quotation_id,
-  q.QUOT_REF_NO                     AS quotation_ref_no,
+  ISNULL(q.QUOT_STATUS, 'NOT_PREPARED') AS quotation_status,
+  q.quot_id                             AS quotation_id,
+  q.QUOT_REF_NO                         AS quotation_ref_no,
   (SELECT COUNT(*) FROM [dbo].[TBL_QUOTATIONS] qc WHERE qc.ENQ_ID = e.PK_ID) AS quotation_count
 `
 
+// Output column named QUOT_STATUS (not STATUS) — the enquiry table has its
+// own unqualified STATUS in SELECT_COLS, and an unqualified "STATUS" here
+// would be ambiguous once both are in scope (SQL Server error 209).
 const QUOTATION_APPLY = `
   OUTER APPLY (
     SELECT TOP 1
       CAST(qq.QUOT_ID AS varchar(20)) AS quot_id,
       qq.QUOT_REF_NO,
-      ISNULL(qq.STATUS, 'DRAFT')      AS STATUS
+      ISNULL(qq.STATUS, 'DRAFT')      AS QUOT_STATUS
     FROM [dbo].[TBL_QUOTATIONS] qq
     WHERE qq.ENQ_ID = e.PK_ID
     ORDER BY qq.QUOT_ID DESC
