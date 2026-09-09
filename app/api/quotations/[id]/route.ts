@@ -22,7 +22,7 @@ export async function GET(
       SELECT
         QUOT_ID, QUOT_REF_NO, QUOT_DATE, MODE, EXIM, FN, ENQ_TYPE,
         INCOTERMS, POL, POD, CONTAINER_TYPE, SHIPPER, SHIPMENT_TYPE,
-        VESSEL_NAME, ETD, ETA, TRANSIT_TIME, FREE_TIME,
+        VESSEL_NAME, SHIPPING_LINE, QUOTED_RATE, ETD, ETA, TRANSIT_TIME, FREE_TIME,
         LOCAL_CHARGES, STUFFING_TYPE, CC_CHARGES,
         TRANSPORT_ENABLED, TRANSPORT_COST,
         TOTAL_INR, EXCHANGE_RATE, TOTAL_DISPLAY, DISPLAY_CURRENCY,
@@ -83,6 +83,8 @@ export async function PATCH(
       .input("shipper",           sql.NVarChar, body.shipper || null)
       .input("shipment_type",     sql.NVarChar, body.shipment_type || null)
       .input("vessel_name",       sql.NVarChar, body.vessel_name || null)
+      .input("shipping_line",     sql.NVarChar, body.shipping_line || null)
+      .input("quoted_rate",       sql.Decimal(18, 2), body.quoted_rate ?? null)
       .input("etd",               sql.Date,     body.etd ? new Date(body.etd) : null)
       .input("eta",               sql.Date,     body.eta ? new Date(body.eta) : null)
       .input("transit_time",      sql.NVarChar, body.transit_time || null)
@@ -113,6 +115,8 @@ export async function PATCH(
           SHIPPER           = @shipper,
           SHIPMENT_TYPE     = @shipment_type,
           VESSEL_NAME       = @vessel_name,
+          SHIPPING_LINE     = @shipping_line,
+          QUOTED_RATE       = @quoted_rate,
           ETD               = @etd,
           ETA               = @eta,
           TRANSIT_TIME      = @transit_time,

@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
       SELECT
         QUOT_ID, QUOT_REF_NO, QUOT_DATE, MODE, EXIM, SHIPPER, POL, POD,
         SHIPMENT_TYPE, TOTAL_INR, TOTAL_DISPLAY, DISPLAY_CURRENCY,
+        SHIPPING_LINE, QUOTED_RATE, ENQ_ID,
         SALES_PERSON, BRANCH, ISNULL(STATUS, 'DRAFT') AS STATUS, CREATED_AT
       FROM [dbo].[TBL_QUOTATIONS]
       ${whereClause}
@@ -68,6 +69,8 @@ export async function POST(req: NextRequest) {
       .input("shipper",           sql.NVarChar, body.shipper || null)
       .input("shipment_type",     sql.NVarChar, body.shipment_type || null)
       .input("vessel_name",       sql.NVarChar, body.vessel_name || null)
+      .input("shipping_line",     sql.NVarChar, body.shipping_line || null)
+      .input("quoted_rate",       sql.Decimal(18, 2), body.quoted_rate ?? null)
       .input("etd",               sql.Date,     body.etd ? new Date(body.etd) : null)
       .input("eta",               sql.Date,     body.eta ? new Date(body.eta) : null)
       .input("transit_time",      sql.NVarChar, body.transit_time || null)
@@ -91,7 +94,7 @@ export async function POST(req: NextRequest) {
         INSERT INTO [dbo].[TBL_QUOTATIONS]
           (QUOT_REF_NO, QUOT_DATE, MODE, EXIM, FN, ENQ_TYPE, INCOTERMS,
            POL, POD, CONTAINER_TYPE, SHIPPER, SHIPMENT_TYPE,
-           VESSEL_NAME, ETD, ETA, TRANSIT_TIME, FREE_TIME,
+           VESSEL_NAME, SHIPPING_LINE, QUOTED_RATE, ETD, ETA, TRANSIT_TIME, FREE_TIME,
            LOCAL_CHARGES, STUFFING_TYPE, CC_CHARGES,
            TRANSPORT_ENABLED, TRANSPORT_COST,
            TOTAL_INR, EXCHANGE_RATE, TOTAL_DISPLAY, DISPLAY_CURRENCY, CLAUSES,
@@ -99,7 +102,7 @@ export async function POST(req: NextRequest) {
         VALUES
           (@quot_ref_no, @quot_date, @mode, @exim, @fn, @enq_type, @incoterms,
            @pol, @pod, @container_type, @shipper, @shipment_type,
-           @vessel_name, @etd, @eta, @transit_time, @free_time,
+           @vessel_name, @shipping_line, @quoted_rate, @etd, @eta, @transit_time, @free_time,
            @local_charges, @stuffing_type, @cc_charges,
            @transport_enabled, @transport_cost,
            @total_inr, @exchange_rate, @total_display, @display_currency, @clauses,

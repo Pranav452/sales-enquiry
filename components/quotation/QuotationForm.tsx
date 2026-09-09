@@ -138,6 +138,8 @@ interface FormData {
   extra_local: ExtraCharge[]
   extra_cc: ExtraCharge[]
   vessel_name: string
+  shipping_line: string
+  quoted_rate: string
   etd: string
   eta: string
   transit_time: string
@@ -252,6 +254,8 @@ function getDefaultForm(): FormData {
     extra_local: [],
     extra_cc: [],
     vessel_name: "",
+    shipping_line: "",
+    quoted_rate: "",
     etd: "",
     eta: "",
     transit_time: "",
@@ -294,6 +298,8 @@ function formFromQuotation(q: QuotationEditing): FormData {
     extra_local: q.extra_local ?? [],
     extra_cc: q.extra_cc ?? [],
     vessel_name: q.vessel_name ?? "",
+    shipping_line: q.shipping_line ?? "",
+    quoted_rate: q.quoted_rate != null ? String(q.quoted_rate) : "",
     etd: normDate(q.etd),
     eta: normDate(q.eta),
     transit_time: q.transit_time ?? "",
@@ -348,6 +354,8 @@ function formFromRatePrefill(p: RatePrefill): FormData {
       remarks: p.carrier ? `${p.carrier} rate` : "",
     },
     extra_freight: extraFreight,
+    shipping_line: p.carrier ?? "",
+    quoted_rate: p.amount != null ? String(p.amount) : "",
     transit_time: p.transit_time ?? "",
     freight_validity_date: p.freight_validity_date ?? "",
   }
@@ -369,6 +377,9 @@ export interface QuotationEditing {
   shipment_type: string | null
   freight_charge: ChargeField | null
   vessel_name: string | null
+  shipping_line?: string | null
+  quoted_rate?: number | null
+  status?: string | null
   etd: string | null
   eta: string | null
   transit_time: string | null
@@ -399,6 +410,8 @@ interface Props {
   editingQuotation?: QuotationEditing | null
   ratePrefill?: RatePrefill | null
   prefilledEnqId?: string | null
+  /** Ref no of the linked enquiry — shown read-only at the top of the form. */
+  linkedEnqRefNo?: string | null
   onSuccess?: (id: string, refNo: string) => void
 }
 
@@ -631,7 +644,7 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
 
 // ─── Main component ───────────────────────────────────────────
 
-export function QuotationForm({ company, editingQuotation, ratePrefill, prefilledEnqId, onSuccess }: Props) {
+export function QuotationForm({ company, editingQuotation, ratePrefill, prefilledEnqId, linkedEnqRefNo, onSuccess }: Props) {
   const router = useRouter()
   const exchange = useExchangeRate()
   // Lazy-init from editing data so controlled Radix Selects mount with
@@ -848,6 +861,8 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
       extra_local: [],
       extra_cc: showCC ? form.extra_cc : [],
       vessel_name: showFreight ? form.vessel_name : null,
+      shipping_line: form.shipping_line || null,
+      quoted_rate: form.quoted_rate.trim() === "" ? null : Number(form.quoted_rate),
       etd: showFreight && form.etd ? form.etd : null,
       eta: showFreight && form.eta ? form.eta : null,
       transit_time: showFreight ? form.transit_time : null,
@@ -1218,6 +1233,23 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
   return (
     <form onSubmit={handleSubmit} className="space-y-2">
 
+      {/* ── Linked enquiry (read-only, auto-reflected) ───────── */}
+      {prefilledEnqId && (
+        <div className="rounded-md border border-border bg-muted/40 px-4 py-3">
+          <Label className="text-xs text-muted-foreground">Enquiry Ref No</Label>
+          <Input
+            value={linkedEnqRefNo ?? `#${prefilledEnqId}`}
+            readOnly
+            disabled
+            className="mt-1 h-9 max-w-xs text-sm font-mono"
+            aria-label="Linked enquiry reference number"
+          />
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            This quotation is linked to the enquiry above.
+          </p>
+        </div>
+      )}
+
       {/* ── Exchange rate banner ────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-border bg-muted/40 px-4 py-2 text-sm">
         <span className="text-muted-foreground shrink-0">Exchange Rate</span>
@@ -1471,6 +1503,21 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
           <SectionHeader>Vessel Schedule</SectionHeader>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+            <div className="space-y-1">
+              <Label>Shipping Line / Carrier</Label>
+              <Input value={form.shipping_line} onChange={(e) => set("shipping_line", e.target.value)} placeholder="e.g. MSC, COSCO, PIL" />
+            </div>
+            <div className="space-y-1">
+              <Label>Quoted Rate</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.quoted_rate}
+                onChange={(e) => set("quoted_rate", e.target.value)}
+                placeholder="Headline rate quoted"
+              />
+            </div>
             <div className="space-y-1">
               <Label>Vessel Name</Label>
               <Input value={form.vessel_name} onChange={(e) => set("vessel_name", e.target.value)} placeholder="Vessel name" />

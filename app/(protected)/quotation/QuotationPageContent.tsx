@@ -3,6 +3,12 @@
 import { useEffect, useState } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { QuotationForm, QuotationEditing, RatePrefill } from "@/components/quotation/QuotationForm"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  quotationStatusLabel,
+  quotationStatusVariant,
+} from "@/lib/constants/quotation-status"
 
 interface Props {
   company: string
@@ -40,6 +46,13 @@ export function QuotationPageContent({ company }: Props) {
   const [editing, setEditing] = useState<QuotationEditing | null>(null)
   const [loading, setLoading] = useState(false)
   const [loadFailed, setLoadFailed] = useState(false)
+  // Status of the quotation being edited, plus the transition in flight.
+  const [status, setStatus] = useState<string>("DRAFT")
+  const [transitioning, setTransitioning] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  // Enq ref no of the linked enquiry — auto-reflected on the form when a
+  // quotation is started from an enquiry (?enq=ID) or opened for edit.
+  const [linkedEnq, setLinkedEnq] = useState<{ id: string; ref: string | null } | null>(null)
 
   // Load for edit or dup
   useEffect(() => {
@@ -89,12 +102,56 @@ export function QuotationPageContent({ company }: Props) {
           extra_cc: data.extra_cc ?? [],
           freight_validity: data.freight_validity ?? null,
           freight_validity_date: data.freight_validity_date ?? null,
+          shipping_line: data.SHIPPING_LINE ?? null,
+          quoted_rate: data.QUOTED_RATE ?? null,
+          status: data.STATUS ?? "DRAFT",
         }
         setEditing(q)
+        setStatus((data.STATUS as string) ?? "DRAFT")
       })
       .catch((e) => { console.error(e); setLoadFailed(true) })
       .finally(() => setLoading(false))
   }, [editId, dupId])
+
+  // Resolve the linked enquiry's ref no so the form can show it read-only.
+  const linkEnqId = enqId ?? editing?.enq_id ?? null
+  useEffect(() => {
+    if (!linkEnqId) {
+      setLinkedEnq(null)
+      return
+    }
+    let cancelled = false
+    fetch(`/api/enquiries/${linkEnqId}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("enquiry lookup failed"))))
+      .then((e) => {
+        if (cancelled) return
+        setLinkedEnq({ id: String(e.id ?? linkEnqId), ref: e.enq_ref_no ?? null })
+      })
+      .catch(() => { if (!cancelled) setLinkedEnq(null) })
+    return () => { cancelled = true }
+  }, [linkEnqId])
+
+  async function transition(action: "submit" | "close" | "approve", confirmMsg: string) {
+    if (!editId) return
+    if (!window.confirm(confirmMsg)) return
+    setTransitioning(action)
+    setActionError(null)
+    try {
+      const res = await fetch(`/api/quotations/${editId}/${action}`, {
+        method: action === "approve" ? "POST" : "PATCH",
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) {
+        setActionError(data?.error ?? `Failed to ${action} quotation`)
+        return
+      }
+      setStatus((data?.status as string) ?? status)
+    } catch {
+      setActionError("Network error — please try again.")
+    } finally {
+      setTransitioning(null)
+    }
+  }
 
   function handleSuccess(id: string, refNo: string) {
     router.push(`/quotations`)
@@ -110,6 +167,54 @@ export function QuotationPageContent({ company }: Props) {
         <p className="text-sm text-muted-foreground">Fill in details and generate a PDF quotation</p>
       </div>
 
+      {editId && (
+        <div className="rounded-lg border border-border px-4 py-3 flex flex-wrap items-center gap-3">
+          <span className="text-sm text-muted-foreground">Status</span>
+          <Badge variant={quotationStatusVariant(status)}>{quotationStatusLabel(status)}</Badge>
+
+          <div className="flex items-center gap-2 ml-auto">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs"
+              disabled={status !== "DRAFT" || transitioning !== null}
+              onClick={() => transition("submit", "Submit this quotation for approval?")}
+            >
+              {transitioning === "submit" ? "Submitting..." : "Submit"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs"
+              disabled={status === "APPROVED" || status === "CLOSED_NOT_QUOTED" || transitioning !== null}
+              onClick={() =>
+                transition("approve", "Approve this quotation? The linked contact will be promoted to CLIENT.")
+              }
+            >
+              {transitioning === "approve" ? "Approving..." : "Approve"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs"
+              disabled={status === "CLOSED_NOT_QUOTED" || transitioning !== null}
+              onClick={() =>
+                transition("close", "Close this enquiry as Not Quoted? No quotation will be issued.")
+              }
+            >
+              {transitioning === "close" ? "Closing..." : "Close - Not Quoted"}
+            </Button>
+          </div>
+
+          {actionError && (
+            <p className="w-full text-sm text-destructive">{actionError}</p>
+          )}
+        </div>
+      )}
+
       {/* Wait for the fetch before mounting the form so it lazy-inits
           with the editing data — Radix Selects don't reliably reflect a
           value applied async after an empty mount. */}
@@ -121,7 +226,8 @@ export function QuotationPageContent({ company }: Props) {
           company={company}
           editingQuotation={editing}
           ratePrefill={ratePrefill}
-          prefilledEnqId={enqId}
+          prefilledEnqId={linkEnqId}
+          linkedEnqRefNo={linkedEnq?.ref ?? null}
           onSuccess={handleSuccess}
         />
       )}

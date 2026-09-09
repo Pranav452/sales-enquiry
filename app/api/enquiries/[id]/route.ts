@@ -41,6 +41,27 @@ const SELECT_COLS = `
   CAST(LEAD_ID AS varchar(20))    AS lead_id
 `
 
+// Derived quotation state — see /api/enquiries for the same shape.
+// 'NOT_PREPARED' means no quotation row exists for this enquiry yet.
+const QUOTATION_COLS = `
+  ISNULL(q.STATUS, 'NOT_PREPARED')  AS quotation_status,
+  q.quot_id                         AS quotation_id,
+  q.QUOT_REF_NO                     AS quotation_ref_no,
+  (SELECT COUNT(*) FROM [dbo].[TBL_QUOTATIONS] qc WHERE qc.ENQ_ID = e.PK_ID) AS quotation_count
+`
+
+const QUOTATION_APPLY = `
+  OUTER APPLY (
+    SELECT TOP 1
+      CAST(qq.QUOT_ID AS varchar(20)) AS quot_id,
+      qq.QUOT_REF_NO,
+      ISNULL(qq.STATUS, 'DRAFT')      AS STATUS
+    FROM [dbo].[TBL_QUOTATIONS] qq
+    WHERE qq.ENQ_ID = e.PK_ID
+    ORDER BY qq.QUOT_ID DESC
+  ) q
+`
+
 // ─── GET /api/enquiries/[id] ──────────────────────────────────
 export async function GET(
   _req: NextRequest,
@@ -59,9 +80,11 @@ export async function GET(
       .request()
       .input("pk_id", sql.Int, pkId)
       .query(`
-        SELECT ${SELECT_COLS}
-        FROM [dbo].[TBL_ADMIN_SALESENQUIRY]
-        WHERE PK_ID = @pk_id
+        SELECT ${SELECT_COLS},
+        ${QUOTATION_COLS}
+        FROM [dbo].[TBL_ADMIN_SALESENQUIRY] e
+        ${QUOTATION_APPLY}
+        WHERE e.PK_ID = @pk_id
       `)
 
     if (!result.recordset.length) {
