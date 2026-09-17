@@ -23,6 +23,17 @@ import {
   PORT_CITIES,
   expandPortCity,
 } from "@/lib/constants/dropdowns"
+import {
+  matchOptionCI,
+  matchIncoterms,
+  matchBranch,
+  matchSalesPerson,
+  QUOT_MODES,
+  QUOT_EXIM,
+  QUOT_FN,
+  QUOT_ENQ_TYPES,
+  type EnquirySource,
+} from "@/lib/quotation-enquiry-map"
 import { RotateCcw, FileDown, Save, Plus, X, Loader2 } from "lucide-react"
 import { drawCompanyLogo } from "@/lib/pdf-logo"
 import type { RowInput } from "jspdf-autotable"
@@ -361,6 +372,56 @@ function formFromRatePrefill(p: RatePrefill): FormData {
   }
 }
 
+// One-click prefill: seed a NEW quotation from the enquiry it was raised
+// against (/quotation?enq=<id>). Only fields with a compatible counterpart
+// are carried over — a value that isn't in the quotation field's option set
+// is dropped rather than forced in, so a Select never shows a bogus entry.
+// Never applied when editing/duplicating an existing quotation.
+function formFromEnquiry(
+  e: EnquirySource,
+  salesPersonOptions: readonly string[]
+): FormData {
+  const base = getDefaultForm()
+  return {
+    ...base,
+    mode: matchOptionCI(e.mode, QUOT_MODES),
+    exim: matchOptionCI(e.exim, QUOT_EXIM),
+    fn: matchOptionCI(e.fn, QUOT_FN),
+    enq_type: matchOptionCI(e.enq_type, QUOT_ENQ_TYPES),
+    incoterms: matchIncoterms(e.incoterms),
+    // POL/POD are free-text comboboxes — pass through, expanded to the
+    // full "CITY (CODE)" label the port list uses.
+    pol: expandPortCity(e.pol ?? "") || "",
+    pod: expandPortCity(e.pod ?? "") || "",
+    container_type: matchOptionCI(e.container_type, CONTAINER_TYPES),
+    // The quotation only has a single party field; prefer the shipper and
+    // fall back to the consignee (import enquiries often only carry one).
+    shipper: (e.shipper || e.consignee || "").trim(),
+    sales_person: matchSalesPerson(e.sales_person, salesPersonOptions),
+    branch: matchBranch(e.branch),
+  }
+}
+
+// Rate Explorer params win over the enquiry prefill for the fields they
+// actually carry — the user picked that specific lane/rate card.
+function mergeRateOverEnquiry(enqForm: FormData, p: RatePrefill): FormData {
+  const rate = formFromRatePrefill(p)
+  return {
+    ...enqForm,
+    mode: rate.mode,
+    pol: p.pol ? rate.pol : enqForm.pol,
+    pod: p.pod ? rate.pod : enqForm.pod,
+    container_type: p.container_type ? rate.container_type : enqForm.container_type,
+    shipment_type: rate.shipment_type,
+    freight_charge: rate.freight_charge,
+    extra_freight: rate.extra_freight,
+    shipping_line: rate.shipping_line,
+    quoted_rate: rate.quoted_rate,
+    transit_time: rate.transit_time,
+    freight_validity_date: rate.freight_validity_date,
+  }
+}
+
 export interface QuotationEditing {
   id: string
   quot_ref_no: string
@@ -412,6 +473,11 @@ interface Props {
   prefilledEnqId?: string | null
   /** Ref no of the linked enquiry — shown read-only at the top of the form. */
   linkedEnqRefNo?: string | null
+  /**
+   * Full enquiry record, passed only when starting a NEW quotation from an
+   * enquiry. Seeds the form (see formFromEnquiry).
+   */
+  enquiryPrefill?: EnquirySource | null
   onSuccess?: (id: string, refNo: string) => void
 }
 
@@ -644,17 +710,25 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
 
 // ─── Main component ───────────────────────────────────────────
 
-export function QuotationForm({ company, editingQuotation, ratePrefill, prefilledEnqId, linkedEnqRefNo, onSuccess }: Props) {
+export function QuotationForm({ company, editingQuotation, ratePrefill, prefilledEnqId, linkedEnqRefNo, enquiryPrefill, onSuccess }: Props) {
   const router = useRouter()
   const exchange = useExchangeRate()
   // Lazy-init from editing data so controlled Radix Selects mount with
   // the correct value (a value applied async after an empty mount is
   // not reliably reflected by the Select trigger under React 19).
-  const [form, setForm] = useState<FormData>(() =>
-    editingQuotation ? formFromQuotation(editingQuotation)
-      : ratePrefill ? formFromRatePrefill(ratePrefill)
-      : getDefaultForm()
-  )
+  //
+  // Precedence: an existing quotation (edit/dup) beats everything; then
+  // the enquiry prefill, with Rate Explorer params layered on top for the
+  // fields they carry; then plain defaults.
+  const [form, setForm] = useState<FormData>(() => {
+    if (editingQuotation) return formFromQuotation(editingQuotation)
+    const sp = company === "links" ? LINKS_SALES_PERSONS : MANILAL_SALES_PERSONS
+    if (enquiryPrefill) {
+      const fromEnq = formFromEnquiry(enquiryPrefill, sp)
+      return ratePrefill ? mergeRateOverEnquiry(fromEnq, ratePrefill) : fromEnq
+    }
+    return ratePrefill ? formFromRatePrefill(ratePrefill) : getDefaultForm()
+  })
   const [submitting, setSubmitting] = useState(false)
   const [pdfGenerating, setPdfGenerating] = useState(false)
   const [error, setError] = useState("")
@@ -667,6 +741,10 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
     () => lockedDisplayFrom(editingQuotation)
   )
   const [editId, setEditId] = useState<string | null>(editingQuotation?.id ?? null)
+  // Reverse link — raise an enquiry from a saved quotation that has none.
+  const [creatingEnq, setCreatingEnq] = useState(false)
+  const [createdEnq, setCreatedEnq] = useState<{ id: string; ref: string | null } | null>(null)
+  const [createEnqError, setCreateEnqError] = useState<string | null>(null)
 
   const salesPersons = company === "links" ? LINKS_SALES_PERSONS : MANILAL_SALES_PERSONS
   const portOptions = PORT_OPTIONS
@@ -912,6 +990,27 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
     }
   }
 
+  // ─── Reverse link: quotation → enquiry ────────────────────
+
+  async function handleCreateEnquiry() {
+    if (!editId || creatingEnq) return
+    setCreatingEnq(true)
+    setCreateEnqError(null)
+    try {
+      const res = await fetch(`/api/quotations/${editId}/create-enquiry`, { method: "POST" })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) {
+        setCreateEnqError(data?.error ?? "Could not create the enquiry")
+        return
+      }
+      setCreatedEnq({ id: String(data.enq_id), ref: data.enq_ref_no ?? null })
+    } catch {
+      setCreateEnqError("Network error — please try again.")
+    } finally {
+      setCreatingEnq(false)
+    }
+  }
+
   // ─── PDF generation ───────────────────────────────────────
 
   // Public handler: guards against double-clicks (the build is async and
@@ -967,6 +1066,12 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
     const refLabel = editingQuotation?.quot_ref_no ?? "DRAFT"
     doc.text(`Ref: ${refLabel}`, pageW - margin, y, { align: "right" })
     y += 5
+    // Linked enquiry — printed right under the quotation ref so the
+    // customer/ops can tie the two documents together.
+    if (linkedEnqRefNo) {
+      doc.text(`Enquiry Ref: ${linkedEnqRefNo}`, pageW - margin, y, { align: "right" })
+      y += 5
+    }
     doc.text(`Date: ${form.quot_date}`, pageW - margin, y, { align: "right" })
     doc.setTextColor(0)
     y += 15
@@ -1203,23 +1308,55 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
     y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8
 
     // ── Clauses ───────────────────────────────────────────
-    if (form.clauses) {
+    // Each clause is wrapped to the printable width and broken across
+    // pages line by line, so a long clause can never run off the right
+    // edge or off the bottom of the page.
+    const clauses = (form.clauses ?? "")
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean)
+
+    if (clauses.length > 0) {
+      const pageH = doc.internal.pageSize.getHeight()
+      const bottom = pageH - margin
+      const bulletIndent = 4                                   // bullet → text
+      const textW = pageW - 2 * margin - bulletIndent
+      const lineH = 4.2
+
+      // Don't orphan the heading at the foot of a page — it needs room for
+      // itself plus at least the first line of the first clause.
+      if (y + 5 + lineH > bottom) {
+        doc.addPage()
+        y = margin
+      }
+
       doc.setFontSize(9)
       doc.setFont("helvetica", "bold")
+      doc.setTextColor(0)
       doc.text("Terms & Conditions", margin, y)
-      y += 4
+      y += 5
+
       doc.setFont("helvetica", "normal")
       doc.setFontSize(8)
       doc.setTextColor(80)
-      const lines = form.clauses.split("\n")
-      lines.forEach((line) => {
-        if (y > 270) {
-          doc.addPage()
-          y = 14
-        }
-        doc.text(`• ${line}`, margin, y)
-        y += 5
+
+      clauses.forEach((clause) => {
+        // Measured at the current font size — must come after setFontSize.
+        const wrapped = doc.splitTextToSize(clause, textW) as string[]
+        wrapped.forEach((sub, i) => {
+          if (y + lineH > bottom) {
+            doc.addPage()
+            y = margin
+          }
+          // Bullet only on the first line; continuation lines sit under the
+          // text, not under the bullet.
+          if (i === 0) doc.text("•", margin, y)
+          doc.text(sub, margin + bulletIndent, y)
+          y += lineH
+        })
       })
+
+      doc.setTextColor(0)
     }
 
     doc.save(`Quotation_${refLabel}_${form.quot_date}.pdf`)
@@ -1247,6 +1384,51 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
           <p className="mt-1.5 text-xs text-muted-foreground">
             This quotation is linked to the enquiry above.
           </p>
+        </div>
+      )}
+
+      {/* ── No linked enquiry — offer to raise one from this quotation ── */}
+      {!prefilledEnqId && editId && (
+        <div className="rounded-md border border-border bg-muted/40 px-4 py-3">
+          {createdEnq ? (
+            <>
+              <Label className="text-xs text-muted-foreground">Enquiry Ref No</Label>
+              <p className="mt-1 text-sm font-mono">
+                <button
+                  type="button"
+                  onClick={() => router.push(`/enquiry?edit=${createdEnq.id}`)}
+                  className="text-blue-600 hover:underline"
+                >
+                  {createdEnq.ref ?? `#${createdEnq.id}`}
+                </button>
+              </p>
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                Enquiry created and linked to this quotation.
+              </p>
+            </>
+          ) : (
+            <div className="flex flex-wrap items-center gap-3">
+              <div>
+                <Label className="text-xs text-muted-foreground">Linked Enquiry</Label>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  This quotation is not linked to any enquiry.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs ml-auto"
+                disabled={creatingEnq}
+                onClick={handleCreateEnquiry}
+              >
+                {creatingEnq ? "Creating..." : "Create Enquiry"}
+              </Button>
+            </div>
+          )}
+          {createEnqError && (
+            <p className="mt-2 text-xs text-destructive">{createEnqError}</p>
+          )}
         </div>
       )}
 

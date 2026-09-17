@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation"
 import { QuotationForm, QuotationEditing, RatePrefill } from "@/components/quotation/QuotationForm"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import type { EnquirySource } from "@/lib/quotation-enquiry-map"
 import {
   quotationStatusLabel,
   quotationStatusVariant,
@@ -53,6 +54,11 @@ export function QuotationPageContent({ company }: Props) {
   // Enq ref no of the linked enquiry — auto-reflected on the form when a
   // quotation is started from an enquiry (?enq=ID) or opened for edit.
   const [linkedEnq, setLinkedEnq] = useState<{ id: string; ref: string | null } | null>(null)
+  // Full enquiry record — only used to seed a NEW quotation (?enq=ID).
+  const [enqPrefill, setEnqPrefill] = useState<EnquirySource | null>(null)
+  // Seeded true when the page opens on ?enq= so the form is never mounted
+  // (and lazily initialised) before the enquiry has been fetched.
+  const [enqLoading, setEnqLoading] = useState(() => Boolean(enqId) && !editId && !dupId)
 
   // Load for edit or dup
   useEffect(() => {
@@ -115,21 +121,34 @@ export function QuotationPageContent({ company }: Props) {
 
   // Resolve the linked enquiry's ref no so the form can show it read-only.
   const linkEnqId = enqId ?? editing?.enq_id ?? null
+  // A new quotation started from an enquiry is also prefilled from it —
+  // never when editing or duplicating an existing quotation.
+  const prefillFromEnquiry = Boolean(enqId) && !editId && !dupId
+
   useEffect(() => {
     if (!linkEnqId) {
       setLinkedEnq(null)
+      setEnqPrefill(null)
+      setEnqLoading(false)
       return
     }
     let cancelled = false
+    setEnqLoading(true)
     fetch(`/api/enquiries/${linkEnqId}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error("enquiry lookup failed"))))
       .then((e) => {
         if (cancelled) return
         setLinkedEnq({ id: String(e.id ?? linkEnqId), ref: e.enq_ref_no ?? null })
+        setEnqPrefill(prefillFromEnquiry ? (e as EnquirySource) : null)
       })
-      .catch(() => { if (!cancelled) setLinkedEnq(null) })
+      .catch(() => {
+        if (cancelled) return
+        setLinkedEnq(null)
+        setEnqPrefill(null)
+      })
+      .finally(() => { if (!cancelled) setEnqLoading(false) })
     return () => { cancelled = true }
-  }, [linkEnqId])
+  }, [linkEnqId, prefillFromEnquiry])
 
   async function transition(action: "submit" | "close" | "approve", confirmMsg: string) {
     if (!editId) return
@@ -158,7 +177,10 @@ export function QuotationPageContent({ company }: Props) {
   }
 
   const title = editId ? "Edit Quotation" : dupId ? "Duplicate Quotation" : "New Quotation"
-  const formKey = editId ?? dupId ?? (ratePrefill ? searchParams.toString() : "new")
+  const formKey =
+    editId ??
+    dupId ??
+    (ratePrefill ? searchParams.toString() : enqPrefill ? `enq-${enqId}` : "new")
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
@@ -218,7 +240,7 @@ export function QuotationPageContent({ company }: Props) {
       {/* Wait for the fetch before mounting the form so it lazy-inits
           with the editing data — Radix Selects don't reliably reflect a
           value applied async after an empty mount. */}
-      {loading || ((editId || dupId) && !editing && !loadFailed) ? (
+      {loading || ((editId || dupId) && !editing && !loadFailed) || (prefillFromEnquiry && enqLoading) ? (
         <p className="text-sm text-muted-foreground py-8 text-center">Loading...</p>
       ) : (
         <QuotationForm
@@ -228,6 +250,7 @@ export function QuotationPageContent({ company }: Props) {
           ratePrefill={ratePrefill}
           prefilledEnqId={linkEnqId}
           linkedEnqRefNo={linkedEnq?.ref ?? null}
+          enquiryPrefill={enqPrefill}
           onSuccess={handleSuccess}
         />
       )}

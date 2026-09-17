@@ -2,7 +2,9 @@
 
 CREATE TABLE [dbo].[TBL_QUOTATIONS] (
   QUOT_ID           INT IDENTITY(1,1) PRIMARY KEY,
-  QUOT_REF_NO       NVARCHAR(20)    NOT NULL,
+  -- 50 chars: enquiry-linked quotations are numbered `<ENQREFNO>-Q<n>`.
+  -- Existing databases: run scripts/widen-quot-ref-no.sql.
+  QUOT_REF_NO       NVARCHAR(50)    NOT NULL,
   QUOT_DATE         DATE            NOT NULL,
   MODE              NVARCHAR(10),
   EXIM              NVARCHAR(30),

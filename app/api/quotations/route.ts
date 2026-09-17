@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getAuthContext } from "@/lib/api-auth"
 import { getPool, sql } from "@/lib/mssql/client"
-import { generateQuotRefNo } from "@/lib/mssql/quot-ref"
+import { generateQuotRefNo, generateLinkedQuotRefNo } from "@/lib/mssql/quot-ref"
 import { buildLocalBlob, buildCcBlob } from "@/lib/quotation-charges"
 
 // ─── GET — list quotations ────────────────────────────────────
@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
 
   const whereClause = role === "admin"
     ? ""
-    : "WHERE CREATED_BY = @created_by"
+    : "WHERE q.CREATED_BY = @created_by"
 
   // List view only renders/searches a handful of light columns. Select
   // exactly those — the heavy NVARCHAR(MAX) blobs (LOCAL_CHARGES,
@@ -27,13 +27,16 @@ export async function GET(req: NextRequest) {
     .input("created_by", sql.NVarChar, salesperson ?? auth.email)
     .query(`
       SELECT
-        QUOT_ID, QUOT_REF_NO, QUOT_DATE, MODE, EXIM, SHIPPER, POL, POD,
-        SHIPMENT_TYPE, TOTAL_INR, TOTAL_DISPLAY, DISPLAY_CURRENCY,
-        SHIPPING_LINE, QUOTED_RATE, ENQ_ID,
-        SALES_PERSON, BRANCH, ISNULL(STATUS, 'DRAFT') AS STATUS, CREATED_AT
-      FROM [dbo].[TBL_QUOTATIONS]
+        q.QUOT_ID, q.QUOT_REF_NO, q.QUOT_DATE, q.MODE, q.EXIM, q.SHIPPER,
+        q.POL, q.POD, q.SHIPMENT_TYPE, q.TOTAL_INR, q.TOTAL_DISPLAY,
+        q.DISPLAY_CURRENCY, q.SHIPPING_LINE, q.QUOTED_RATE, q.ENQ_ID,
+        q.SALES_PERSON, q.BRANCH, ISNULL(q.STATUS, 'DRAFT') AS STATUS,
+        q.CREATED_AT,
+        e.ENQREFNO AS ENQ_REF_NO
+      FROM [dbo].[TBL_QUOTATIONS] q
+      LEFT JOIN [dbo].[TBL_ADMIN_SALESENQUIRY] e ON e.PK_ID = q.ENQ_ID
       ${whereClause}
-      ORDER BY CREATED_AT DESC
+      ORDER BY q.CREATED_AT DESC
     `)
 
   return NextResponse.json(result.recordset)
@@ -53,9 +56,17 @@ export async function POST(req: NextRequest) {
     const quotDate = body.quot_date || new Date().toISOString().split("T")[0]
     const branch = (body.branch || "MUMBAI").trim()
 
-    const quotRefNo = await generateQuotRefNo(company, branch, quotDate)
+    const enqId = body.enq_id ? parseInt(body.enq_id) : null
 
-    await pool.request()
+    // Quotations raised against an enquiry are numbered off that enquiry's
+    // ref (`<ENQREFNO>-Q<n>`) so the two read back to each other. Unlinked
+    // quotations — and linked ones whose enquiry has no ref — keep the
+    // branch/date sequence.
+    const linkedRefNo =
+      enqId && !isNaN(enqId) ? await generateLinkedQuotRefNo(company, enqId) : null
+    const quotRefNo = linkedRefNo ?? (await generateQuotRefNo(company, branch, quotDate))
+
+    const insert = await pool.request()
       .input("quot_ref_no",       sql.NVarChar, quotRefNo)
       .input("quot_date",         sql.Date,     new Date(quotDate))
       .input("mode",              sql.NVarChar, body.mode || null)
@@ -85,12 +96,12 @@ export async function POST(req: NextRequest) {
       .input("total_display",     sql.Decimal(18, 2), body.total_display ?? null)
       .input("display_currency",  sql.NVarChar, body.display_currency || null)
       .input("clauses",           sql.NVarChar, body.clauses || null)
-      .input("enq_id",            sql.Int,      body.enq_id ? parseInt(body.enq_id) : null)
+      .input("enq_id",            sql.Int,      enqId && !isNaN(enqId) ? enqId : null)
       .input("sales_person",      sql.NVarChar, body.sales_person || salesperson || null)
       .input("branch",            sql.NVarChar, branch)
       .input("status",            sql.NVarChar, "DRAFT")
       .input("created_by",        sql.NVarChar, salesperson ?? email)
-      .query(`
+      .query<{ QUOT_ID: number }>(`
         INSERT INTO [dbo].[TBL_QUOTATIONS]
           (QUOT_REF_NO, QUOT_DATE, MODE, EXIM, FN, ENQ_TYPE, INCOTERMS,
            POL, POD, CONTAINER_TYPE, SHIPPER, SHIPMENT_TYPE,
@@ -106,15 +117,17 @@ export async function POST(req: NextRequest) {
            @local_charges, @stuffing_type, @cc_charges,
            @transport_enabled, @transport_cost,
            @total_inr, @exchange_rate, @total_display, @display_currency, @clauses,
-           @enq_id, @sales_person, @branch, @status, @created_by)
+           @enq_id, @sales_person, @branch, @status, @created_by);
+
+        -- New id read in the same batch. SCOPE_IDENTITY (not OUTPUT) so the
+        -- statement keeps working if a trigger is ever added to the table,
+        -- and (not a TOP 1 ... ORDER BY DESC re-read) so concurrent inserts
+        -- can't hand back somebody else's row.
+        SELECT CAST(SCOPE_IDENTITY() AS INT) AS QUOT_ID;
       `)
 
-    const idResult = await pool.request().query<{ QUOT_ID: number }>(
-      "SELECT TOP 1 QUOT_ID FROM [dbo].[TBL_QUOTATIONS] ORDER BY QUOT_ID DESC"
-    )
-
     return NextResponse.json({
-      id: String(idResult.recordset[0].QUOT_ID),
+      id: String(insert.recordset[0].QUOT_ID),
       quot_ref_no: quotRefNo,
     })
   } catch (err: unknown) {

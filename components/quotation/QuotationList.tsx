@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { CheckCircle2, Copy, FileDown, Pencil, Send, XCircle } from "lucide-react"
+import { CheckCircle2, Copy, FileDown, FilePlus, Pencil, Send, XCircle } from "lucide-react"
 import { quotationStatusLabel, quotationStatusVariant } from "@/lib/constants/quotation-status"
 
 interface Quotation {
@@ -26,6 +26,9 @@ interface Quotation {
   BRANCH: string | null
   STATUS: string | null
   CREATED_AT: string
+  ENQ_ID: number | null
+  /** Ref no of the linked enquiry, via LEFT JOIN in the list query. */
+  ENQ_REF_NO: string | null
 }
 
 export function QuotationList() {
@@ -71,6 +74,23 @@ export function QuotationList() {
     }
   }
 
+  // Reverse link — create an enquiry from a quotation that has none.
+  async function handleCreateEnquiry(q: Quotation) {
+    if (!window.confirm(`Create an enquiry from ${q.QUOT_REF_NO}? It will be linked to this quotation.`)) return
+    setActingId(q.QUOT_ID)
+    try {
+      const res = await fetch(`/api/quotations/${q.QUOT_ID}/create-enquiry`, { method: "POST" })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) {
+        alert(data?.error ?? "Could not create the enquiry")
+        return
+      }
+      await load()
+    } finally {
+      setActingId(null)
+    }
+  }
+
   async function load() {
     setLoading(true)
     setLoadError(null)
@@ -94,7 +114,7 @@ export function QuotationList() {
   const filtered = quotations.filter((q) => {
     const s = search.toLowerCase()
     return !s || [
-      q.QUOT_REF_NO, q.SHIPPER, q.POL, q.POD,
+      q.QUOT_REF_NO, q.ENQ_REF_NO, q.SHIPPER, q.POL, q.POD,
       q.MODE, q.EXIM, q.SALES_PERSON, q.BRANCH,
     ].some((v) => v?.toLowerCase().includes(s))
   })
@@ -133,6 +153,7 @@ export function QuotationList() {
             <thead>
               <tr className="border-b border-border bg-muted/50">
                 <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground">Quot No</th>
+                <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground">Enquiry</th>
                 <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground">Date</th>
                 <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground">Shipper</th>
                 <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground">POL</th>
@@ -161,6 +182,20 @@ export function QuotationList() {
                     >
                       {q.QUOT_REF_NO}
                     </button>
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    {q.ENQ_ID ? (
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/enquiry?edit=${q.ENQ_ID}`)}
+                        className="text-blue-600 hover:underline font-medium"
+                        title="Open the linked enquiry"
+                      >
+                        {q.ENQ_REF_NO ?? `#${q.ENQ_ID}`}
+                      </button>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
                   </td>
                   <td className="px-3 py-2 text-muted-foreground">{formatDate(q.QUOT_DATE)}</td>
                   <td className="px-3 py-2 max-w-[140px] truncate">{q.SHIPPER || "-"}</td>
@@ -220,6 +255,17 @@ export function QuotationList() {
                           className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-emerald-600 transition-colors disabled:opacity-50"
                         >
                           <CheckCircle2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                      {!q.ENQ_ID && (
+                        <button
+                          type="button"
+                          title="Create Enquiry"
+                          disabled={actingId === q.QUOT_ID}
+                          onClick={() => handleCreateEnquiry(q)}
+                          className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-blue-600 transition-colors disabled:opacity-50"
+                        >
+                          <FilePlus className="h-3.5 w-3.5" />
                         </button>
                       )}
                       <button
