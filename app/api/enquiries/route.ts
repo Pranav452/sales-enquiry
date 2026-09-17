@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getAuthContext } from "@/lib/api-auth"
-import { getPool, sql } from "@/lib/mssql/client"
-import { generateEnqRefNo } from "@/lib/mssql/enq-ref"
+import { getPool } from "@/lib/mssql/client"
+import { insertEnquiry, type EnquiryPayload } from "@/lib/mssql/insert-enquiry"
 import { SALESPERSON_CODE_MAP } from "@/lib/constants/dropdowns"
 
 // ─── Column map (app field → MSSQL column) ───────────────────
@@ -131,118 +131,10 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const pool = await getPool(auth.company)
-
-    const enqRefNo = await generateEnqRefNo(
-      auth.company,
-      body.branch ?? "",
-      body.enq_receipt_date ?? new Date().toISOString().split("T")[0]
-    )
-
-    const now = new Date()
-    // ENQRECPTDT is varchar(10) — store as YYYY-MM-DD string
-    const receiptDateStr = body.enq_receipt_date
-      ? body.enq_receipt_date.split("T")[0]
-      : now.toISOString().split("T")[0]
-
-    const result = await pool
-      .request()
-      .input("enqrefno",      enqRefNo)
-      .input("enqrecptdt",    receiptDateStr)
-      .input("mode",          truncate(body.mode, 10))
-      .input("enqtype",       truncate(body.enq_type, 10))
-      .input("exim",          truncate(body.exim, 10))
-      .input("fn",            truncate(body.fn, 20))
-      .input("salesperson",   truncate(body.sales_person, 15))
-      .input("agent_name",    truncate(body.agent_name, 100))
-      .input("country_code",  truncate(body.country, 15))
-      .input("branch",        truncate(body.branch, 10))
-      .input("network",       truncate(body.network, 25))
-      .input("pol",           truncate(body.pol, 100))
-      .input("pod",           truncate(body.pod, 100))
-      .input("incoterm",      truncate(body.incoterms, 10))
-      .input("dimension",     truncate(body.container_type, 20))
-      .input("status",        truncate(body.status ?? "PENDING", 25))
-      .input("email_subject", truncate(body.email_subject_line, 200))
-      .input("shipper",       truncate(body.shipper, 100))
-      .input("consignee",     truncate(body.consignee, 100))
-      .input("remark",        truncate(body.remarks, 200))
-      .input("mbl_awb_no",    truncate(body.mbl_awb_no, 50))
-      .input("job_invoice_no",truncate(body.job_invoice_no, 50))
-      .input("gop",           truncate(body.gop, 50))
-      .input("assigned_user", truncate(body.assigned_user, 100))
-      .input("assigned_date", sql.DateTime,     body.assigned_date ? new Date(body.assigned_date) : null)
-      .input("buy_rate_file", body.buy_rate_file ?? null)
-      .input("sell_rate_file",body.sell_rate_file ?? null)
-      .input("contact_id",    sql.Int, body.contact_id ? parseInt(body.contact_id) : null)
-      .input("lead_id",       sql.Int, body.lead_id ? parseInt(body.lead_id) : null)
-      .input("created_by",    auth.userId)
-      .input("makerdt",       sql.DateTime,     now)
-      .input("updated_at",    sql.DateTime,     now)
-      .query<{ PK_ID: number }>(`
-        INSERT INTO [dbo].[TBL_ADMIN_SALESENQUIRY] (
-          ENQREFNO, ENQRECPTDT, MODE, ENQTYPE, EXIM, FN,
-          SALESPERSON, AGENT_NAME, COUNTRY_CODE, BRANCH, NETWORK,
-          POL, POD, INCOTERM, DIMENSION, STATUS, EMAIL_SUBJECT,
-          SHIPPER, CONSIGNEE, REMARK, MBL_AWB_NO, JOB_INVOICE_NO, GOP,
-          ASSIGNED_USER, ASSIGNED_DATE, BUY_RATE_FILE, SELL_RATE_FILE,
-          CONTACT_ID, LEAD_ID, CREATED_BY, MAKERDT, UPDATED_AT
-        )
-        OUTPUT inserted.PK_ID
-        VALUES (
-          @enqrefno, @enqrecptdt, @mode, @enqtype, @exim, @fn,
-          @salesperson, @agent_name, @country_code, @branch, @network,
-          @pol, @pod, @incoterm, @dimension, @status, @email_subject,
-          @shipper, @consignee, @remark, @mbl_awb_no, @job_invoice_no, @gop,
-          @assigned_user, @assigned_date, @buy_rate_file, @sell_rate_file,
-          @contact_id, @lead_id, @created_by, @makerdt, @updated_at
-        )
-      `)
-
-    const newId = result.recordset[0].PK_ID
-    return NextResponse.json({ id: String(newId), enq_ref_no: enqRefNo }, { status: 201 })
+    const created = await insertEnquiry(auth.company, body, auth.userId)
+    return NextResponse.json(created, { status: 201 })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Database error"
     return NextResponse.json({ error: message }, { status: 500 })
   }
-}
-
-// ─── Helpers ─────────────────────────────────────────────────
-
-function truncate(val: string | null | undefined, max: number): string | null {
-  if (!val) return null
-  return val.length > max ? val.substring(0, max) : val
-}
-
-// ─── Types ────────────────────────────────────────────────────
-
-interface EnquiryPayload {
-  enq_receipt_date?: string
-  mode?: string | null
-  enq_type?: string | null
-  exim?: string | null
-  fn?: string | null
-  sales_person?: string | null
-  agent_name?: string | null
-  country?: string | null
-  branch?: string | null
-  network?: string | null
-  pol?: string | null
-  pod?: string | null
-  incoterms?: string | null
-  container_type?: string | null
-  status?: string | null
-  email_subject_line?: string | null
-  shipper?: string | null
-  consignee?: string | null
-  remarks?: string | null
-  mbl_awb_no?: string | null
-  job_invoice_no?: string | null
-  gop?: string | null
-  assigned_user?: string | null
-  assigned_date?: string | null
-  buy_rate_file?: string | null
-  sell_rate_file?: string | null
-  contact_id?: string | null
-  lead_id?: string | null
 }

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { FileText } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { SALESPERSON_CODE_MAP, expandPortCity, displayStatus } from "@/lib/constants/dropdowns"
 import { quotationStatusLabel, quotationStatusVariant } from "@/lib/constants/quotation-status"
@@ -230,6 +231,7 @@ export function EnquiryList({ onSelectEnquiry, editingId, navigateOnEdit }: Enqu
                     </Badge>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => handleQuotationClick(r)}
@@ -250,6 +252,20 @@ export function EnquiryList({ onSelectEnquiry, editingId, navigateOnEdit }: Enqu
                         {(r.quotation_count ?? 0) > 1 ? ` (${r.quotation_count})` : ""}
                       </Badge>
                     </button>
+                    {/* Always raises a NEW quotation pre-linked to this
+                        enquiry — the badge still opens the latest one. */}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-6 px-2 text-[11px] gap-1"
+                      onClick={() => router.push(`/quotation?enq=${r.id}`)}
+                      title={`Generate a new quotation for enquiry ${r.enq_ref_no ?? r.id}`}
+                    >
+                      <FileText className="h-3 w-3" />
+                      Generate Quotation
+                    </Button>
+                    </div>
                   </td>
                 </tr>
               ))

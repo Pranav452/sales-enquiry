@@ -109,7 +109,7 @@ export function EnquiryQuotations({ enquiryId, enqRefNo }: Props) {
           className="h-8 text-xs"
           onClick={() => router.push(`/quotation?enq=${enquiryId}`)}
         >
-          New Quotation
+          Generate Quotation
         </Button>
       </div>
 
