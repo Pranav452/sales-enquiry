@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { CheckCircle2, Copy, FileDown, FilePlus, Pencil, Send, XCircle } from "lucide-react"
+import { CheckCircle2, Copy, FileDown, FilePlus, Link2, Pencil, Send, XCircle } from "lucide-react"
 import { quotationStatusLabel, quotationStatusVariant } from "@/lib/constants/quotation-status"
+import { LinkEnquiryDialog } from "@/components/quotation/LinkEnquiryDialog"
 
 interface Quotation {
   QUOT_ID: number
@@ -40,6 +41,7 @@ export function QuotationList() {
   const [page, setPage] = useState(1)
   const [approvingId, setApprovingId] = useState<number | null>(null)
   const [actingId, setActingId] = useState<number | null>(null)
+  const [linkTarget, setLinkTarget] = useState<Quotation | null>(null)
   const PER_PAGE = 20
 
   async function handleApprove(q: Quotation) {
@@ -74,9 +76,12 @@ export function QuotationList() {
     }
   }
 
-  // Reverse link — create an enquiry from a quotation that has none.
+  // Last resort — only when the enquiry genuinely doesn't exist yet.
+  // Linking to an existing enquiry is the primary action (LinkEnquiryDialog).
   async function handleCreateEnquiry(q: Quotation) {
-    if (!window.confirm(`Create an enquiry from ${q.QUOT_REF_NO}? It will be linked to this quotation.`)) return
+    if (!window.confirm(
+      `No existing enquiry to link? This creates a NEW enquiry from ${q.QUOT_REF_NO} and links it. Continue?`
+    )) return
     setActingId(q.QUOT_ID)
     try {
       const res = await fetch(`/api/quotations/${q.QUOT_ID}/create-enquiry`, { method: "POST" })
@@ -124,7 +129,7 @@ export function QuotationList() {
 
   function formatDate(raw: string | null) {
     if (!raw) return "-"
-    return new Date(raw).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+    return new Date(raw).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "2-digit" })
   }
 
   return (
@@ -148,21 +153,21 @@ export function QuotationList() {
       ) : pageItems.length === 0 ? (
         <p className="text-sm text-muted-foreground py-8 text-center">No quotations found.</p>
       ) : (
-        <div className="rounded-lg border border-border overflow-hidden">
+        <div className="rounded-lg border border-border overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50">
-                <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground">Quot No</th>
-                <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground">Enquiry</th>
-                <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground">Date</th>
-                <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground">Shipper</th>
-                <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground">POL</th>
-                <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground">POD</th>
-                <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground">Mode</th>
-                <th className="text-right px-3 py-2.5 font-semibold text-muted-foreground">Total</th>
-                <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground">Sales</th>
-                <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground">Status</th>
-                <th className="px-3 py-2.5" />
+                <th className="text-left px-2 py-2.5 whitespace-nowrap font-semibold text-muted-foreground">Quot No</th>
+                <th className="text-left px-2 py-2.5 whitespace-nowrap font-semibold text-muted-foreground">Enquiry</th>
+                <th className="text-left px-2 py-2.5 whitespace-nowrap font-semibold text-muted-foreground">Date</th>
+                <th className="text-left px-2 py-2.5 whitespace-nowrap font-semibold text-muted-foreground">Shipper</th>
+                <th className="text-left px-2 py-2.5 whitespace-nowrap font-semibold text-muted-foreground">POL</th>
+                <th className="text-left px-2 py-2.5 whitespace-nowrap font-semibold text-muted-foreground">POD</th>
+                <th className="text-left px-2 py-2.5 whitespace-nowrap font-semibold text-muted-foreground">Mode</th>
+                <th className="text-right px-2 py-2.5 font-semibold text-muted-foreground">Total</th>
+                <th className="text-left px-2 py-2.5 whitespace-nowrap font-semibold text-muted-foreground">Sales</th>
+                <th className="text-left px-2 py-2.5 whitespace-nowrap font-semibold text-muted-foreground">Status</th>
+                <th className="px-2 py-2.5" />
               </tr>
             </thead>
             <tbody>
@@ -174,7 +179,7 @@ export function QuotationList() {
                     i % 2 === 0 ? "bg-background" : "bg-muted/20"
                   )}
                 >
-                  <td className="px-3 py-2">
+                  <td className="px-2 py-2">
                     <button
                       type="button"
                       onClick={() => router.push(`/quotation?edit=${q.QUOT_ID}`)}
@@ -183,7 +188,7 @@ export function QuotationList() {
                       {q.QUOT_REF_NO}
                     </button>
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap">
+                  <td className="px-2 py-2 whitespace-nowrap">
                     {q.ENQ_ID ? (
                       <button
                         type="button"
@@ -197,16 +202,16 @@ export function QuotationList() {
                       <span className="text-muted-foreground">-</span>
                     )}
                   </td>
-                  <td className="px-3 py-2 text-muted-foreground">{formatDate(q.QUOT_DATE)}</td>
-                  <td className="px-3 py-2 max-w-[140px] truncate">{q.SHIPPER || "-"}</td>
-                  <td className="px-3 py-2">{q.POL || "-"}</td>
-                  <td className="px-3 py-2">{q.POD || "-"}</td>
-                  <td className="px-3 py-2">
+                  <td className="px-2 py-2 text-muted-foreground whitespace-nowrap">{formatDate(q.QUOT_DATE)}</td>
+                  <td className="px-2 py-2 max-w-[100px] truncate">{q.SHIPPER || "-"}</td>
+                  <td className="px-2 py-2 max-w-[100px] truncate" title={q.POL ?? ""}>{q.POL || "-"}</td>
+                  <td className="px-2 py-2 max-w-[100px] truncate" title={q.POD ?? ""}>{q.POD || "-"}</td>
+                  <td className="px-2 py-2">
                     {q.MODE && (
                       <Badge variant="outline" className="text-xs">{q.MODE}</Badge>
                     )}
                   </td>
-                  <td className="px-3 py-2 text-right font-medium whitespace-nowrap">
+                  <td className="px-2 py-2 text-right font-medium whitespace-nowrap">
                     {(() => {
                       const amt = q.TOTAL_DISPLAY ?? q.TOTAL_INR
                       if (amt == null) return "-"
@@ -214,14 +219,14 @@ export function QuotationList() {
                       return `${cur} ${amt.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`
                     })()}
                   </td>
-                  <td className="px-3 py-2 text-muted-foreground text-xs">{q.SALES_PERSON || "-"}</td>
-                  <td className="px-3 py-2">
+                  <td className="px-2 py-2 text-muted-foreground text-xs whitespace-nowrap">{q.SALES_PERSON || "-"}</td>
+                  <td className="px-2 py-2">
                     <Badge variant={quotationStatusVariant(q.STATUS)} className="text-xs">
                       {quotationStatusLabel(q.STATUS)}
                     </Badge>
                   </td>
-                  <td className="px-3 py-2">
-                    <div className="flex items-center gap-1 justify-end">
+                  <td className="px-2 py-2 whitespace-nowrap">
+                    <div className="flex items-center gap-0.5 justify-end">
                       {(q.STATUS ?? "DRAFT") === "DRAFT" && (
                         <button
                           type="button"
@@ -260,7 +265,17 @@ export function QuotationList() {
                       {!q.ENQ_ID && (
                         <button
                           type="button"
-                          title="Create Enquiry"
+                          title="Link to Enquiry"
+                          onClick={() => setLinkTarget(q)}
+                          className="p-1 rounded hover:bg-accent text-blue-600 hover:text-blue-700 transition-colors"
+                        >
+                          <Link2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                      {!q.ENQ_ID && (
+                        <button
+                          type="button"
+                          title="Create Enquiry - use only if no enquiry exists"
                           disabled={actingId === q.QUOT_ID}
                           onClick={() => handleCreateEnquiry(q)}
                           className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-blue-600 transition-colors disabled:opacity-50"
@@ -305,6 +320,16 @@ export function QuotationList() {
             Next
           </Button>
         </div>
+      )}
+
+      {linkTarget && (
+        <LinkEnquiryDialog
+          open={!!linkTarget}
+          onOpenChange={(v) => { if (!v) setLinkTarget(null) }}
+          quotId={linkTarget.QUOT_ID}
+          quotRefNo={linkTarget.QUOT_REF_NO}
+          onLinked={() => { setLinkTarget(null); load() }}
+        />
       )}
     </div>
   )

@@ -38,6 +38,7 @@ import { RotateCcw, FileDown, Save, Plus, X, Loader2 } from "lucide-react"
 import { drawCompanyLogo } from "@/lib/pdf-logo"
 import type { RowInput } from "jspdf-autotable"
 import { parseSurcharges } from "@/lib/utils/surcharges"
+import { LinkEnquiryDialog } from "@/components/quotation/LinkEnquiryDialog"
 
 // Port list is static — expand it once at module load, not on every
 // render. (Re-mapping ~600 entries on each keystroke made the form janky.)
@@ -744,6 +745,7 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
   // Reverse link — raise an enquiry from a saved quotation that has none.
   const [creatingEnq, setCreatingEnq] = useState(false)
   const [createdEnq, setCreatedEnq] = useState<{ id: string; ref: string | null } | null>(null)
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false)
   const [createEnqError, setCreateEnqError] = useState<string | null>(null)
 
   const salesPersons = company === "links" ? LINKS_SALES_PERSONS : MANILAL_SALES_PERSONS
@@ -1403,7 +1405,7 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
                 </button>
               </p>
               <p className="mt-1.5 text-xs text-muted-foreground">
-                Enquiry created and linked to this quotation.
+                Enquiry linked to this quotation.
               </p>
             </>
           ) : (
@@ -1414,20 +1416,43 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
                   This quotation is not linked to any enquiry.
                 </p>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8 text-xs ml-auto"
-                disabled={creatingEnq}
-                onClick={handleCreateEnquiry}
-              >
-                {creatingEnq ? "Creating..." : "Create Enquiry"}
-              </Button>
+              <div className="ml-auto flex flex-col items-end gap-1">
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={() => setLinkDialogOpen(true)}
+                  >
+                    Link to Enquiry
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs"
+                    disabled={creatingEnq}
+                    onClick={handleCreateEnquiry}
+                  >
+                    {creatingEnq ? "Creating..." : "Create Enquiry"}
+                  </Button>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Use Create only if no enquiry exists yet.
+                </p>
+              </div>
             </div>
           )}
           {createEnqError && (
             <p className="mt-2 text-xs text-destructive">{createEnqError}</p>
+          )}
+          {editId && (
+            <LinkEnquiryDialog
+              open={linkDialogOpen}
+              onOpenChange={setLinkDialogOpen}
+              quotId={editId}
+              onLinked={(enq) => setCreatedEnq(enq)}
+            />
           )}
         </div>
       )}

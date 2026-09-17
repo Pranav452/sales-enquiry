@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getAuthContext } from "@/lib/api-auth"
 import { getPool } from "@/lib/mssql/client"
 import { insertEnquiry, type EnquiryPayload } from "@/lib/mssql/insert-enquiry"
-import { SALESPERSON_CODE_MAP } from "@/lib/constants/dropdowns"
+import { enquiryVisibilityCondition } from "@/lib/mssql/enquiry-access"
 
 // ─── Column map (app field → MSSQL column) ───────────────────
 // ENQRECPTDT is varchar(10) — store as 'YYYY-MM-DD' string
@@ -84,22 +84,10 @@ export async function GET(_req: NextRequest) {
       // Recent tab — only rows this user created in the new system
       req.input("created_by", auth.userId)
       where = "WHERE CREATED_BY = @created_by"
-    } else if (auth.role !== "admin") {
-      req.input("created_by", auth.userId)
-      req.input("salesperson", auth.salesperson ?? "")
-
-      // Reverse-lookup legacy codes that map to this salesperson's name
-      const oldCodes = Object.entries(SALESPERSON_CODE_MAP)
-        .filter(([, name]) => name === auth.salesperson)
-        .map(([code]) => code)
-
-      if (oldCodes.length > 0) {
-        oldCodes.forEach((code, i) => req.input(`sp_code${i}`, code))
-        const placeholders = oldCodes.map((_, i) => `@sp_code${i}`).join(", ")
-        where = `WHERE (CREATED_BY = @created_by OR SALESPERSON = @salesperson OR SALESPERSON IN (${placeholders}))`
-      } else {
-        where = "WHERE (CREATED_BY = @created_by OR SALESPERSON = @salesperson)"
-      }
+    } else {
+      // Shared with the link-enquiry suggestion search — see lib/mssql/enquiry-access
+      const cond = enquiryVisibilityCondition(req, auth, "e.")
+      if (cond) where = `WHERE ${cond}`
     }
 
     const result = await req.query(`
