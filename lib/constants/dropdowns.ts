@@ -120,6 +120,18 @@ export const STATUSES = [
   "QUOTED",
 ]
 
+// Suggestions only — the Lost Reason field accepts free text
+export const LOST_REASONS = [
+  "Rate too high",
+  "Transit time / sailing schedule",
+  "Customer booked the carrier directly",
+  "Awarded to another forwarder",
+  "Nominated / routed cargo",
+  "Shipment cancelled or postponed",
+  "Credit terms",
+  "No response from customer",
+]
+
 // UI label overrides — DB keeps legacy value, screens/exports show requested wording
 export const STATUS_LABELS: Record<string, string> = { LOSE: "LOST" }
 export function displayStatus(s: string | null | undefined): string {

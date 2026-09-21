@@ -1,5 +1,6 @@
 import { getPool, sql } from "./client"
 import { generateEnqRefNo } from "./enq-ref"
+import { saveLostReason } from "./lost-reason"
 
 // Shared enquiry insert. Used by POST /api/enquiries and by
 // POST /api/quotations/[id]/create-enquiry so both produce identical rows
@@ -28,6 +29,7 @@ export interface EnquiryPayload {
   shipper?: string | null
   consignee?: string | null
   remarks?: string | null
+  lost_reason?: string | null
   mbl_awb_no?: string | null
   job_invoice_no?: string | null
   gop?: string | null
@@ -115,6 +117,9 @@ export async function insertEnquiry(
         @contact_id, @lead_id, @created_by, @makerdt, @updated_at
       )
     `)
+
+  // Separate statement — see lib/mssql/lost-reason.ts. Never fails the insert.
+  await saveLostReason(pool, result.recordset[0].PK_ID, body.status, body.lost_reason).catch(() => {})
 
   return { id: String(result.recordset[0].PK_ID), enq_ref_no: enqRefNo }
 }

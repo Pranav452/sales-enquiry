@@ -217,7 +217,7 @@ export default function ExportPage() {
       const a = document.createElement("a")
       const dateStr = new Date().toISOString().split("T")[0]
       a.href = url
-      a.download = `Weekly_Report_${dateStr}.html`
+      a.download = `Weekly Sales Report - ${dateStr}.xlsx`
       a.click()
       URL.revokeObjectURL(url)
     } catch (e) {
