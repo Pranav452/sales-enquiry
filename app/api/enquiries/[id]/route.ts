@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getAuthContext } from "@/lib/api-auth"
 import { getPool, sql } from "@/lib/mssql/client"
+import { lostReasonSelect, saveLostReason } from "@/lib/mssql/lost-reason"
 
 function truncate(val: unknown, max: number): string | null {
   if (!val) return null
@@ -84,6 +85,7 @@ export async function GET(
       .input("pk_id", sql.Int, pkId)
       .query(`
         SELECT ${SELECT_COLS},
+        ${await lostReasonSelect(pool, "e.")} AS lost_reason,
         ${QUOTATION_COLS}
         FROM [dbo].[TBL_ADMIN_SALESENQUIRY] e
         ${QUOTATION_APPLY}
@@ -132,7 +134,7 @@ export async function PATCH(
     const oldResult = await pool
       .request()
       .input("pk_id", sql.Int, pkId)
-      .query(`SELECT ${SELECT_COLS} FROM [dbo].[TBL_ADMIN_SALESENQUIRY] WHERE PK_ID = @pk_id`)
+      .query(`SELECT ${SELECT_COLS}, ${await lostReasonSelect(pool)} AS lost_reason FROM [dbo].[TBL_ADMIN_SALESENQUIRY] WHERE PK_ID = @pk_id`)
 
     if (!oldResult.recordset.length) {
       return NextResponse.json({ error: "Not found" }, { status: 404 })
@@ -209,6 +211,11 @@ export async function PATCH(
       return NextResponse.json({ error: "Not found" }, { status: 404 })
     }
 
+    // Separate statement — see lib/mssql/lost-reason.ts. Never fails the update.
+    const isLost = String(body.status ?? "").trim().toUpperCase() === "LOSE"
+    if (!isLost) body.lost_reason = null
+    await saveLostReason(pool, pkId, body.status as string, body.lost_reason as string).catch(() => {})
+
     // Step 3: Create audit log entries for changed fields
     const fieldMappings: Record<string, { apiKey: string; dbCol: string }> = {
       enq_receipt_date: { apiKey: "enq_receipt_date", dbCol: "ENQRECPTDT" },
@@ -230,6 +237,7 @@ export async function PATCH(
       shipper: { apiKey: "shipper", dbCol: "SHIPPER" },
       consignee: { apiKey: "consignee", dbCol: "CONSIGNEE" },
       remarks: { apiKey: "remarks", dbCol: "REMARK" },
+      lost_reason: { apiKey: "lost_reason", dbCol: "LOST_REASON" },
       mbl_awb_no: { apiKey: "mbl_awb_no", dbCol: "MBL_AWB_NO" },
       job_invoice_no: { apiKey: "job_invoice_no", dbCol: "JOB_INVOICE_NO" },
       gop: { apiKey: "gop", dbCol: "GOP" },

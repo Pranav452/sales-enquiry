@@ -24,6 +24,7 @@ import {
   NETWORKS,
   CONTAINER_TYPES,
   STATUSES,
+  LOST_REASONS,
   INCOTERMS,
   COUNTRIES,
   PORT_CITIES,
@@ -53,6 +54,7 @@ interface FormData {
   shipper: string
   consignee: string
   remarks: string
+  lost_reason: string
   mbl_awb_no: string
   job_invoice_no: string
   gop: string
@@ -76,7 +78,7 @@ function getDefaultForm(): FormData {
     network: "", pol: "", pod: "", incoterms: "",
     container_type: "", status: "PENDING",
     email_subject_line: "", shipper: "", consignee: "",
-    remarks: "", mbl_awb_no: "", job_invoice_no: "", gop: "",
+    remarks: "", lost_reason: "", mbl_awb_no: "", job_invoice_no: "", gop: "",
     assigned_user: "", assigned_date: "",
     buy_rate_file: "", sell_rate_file: "",
   }
@@ -104,6 +106,7 @@ export interface EnquiryFormEditing {
   shipper: string | null
   consignee: string | null
   remarks: string | null
+  lost_reason?: string | null
   mbl_awb_no?: string | null
   job_invoice_no?: string | null
   gop?: string | null
@@ -210,7 +213,7 @@ function populateFromEditing(e: EnquiryFormEditing): FormData {
     status: matchOption(e.status ?? "PENDING", STATUSES) || "PENDING",
     email_subject_line: e.email_subject_line ?? "",
     shipper: e.shipper ?? "", consignee: e.consignee ?? "",
-    remarks: e.remarks ?? "", mbl_awb_no: e.mbl_awb_no ?? "",
+    remarks: e.remarks ?? "", lost_reason: e.lost_reason ?? "", mbl_awb_no: e.mbl_awb_no ?? "",
     job_invoice_no: e.job_invoice_no ?? "", gop: e.gop ?? "",
     assigned_user: e.assigned_user ?? "",
     assigned_date: e.assigned_date ? e.assigned_date.split("T")[0] : "",
@@ -509,6 +512,8 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete, prefill
         (editingEnquiry ? (populateFromEditingWithOptions(editingEnquiry, salesPersonList)[field] as string) : "")
       if (!effectiveValue) missing[field] = true
     }
+    // Needed to spot loss patterns in the weekly sales report
+    if (form.status === "LOSE" && !form.lost_reason.trim()) missing.lost_reason = true
     if (Object.keys(missing).length > 0) {
       setErrors(missing)
       setError("Please fill in all required fields.")
@@ -532,7 +537,9 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete, prefill
       status: form.status || "PENDING",
       email_subject_line: form.email_subject_line || null,
       shipper: form.shipper || null, consignee: form.consignee || null,
-      remarks: form.remarks || null, mbl_awb_no: form.mbl_awb_no || null,
+      remarks: form.remarks || null,
+      lost_reason: form.status === "LOSE" ? form.lost_reason.trim() || null : null,
+      mbl_awb_no: form.mbl_awb_no || null,
       job_invoice_no: form.job_invoice_no || null, gop: form.gop || null,
       assigned_user: form.assigned_user || null,
       assigned_date: form.assigned_date || null,
@@ -734,6 +741,25 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete, prefill
           </Select>
           {errors.status && <p className="text-xs text-destructive">Required</p>}
         </div>
+
+        {form.status === "LOSE" && (
+          <div className="space-y-1.5">
+            <Label htmlFor="lost_reason">Lost Reason <span className="text-destructive">*</span></Label>
+            <Input
+              id="lost_reason"
+              list="lost-reason-options"
+              maxLength={200}
+              value={form.lost_reason}
+              onChange={(e) => setField("lost_reason", e.target.value)}
+              placeholder="Pick or type why this was lost..."
+              className={fe("lost_reason")}
+            />
+            <datalist id="lost-reason-options">
+              {LOST_REASONS.map((r) => <option key={r} value={r} />)}
+            </datalist>
+            {errors.lost_reason && <p className="text-xs text-destructive">Required when status is Lost</p>}
+          </div>
+        )}
 
         <div className="space-y-1.5">
           <Label>Incoterms <span className="text-destructive">*</span></Label>
