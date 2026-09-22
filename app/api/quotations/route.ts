@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getAuthContext } from "@/lib/api-auth"
-import { getPool, sql } from "@/lib/mssql/client"
+import { getPool, sql, friendlyDbError } from "@/lib/mssql/client"
 import { generateQuotRefNo, generateLinkedQuotRefNo } from "@/lib/mssql/quot-ref"
 import { buildLocalBlob, buildCcBlob } from "@/lib/quotation-charges"
 
@@ -131,7 +131,6 @@ export async function POST(req: NextRequest) {
       quot_ref_no: quotRefNo,
     })
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err)
-    return NextResponse.json({ error: message }, { status: 500 })
+    return NextResponse.json({ error: friendlyDbError(err) }, { status: 500 })
   }
 }
