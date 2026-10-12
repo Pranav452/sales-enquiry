@@ -7,6 +7,7 @@ export const LINKS_SALES_PERSONS = [
   "ARUN S",
   "ASHOK CHENNAI",
   "BHUP KUMAR",
+  "BHUSHAN SHINDE",
   "CHANDAR",
   "DEEPAK BHURA",
   "DEVANSHI",
