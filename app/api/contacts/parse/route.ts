@@ -13,6 +13,8 @@ const HEADER_ALIASES: Record<string, string> = {
   "exporter":             "shipper_name",
   "shipper/exporter":     "shipper_name",
   "exporter name":        "shipper_name",
+  "company":              "shipper_name",   // prospect lists use COMPANY
+  "company name":         "shipper_name",
 
   // ── consignee ─────────────────────────────────────────────────
   "consignee":            "consignee_name",
@@ -58,6 +60,13 @@ const HEADER_ALIASES: Record<string, string> = {
   "sales contact":        "contact_person",
   "attn":                 "contact_person",
   "attention":            "contact_person",
+  "pic":                  "contact_person",
+  "person in charge":     "contact_person",
+
+  // ── designation (folded into contact_person, no own column) ───
+  "desg":                 "designation",
+  "desig":                "designation",
+  "designation":          "designation",
 
   // ── contact number (phone) ────────────────────────────────────
   // NOTE: plain "contact" is treated as a phone number because
@@ -128,16 +137,18 @@ export async function POST(req: NextRequest) {
     }
 
     // Map raw headers → canonical field names
-    const contacts: ContactRow[] = raw.map((row) => {
-      const mapped: Partial<ContactRow> = {}
+    const mappedRows: ContactRow[] = raw.map((row) => {
+      const mapped: Partial<ContactRow & { designation: string }> = {}
       for (const [rawKey, rawVal] of Object.entries(row)) {
         const canonical = HEADER_ALIASES[rawKey.trim().toLowerCase()]
         if (canonical) {
-          mapped[canonical as keyof ContactRow] = String(rawVal ?? "").trim()
+          mapped[canonical as keyof typeof mapped] = String(rawVal ?? "").trim()
         }
       }
 
       const mode = mapped.mode ? normaliseMode(mapped.mode) : ""
+      const person = mapped.contact_person ?? ""
+      const desg   = mapped.designation ?? ""
 
       return {
         shipper_name:   mapped.shipper_name   ?? "",
@@ -145,7 +156,7 @@ export async function POST(req: NextRequest) {
         mode,
         pol:            mapped.pol            ?? "",
         pod:            mapped.pod            ?? "",
-        contact_person: mapped.contact_person ?? "",
+        contact_person: person && desg ? `${person} (${desg})` : person,
         contact_number: mapped.contact_number ?? "",
         email:          mapped.email          ?? "",
       }
@@ -153,6 +164,32 @@ export async function POST(req: NextRequest) {
       // Drop completely blank rows
       c.shipper_name || c.consignee_name || c.contact_person || c.contact_number || c.email
     )
+
+    // Merge rows that would otherwise be lost on save: continuation rows
+    // (extra email/phone under the row above) and repeat rows for the same
+    // shipper (POST dedups on shipper name, so a 2nd person would be skipped).
+    const appendDistinct = (a: string, b: string) =>
+      !b || a.toLowerCase().includes(b.toLowerCase()) ? a : a ? `${a} / ${b}` : b
+
+    const contacts: ContactRow[] = []
+    const byShipper = new Map<string, ContactRow>()
+    for (const c of mappedRows) {
+      const key = c.shipper_name.toLowerCase()
+      const isContinuation = !c.shipper_name && !c.consignee_name && !c.contact_person
+      const target = isContinuation ? contacts[contacts.length - 1] : key ? byShipper.get(key) : undefined
+
+      if (!target) {
+        contacts.push(c)
+        if (key) byShipper.set(key, c)
+        continue
+      }
+      target.contact_person = appendDistinct(target.contact_person, c.contact_person)
+      target.contact_number = appendDistinct(target.contact_number, c.contact_number)
+      target.email          = appendDistinct(target.email, c.email)
+      for (const f of ["consignee_name", "mode", "pol", "pod"] as const) {
+        if (!target[f]) target[f] = c[f]
+      }
+    }
 
     if (!contacts.length) {
       return NextResponse.json(
