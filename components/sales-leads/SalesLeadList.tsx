@@ -41,6 +41,19 @@ export interface SalesLead {
   rate_fcl?:             string | null
   rate_lcl?:             string | null
   rate_validity?:        string | null
+  agent_company?:        string | null
+  origin_country?:       string | null
+  origin_port_code?:     string | null
+  dest_port_code?:       string | null
+  rate_currency?:        string | null
+  rate_20gp?:            string | null
+  rate_40hc?:            string | null
+  consignee_contact?:    string | null
+  consignee_email?:      string | null
+  consignee_phone?:      string | null
+  sender_designation?:   string | null
+  sender_email?:         string | null
+  sender_phone?:         string | null
 }
 
 const PAGE_SIZE = 20
@@ -248,7 +261,7 @@ export function SalesLeadList({ rows, loading, company, onEdit, onConvert, conve
     if (search.trim()) {
       const q = search.trim().toLowerCase()
       result = result.filter((r) =>
-        [r.ref_code, r.shipper, r.consignee, r.dest_country, r.agent_name, r.agent_email, r.city, r.remarks, r.remarks_2, r.notes, r.sent_by]
+        [r.ref_code, r.shipper, r.consignee, r.dest_country, r.agent_name, r.agent_company, r.agent_email, r.city, r.remarks, r.remarks_2, r.notes, r.sent_by]
           .some((v) => v?.toLowerCase().includes(q))
       )
     }

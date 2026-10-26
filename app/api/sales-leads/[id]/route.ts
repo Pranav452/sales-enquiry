@@ -34,7 +34,20 @@ const SELECT_COLS = `
   SPECIAL_REQUIREMENTS    AS special_requirements,
   RATE_FCL                AS rate_fcl,
   RATE_LCL                AS rate_lcl,
-  RATE_VALIDITY           AS rate_validity
+  RATE_VALIDITY           AS rate_validity,
+  AGENT_COMPANY           AS agent_company,
+  ORIGIN_COUNTRY          AS origin_country,
+  ORIGIN_PORT_CODE        AS origin_port_code,
+  DEST_PORT_CODE          AS dest_port_code,
+  RATE_CURRENCY           AS rate_currency,
+  RATE_20GP               AS rate_20gp,
+  RATE_40HC               AS rate_40hc,
+  CONSIGNEE_CONTACT       AS consignee_contact,
+  CONSIGNEE_EMAIL         AS consignee_email,
+  CONSIGNEE_PHONE         AS consignee_phone,
+  SENDER_DESIGNATION      AS sender_designation,
+  SENDER_EMAIL            AS sender_email,
+  SENDER_PHONE            AS sender_phone
 `
 
 // Non-admins may only touch rows they created or rows under their salesperson name
@@ -142,6 +155,19 @@ export async function PATCH(
     if (body.rate_fcl             !== undefined) { request.input("rate_fcl",            trunc(body.rate_fcl, 500));            sets.push("RATE_FCL = @rate_fcl") }
     if (body.rate_lcl             !== undefined) { request.input("rate_lcl",            trunc(body.rate_lcl, 500));            sets.push("RATE_LCL = @rate_lcl") }
     if (body.rate_validity        !== undefined) { request.input("rate_validity",       trunc(body.rate_validity, 255));       sets.push("RATE_VALIDITY = @rate_validity") }
+    if (body.agent_company        !== undefined) { request.input("agent_company",       trunc(body.agent_company, 255));       sets.push("AGENT_COMPANY = @agent_company") }
+    if (body.origin_country       !== undefined) { request.input("origin_country",      trunc(body.origin_country, 100));      sets.push("ORIGIN_COUNTRY = @origin_country") }
+    if (body.origin_port_code     !== undefined) { request.input("origin_port_code",    trunc(body.origin_port_code, 10));     sets.push("ORIGIN_PORT_CODE = @origin_port_code") }
+    if (body.dest_port_code       !== undefined) { request.input("dest_port_code",      trunc(body.dest_port_code, 10));       sets.push("DEST_PORT_CODE = @dest_port_code") }
+    if (body.rate_currency        !== undefined) { request.input("rate_currency",       trunc(body.rate_currency, 10));        sets.push("RATE_CURRENCY = @rate_currency") }
+    if (body.rate_20gp            !== undefined) { request.input("rate_20gp",           trunc(body.rate_20gp, 100));           sets.push("RATE_20GP = @rate_20gp") }
+    if (body.rate_40hc            !== undefined) { request.input("rate_40hc",           trunc(body.rate_40hc, 100));           sets.push("RATE_40HC = @rate_40hc") }
+    if (body.consignee_contact    !== undefined) { request.input("consignee_contact",   trunc(body.consignee_contact, 255));   sets.push("CONSIGNEE_CONTACT = @consignee_contact") }
+    if (body.consignee_email      !== undefined) { request.input("consignee_email",     trunc(body.consignee_email, 255));     sets.push("CONSIGNEE_EMAIL = @consignee_email") }
+    if (body.consignee_phone      !== undefined) { request.input("consignee_phone",     trunc(body.consignee_phone, 100));     sets.push("CONSIGNEE_PHONE = @consignee_phone") }
+    if (body.sender_designation   !== undefined) { request.input("sender_designation",  trunc(body.sender_designation, 100));  sets.push("SENDER_DESIGNATION = @sender_designation") }
+    if (body.sender_email         !== undefined) { request.input("sender_email",        trunc(body.sender_email, 255));        sets.push("SENDER_EMAIL = @sender_email") }
+    if (body.sender_phone         !== undefined) { request.input("sender_phone",        trunc(body.sender_phone, 100));        sets.push("SENDER_PHONE = @sender_phone") }
 
     const result = await request.query(`
       UPDATE [dbo].[TBL_SALES_LEADS]
@@ -195,4 +221,17 @@ interface LeadPayload {
   rate_fcl?:             string | null
   rate_lcl?:             string | null
   rate_validity?:        string | null
+  agent_company?:        string | null
+  origin_country?:       string | null
+  origin_port_code?:     string | null
+  dest_port_code?:       string | null
+  rate_currency?:        string | null
+  rate_20gp?:            string | null
+  rate_40hc?:            string | null
+  consignee_contact?:    string | null
+  consignee_email?:      string | null
+  consignee_phone?:      string | null
+  sender_designation?:   string | null
+  sender_email?:         string | null
+  sender_phone?:         string | null
 }

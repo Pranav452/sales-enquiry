@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Plus, X, List } from "lucide-react"
 
-interface UserInfo { role: string; salesperson: string | null; company: string }
+interface UserInfo { role: string; salesperson: string | null; company: string; email: string | null }
 
 function MiniStat({ label, value }: { label: string; value: number }) {
   return (
@@ -43,6 +43,7 @@ export default function SalesLeadsPage() {
         role:        data?.role ?? "sales",
         salesperson: data?.salesperson ?? null,
         company:     data?.company ?? "manilal",
+        email:       user.email ?? null,
       })
     })
   }, [])
@@ -144,6 +145,7 @@ export default function SalesLeadsPage() {
           <SalesLeadForm
             editing={editing}
             defaultSalesPerson={userInfo?.salesperson ?? undefined}
+            defaultSenderEmail={userInfo?.email ?? undefined}
             company={userInfo?.company}
             onSuccess={handleSuccess}
             onCancel={() => { setShowForm(false); setEditing(null) }}
