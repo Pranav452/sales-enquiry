@@ -34,7 +34,20 @@ const SELECT_COLS = `
   SPECIAL_REQUIREMENTS    AS special_requirements,
   RATE_FCL                AS rate_fcl,
   RATE_LCL                AS rate_lcl,
-  RATE_VALIDITY           AS rate_validity
+  RATE_VALIDITY           AS rate_validity,
+  AGENT_COMPANY           AS agent_company,
+  ORIGIN_COUNTRY          AS origin_country,
+  ORIGIN_PORT_CODE        AS origin_port_code,
+  DEST_PORT_CODE          AS dest_port_code,
+  RATE_CURRENCY           AS rate_currency,
+  RATE_20GP               AS rate_20gp,
+  RATE_40HC               AS rate_40hc,
+  CONSIGNEE_CONTACT       AS consignee_contact,
+  CONSIGNEE_EMAIL         AS consignee_email,
+  CONSIGNEE_PHONE         AS consignee_phone,
+  SENDER_DESIGNATION      AS sender_designation,
+  SENDER_EMAIL            AS sender_email,
+  SENDER_PHONE            AS sender_phone
 `
 
 // ─── GET /api/sales-leads ─────────────────────────────────────
@@ -135,6 +148,19 @@ export async function POST(req: NextRequest) {
           .input("rate_fcl",            trunc(body.rate_fcl, 500))
           .input("rate_lcl",            trunc(body.rate_lcl, 500))
           .input("rate_validity",       trunc(body.rate_validity, 255))
+          .input("agent_company",       trunc(body.agent_company, 255))
+          .input("origin_country",      trunc(body.origin_country, 100))
+          .input("origin_port_code",    trunc(body.origin_port_code, 10))
+          .input("dest_port_code",      trunc(body.dest_port_code, 10))
+          .input("rate_currency",       trunc(body.rate_currency, 10))
+          .input("rate_20gp",           trunc(body.rate_20gp, 100))
+          .input("rate_40hc",           trunc(body.rate_40hc, 100))
+          .input("consignee_contact",   trunc(body.consignee_contact, 255))
+          .input("consignee_email",     trunc(body.consignee_email, 255))
+          .input("consignee_phone",     trunc(body.consignee_phone, 100))
+          .input("sender_designation",  trunc(body.sender_designation, 100))
+          .input("sender_email",        trunc(body.sender_email, 255))
+          .input("sender_phone",        trunc(body.sender_phone, 100))
           .input("created_by",          auth.userId)
           .input("now",                 now)
           .query<{ ID: number }>(`
@@ -146,6 +172,10 @@ export async function POST(req: NextRequest) {
               MODE_OF_TRANSPORT, ORIGIN_PORT, DEST_PORT,
               COMMODITY, HS_CODE, SPECIAL_REQUIREMENTS,
               RATE_FCL, RATE_LCL, RATE_VALIDITY,
+              AGENT_COMPANY, ORIGIN_COUNTRY, ORIGIN_PORT_CODE, DEST_PORT_CODE,
+              RATE_CURRENCY, RATE_20GP, RATE_40HC,
+              CONSIGNEE_CONTACT, CONSIGNEE_EMAIL, CONSIGNEE_PHONE,
+              SENDER_DESIGNATION, SENDER_EMAIL, SENDER_PHONE,
               CREATED_BY, CREATED_AT, UPDATED_AT
             )
             OUTPUT inserted.ID
@@ -157,6 +187,10 @@ export async function POST(req: NextRequest) {
               @mode_of_transport, @origin_port, @dest_port,
               @commodity, @hs_code, @special_requirements,
               @rate_fcl, @rate_lcl, @rate_validity,
+              @agent_company, @origin_country, @origin_port_code, @dest_port_code,
+              @rate_currency, @rate_20gp, @rate_40hc,
+              @consignee_contact, @consignee_email, @consignee_phone,
+              @sender_designation, @sender_email, @sender_phone,
               @created_by, @now, @now
             )
           `)
@@ -216,4 +250,17 @@ interface LeadPayload {
   rate_fcl?:             string | null
   rate_lcl?:             string | null
   rate_validity?:        string | null
+  agent_company?:        string | null
+  origin_country?:       string | null
+  origin_port_code?:     string | null
+  dest_port_code?:       string | null
+  rate_currency?:        string | null
+  rate_20gp?:            string | null
+  rate_40hc?:            string | null
+  consignee_contact?:    string | null
+  consignee_email?:      string | null
+  consignee_phone?:      string | null
+  sender_designation?:   string | null
+  sender_email?:         string | null
+  sender_phone?:         string | null
 }

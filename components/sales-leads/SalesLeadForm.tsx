@@ -16,6 +16,7 @@ const ALL_SALES_PERSONS = [...new Set([...MANILAL_SALES_PERSONS, ...LINKS_SALES_
 interface Props {
   editing?:            SalesLead | null
   defaultSalesPerson?: string
+  defaultSenderEmail?: string
   company?:            string | null
   onSuccess:           (id: string, refCode: string | undefined, isEdit: boolean) => void
   onCancel?:           () => void
@@ -48,6 +49,19 @@ interface FormState {
   rate_fcl:             string
   rate_lcl:             string
   rate_validity:        string
+  agent_company:        string
+  origin_country:       string
+  origin_port_code:     string
+  dest_port_code:       string
+  rate_currency:        string
+  rate_20gp:            string
+  rate_40hc:            string
+  consignee_contact:    string
+  consignee_email:      string
+  consignee_phone:      string
+  sender_designation:   string
+  sender_email:         string
+  sender_phone:         string
 }
 
 const EMPTY: FormState = {
@@ -58,6 +72,10 @@ const EMPTY: FormState = {
   mode_of_transport: "", origin_port: "", dest_port: "",
   commodity: "", hs_code: "", special_requirements: "",
   rate_fcl: "", rate_lcl: "", rate_validity: "",
+  agent_company: "", origin_country: "", origin_port_code: "", dest_port_code: "",
+  rate_currency: "USD", rate_20gp: "", rate_40hc: "",
+  consignee_contact: "", consignee_email: "", consignee_phone: "",
+  sender_designation: "Sales Executive", sender_email: "", sender_phone: "",
 }
 
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
@@ -80,7 +98,7 @@ const textareaCls = cn(
   "text-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-y"
 )
 
-export function SalesLeadForm({ editing, defaultSalesPerson, company, onSuccess, onCancel }: Props) {
+export function SalesLeadForm({ editing, defaultSalesPerson, defaultSenderEmail, company, onSuccess, onCancel }: Props) {
   const [form, setForm]       = useState<FormState>(EMPTY)
   const [saving, setSaving]   = useState(false)
   const [error, setError]     = useState<string | null>(null)
@@ -114,15 +132,29 @@ export function SalesLeadForm({ editing, defaultSalesPerson, company, onSuccess,
         rate_fcl:             editing.rate_fcl             ?? "",
         rate_lcl:             editing.rate_lcl             ?? "",
         rate_validity:        editing.rate_validity         ?? "",
+        agent_company:        editing.agent_company        ?? "",
+        origin_country:       editing.origin_country       ?? "",
+        origin_port_code:     editing.origin_port_code     ?? "",
+        dest_port_code:       editing.dest_port_code       ?? "",
+        rate_currency:        editing.rate_currency        ?? "",
+        rate_20gp:            editing.rate_20gp            ?? "",
+        rate_40hc:            editing.rate_40hc            ?? "",
+        consignee_contact:    editing.consignee_contact    ?? "",
+        consignee_email:      editing.consignee_email      ?? "",
+        consignee_phone:      editing.consignee_phone      ?? "",
+        sender_designation:   editing.sender_designation   ?? "",
+        sender_email:         editing.sender_email         ?? "",
+        sender_phone:         editing.sender_phone         ?? "",
       })
     } else {
       setForm({
         ...EMPTY,
-        sent_by:   defaultSalesPerson ?? "",
-        date_sent: new Date().toISOString().split("T")[0],
+        sent_by:      defaultSalesPerson ?? "",
+        sender_email: defaultSenderEmail ?? "",
+        date_sent:    new Date().toISOString().split("T")[0],
       })
     }
-  }, [editing, defaultSalesPerson])
+  }, [editing, defaultSalesPerson, defaultSenderEmail])
 
   function set<K extends keyof FormState>(key: K, value: string) {
     setForm((f) => ({ ...f, [key]: value }))
@@ -187,8 +219,24 @@ export function SalesLeadForm({ editing, defaultSalesPerson, company, onSuccess,
         </Field>
       </div>
 
+      {/* ── Signature (sender details shown on the PDF) ───── */}
+      <div className="border-t border-border pt-4">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Signature</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <Field label="Sender Designation">
+            <Input value={form.sender_designation} onChange={(e) => set("sender_designation", e.target.value)} placeholder="Sales Executive" className="h-9 text-sm" />
+          </Field>
+          <Field label="Sender Email">
+            <Input value={form.sender_email} onChange={(e) => set("sender_email", e.target.value)} placeholder="name@company.com" className="h-9 text-sm" />
+          </Field>
+          <Field label="Sender Phone">
+            <Input value={form.sender_phone} onChange={(e) => set("sender_phone", e.target.value)} placeholder="+91 …" className="h-9 text-sm" />
+          </Field>
+        </div>
+      </div>
+
       {/* ── Shipper ─────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="border-t border-border pt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         <Field label="Shipper" required>
           <Input value={form.shipper} onChange={(e) => set("shipper", e.target.value)} placeholder="Shipper company name" className="h-9 text-sm" />
         </Field>
@@ -201,15 +249,20 @@ export function SalesLeadForm({ editing, defaultSalesPerson, company, onSuccess,
       </div>
 
       {/* ── Consignee + agent ────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         <Field label="Consignee">
           <Input value={form.consignee} onChange={(e) => set("consignee", e.target.value)} className="h-9 text-sm" />
         </Field>
         <Field label="Destination Country">
           <Input value={form.dest_country} onChange={(e) => set("dest_country", e.target.value)} className="h-9 text-sm" />
         </Field>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         <Field label="Agent Name">
           <Input value={form.agent_name} onChange={(e) => set("agent_name", e.target.value)} className="h-9 text-sm" />
+        </Field>
+        <Field label="Agent Company">
+          <Input value={form.agent_company} onChange={(e) => set("agent_company", e.target.value)} className="h-9 text-sm" />
         </Field>
         <Field label="Agent Email(s)">
           <Input value={form.agent_email} onChange={(e) => set("agent_email", e.target.value)} placeholder="a@x.com; b@y.com" className="h-9 text-sm" />
@@ -240,7 +293,7 @@ export function SalesLeadForm({ editing, defaultSalesPerson, company, onSuccess,
       {/* ── Shipment Details ──────────────────────────────── */}
       <div className="border-t border-border pt-4 mt-2">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Shipment Details</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <Field label="Mode of Transport">
             <select value={form.mode_of_transport} onChange={(e) => set("mode_of_transport", e.target.value)} className={selectCls}>
               <option value="">—</option>
@@ -250,11 +303,20 @@ export function SalesLeadForm({ editing, defaultSalesPerson, company, onSuccess,
               <option value="Rail">Rail</option>
             </select>
           </Field>
+          <Field label="Origin Country">
+            <Input value={form.origin_country} onChange={(e) => set("origin_country", e.target.value)} className="h-9 text-sm" />
+          </Field>
           <Field label="Origin Port / Airport">
             <Input value={form.origin_port} onChange={(e) => set("origin_port", e.target.value)} className="h-9 text-sm" />
           </Field>
+          <Field label="Origin Port Code (UN/LOCODE, e.g. INNSA)">
+            <Input value={form.origin_port_code} onChange={(e) => set("origin_port_code", e.target.value)} placeholder="INNSA" maxLength={10} className="h-9 text-sm" />
+          </Field>
           <Field label="Destination Port / Airport">
             <Input value={form.dest_port} onChange={(e) => set("dest_port", e.target.value)} className="h-9 text-sm" />
+          </Field>
+          <Field label="Destination Port Code (e.g. DEHAM)">
+            <Input value={form.dest_port_code} onChange={(e) => set("dest_port_code", e.target.value)} placeholder="DEHAM" maxLength={10} className="h-9 text-sm" />
           </Field>
           <Field label="HS Code">
             <Input value={form.hs_code} onChange={(e) => set("hs_code", e.target.value)} className="h-9 text-sm" />
@@ -286,17 +348,37 @@ export function SalesLeadForm({ editing, defaultSalesPerson, company, onSuccess,
             </Field>
           </div>
         </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+          <Field label="Consignee Contact Person">
+            <Input value={form.consignee_contact} onChange={(e) => set("consignee_contact", e.target.value)} className="h-9 text-sm" />
+          </Field>
+          <Field label="Consignee Email">
+            <Input value={form.consignee_email} onChange={(e) => set("consignee_email", e.target.value)} placeholder="name@company.com" className="h-9 text-sm" />
+          </Field>
+          <Field label="Consignee Phone">
+            <Input value={form.consignee_phone} onChange={(e) => set("consignee_phone", e.target.value)} className="h-9 text-sm" />
+          </Field>
+        </div>
       </div>
 
       {/* ── Rate ──────────────────────────────────────────── */}
       <div className="border-t border-border pt-4">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Rate</p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Field label="FCL Rate">
-            <Input value={form.rate_fcl} onChange={(e) => set("rate_fcl", e.target.value)} placeholder="e.g. USD 1200/20'" className="h-9 text-sm" />
+          <Field label="Currency">
+            <Input value={form.rate_currency} onChange={(e) => set("rate_currency", e.target.value)} placeholder="USD" maxLength={10} className="h-9 text-sm" />
           </Field>
-          <Field label="LCL Rate">
-            <Input value={form.rate_lcl} onChange={(e) => set("rate_lcl", e.target.value)} placeholder="e.g. USD 35/CBM" className="h-9 text-sm" />
+          <Field label="FCL Rate — 20' GP">
+            <Input value={form.rate_20gp} onChange={(e) => set("rate_20gp", e.target.value)} placeholder="e.g. 1200" className="h-9 text-sm" />
+          </Field>
+          <Field label="FCL Rate — 40' HC">
+            <Input value={form.rate_40hc} onChange={(e) => set("rate_40hc", e.target.value)} placeholder="e.g. 2100" className="h-9 text-sm" />
+          </Field>
+          <Field label="FCL Rate — Other / Notes">
+            <Input value={form.rate_fcl} onChange={(e) => set("rate_fcl", e.target.value)} placeholder="e.g. 40' RF: USD 3500" className="h-9 text-sm" />
+          </Field>
+          <Field label="LCL Rate (per CBM)">
+            <Input value={form.rate_lcl} onChange={(e) => set("rate_lcl", e.target.value)} placeholder="e.g. 35" className="h-9 text-sm" />
           </Field>
           <Field label="Validity">
             <Input value={form.rate_validity} onChange={(e) => set("rate_validity", e.target.value)} placeholder="e.g. 30 days" className="h-9 text-sm" />
