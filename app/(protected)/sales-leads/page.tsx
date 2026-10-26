@@ -1,34 +1,31 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { Suspense, useCallback, useEffect, useRef, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import { SalesLeadForm } from "@/components/sales-leads/SalesLeadForm"
-import { SalesLeadList, type SalesLead } from "@/components/sales-leads/SalesLeadList"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Plus, X, List } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { LEAD_STATUS_MAP } from "@/lib/constants/sales-leads"
+import type { SalesLead } from "@/components/sales-leads/SalesLeadList"
+import { SalesLeadWorkspace } from "@/components/sales-leads/workspace/SalesLeadWorkspace"
+import { LeadFormDrawer } from "@/components/sales-leads/workspace/LeadFormDrawer"
 
 interface UserInfo { role: string; salesperson: string | null; company: string; email: string | null }
+interface Flash { text: string; tone: "success" | "error" }
 
-function MiniStat({ label, value }: { label: string; value: number }) {
-  return (
-    <Card>
-      <CardContent className="pt-4 pb-3">
-        <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
-        <p className="text-xl font-bold text-foreground leading-tight">{value}</p>
-      </CardContent>
-    </Card>
-  )
-}
+function SalesLeadsPageContent() {
+  const searchParams = useSearchParams()
+  const [initialLead] = useState(() => searchParams.get("lead"))
 
-export default function SalesLeadsPage() {
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(null)
-  const [rows, setRows]         = useState<SalesLead[]>([])
-  const [loading, setLoading]   = useState(true)
-  const [showForm, setShowForm] = useState(false)
-  const [editing, setEditing]   = useState<SalesLead | null>(null)
-  const [savedMsg, setSavedMsg] = useState<string | null>(null)
+  const [userInfo, setUserInfo]         = useState<UserInfo | null>(null)
+  const [rows, setRows]                 = useState<SalesLead[]>([])
+  const [loading, setLoading]           = useState(true)
+  const [selectedId, setSelectedId]     = useState<string | null>(initialLead)
+  const [drawerOpen, setDrawerOpen]     = useState(false)
+  const [editing, setEditing]           = useState<SalesLead | null>(null)
+  const [flash, setFlash]               = useState<Flash | null>(null)
   const [convertingId, setConvertingId] = useState<string | null>(null)
+  const [updatingId, setUpdatingId]     = useState<string | null>(null)
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -48,28 +45,37 @@ export default function SalesLeadsPage() {
     })
   }, [])
 
-  const fetchLeads = useCallback(() => {
-    setLoading(true)
-    fetch("/api/sales-leads")
-      .then((r) => r.json())
-      .then((data: SalesLead[]) => setRows(Array.isArray(data) ? data : []))
-      .catch(() => setRows([]))
-      .finally(() => setLoading(false))
+  // Initial load shows skeletons; later refreshes keep the current view on screen.
+  const fetchLeads = useCallback(async () => {
+    try {
+      const res  = await fetch("/api/sales-leads")
+      const data = await res.json()
+      setRows(Array.isArray(data) ? data : [])
+    } catch {
+      // keep whatever is already on screen; the first load simply stays empty
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   useEffect(() => { fetchLeads() }, [fetchLeads])
 
-  const stats = useMemo(() => {
-    const thisMonth = new Date().toISOString().slice(0, 7)
-    return {
-      total:     rows.length,
-      month:     rows.filter((r) => r.date_sent?.startsWith(thisMonth)).length,
-      responses: rows.filter((r) =>
-        ["RESPONSE_RECEIVED", "MEETING_SCHEDULED", "QUOTED", "WON"].includes(r.status ?? "")
-      ).length,
-      won:       rows.filter((r) => r.status === "WON").length,
-    }
-  }, [rows])
+  useEffect(() => () => { if (flashTimer.current) clearTimeout(flashTimer.current) }, [])
+
+  function showFlash(text: string, tone: Flash["tone"] = "success") {
+    if (flashTimer.current) clearTimeout(flashTimer.current)
+    setFlash({ text, tone })
+    flashTimer.current = setTimeout(() => setFlash(null), 4000)
+  }
+
+  // Selection lives in ?lead=<id> so a lead can be deep-linked
+  const selectLead = useCallback((id: string) => {
+    setSelectedId(id)
+    const params = new URLSearchParams(window.location.search)
+    if (params.get("lead") === id) return
+    params.set("lead", id)
+    window.history.replaceState(null, "", `?${params.toString()}`)
+  }, [])
 
   async function handleConvert(lead: SalesLead) {
     setConvertingId(lead.id)
@@ -77,109 +83,98 @@ export default function SalesLeadsPage() {
       const res = await fetch(`/api/sales-leads/${lead.id}/convert`, { method: "POST" })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? "Conversion failed")
-      setSavedMsg(
+      showFlash(
         data.already_converted
           ? `${lead.shipper ?? "Lead"} is already linked to a contact.`
           : `${lead.shipper ?? "Lead"} converted to contact.`
       )
       fetchLeads()
     } catch (err) {
-      setSavedMsg(err instanceof Error ? err.message : "Conversion failed")
+      showFlash(err instanceof Error ? err.message : "Conversion failed", "error")
     } finally {
       setConvertingId(null)
-      setTimeout(() => setSavedMsg(null), 4000)
     }
   }
 
-  function handleSuccess(_id: string, refCode: string | undefined, isEdit: boolean) {
-    setShowForm(false)
-    setEditing(null)
-    fetchLeads()
-    setSavedMsg(isEdit ? "Lead updated." : `Lead created${refCode ? ` — ${refCode}` : ""}.`)
-    setTimeout(() => setSavedMsg(null), 4000)
+  async function handleStatusChange(lead: SalesLead, status: string) {
+    const label = LEAD_STATUS_MAP[status]?.label ?? status
+    setUpdatingId(lead.id)
+    // Optimistic: show the new status right away, roll back if the PATCH fails
+    setRows((prev) => prev.map((r) => (r.id === lead.id ? { ...r, status } : r)))
+    try {
+      const res = await fetch(`/api/sales-leads/${lead.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error ?? "Status update failed")
+      showFlash(`${lead.shipper ?? "Lead"} marked ${label}.`)
+    } catch (err) {
+      setRows((prev) => prev.map((r) => (r.id === lead.id ? { ...r, status: lead.status } : r)))
+      showFlash(err instanceof Error ? err.message : "Status update failed", "error")
+    } finally {
+      setUpdatingId(null)
+      fetchLeads()
+    }
   }
 
-  const isAdmin = userInfo?.role === "admin"
+  async function handleSuccess(id: string, refCode: string | undefined, isEdit: boolean) {
+    setDrawerOpen(false)
+    setEditing(null)
+    showFlash(isEdit ? "Lead updated." : `Lead created${refCode ? ` — ${refCode}` : ""}.`)
+    await fetchLeads()
+    if (id) selectLead(String(id))
+  }
 
   return (
-    <div className="p-4 max-w-screen-xl mx-auto space-y-5">
+    <div className="relative h-full min-h-0">
+      <SalesLeadWorkspace
+        rows={rows}
+        loading={loading}
+        company={userInfo?.company}
+        selectedId={selectedId}
+        onSelect={selectLead}
+        initialMobileDetail={!!initialLead}
+        onNew={() => { setEditing(null); setDrawerOpen(true) }}
+        onEdit={(lead) => { setEditing(lead); setDrawerOpen(true) }}
+        onConvert={handleConvert}
+        convertingId={convertingId}
+        onStatusChange={handleStatusChange}
+        updatingId={updatingId}
+      />
 
-      {/* ── Header ──────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">Sales Leads</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Track leads sent to overseas agents — responses, follow-ups, and outcomes
-          </p>
-        </div>
-        {!showForm && !editing && (
-          <Button size="sm" onClick={() => setShowForm(true)} className="gap-1.5">
-            <Plus className="h-4 w-4" /> New Lead
-          </Button>
-        )}
-      </div>
-
-      {/* ── Quick stats (scoped to visible rows) ─────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <MiniStat label={isAdmin ? "Total Leads" : "My Leads"} value={stats.total} />
-        <MiniStat label="This Month" value={stats.month} />
-        <MiniStat label="Responses" value={stats.responses} />
-        <MiniStat label="Won" value={stats.won} />
-      </div>
-
-      {/* ── Create / Edit form ────────────────────────────── */}
-      {(showForm || editing) && (
-        <div className="rounded-xl border border-border bg-card p-5 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold">
-              {editing ? `Edit Lead — ${editing.ref_code}` : "New Sales Lead"}
-            </h2>
-            <button
-              type="button"
-              onClick={() => { setShowForm(false); setEditing(null) }}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-          <SalesLeadForm
-            editing={editing}
-            defaultSalesPerson={userInfo?.salesperson ?? undefined}
-            defaultSenderEmail={userInfo?.email ?? undefined}
-            company={userInfo?.company}
-            onSuccess={handleSuccess}
-            onCancel={() => { setShowForm(false); setEditing(null) }}
-          />
+      {flash && (
+        <div
+          role="status"
+          className={cn(
+            "pointer-events-none absolute left-1/2 top-[68px] z-40 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-lg border px-4 py-2.5 text-sm shadow-md",
+            flash.tone === "success"
+              ? "border-green-300! bg-green-50 text-green-700 dark:border-green-800! dark:bg-green-950 dark:text-green-300"
+              : "border-red-300! bg-red-50 text-red-700 dark:border-red-800! dark:bg-red-950 dark:text-red-300",
+          )}
+        >
+          {flash.text}
         </div>
       )}
 
-      {savedMsg && (
-        <div className="rounded-lg border border-green-300 dark:border-green-800 bg-green-50 dark:bg-green-950/40 px-4 py-2.5 text-sm text-green-700 dark:text-green-300">
-          {savedMsg}
-        </div>
-      )}
-
-      {/* ── Lead list ─────────────────────────────────────── */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
-          <List className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-semibold">
-            {isAdmin ? "All Leads" : "My Leads"}
-          </span>
-        </div>
-        <SalesLeadList
-          rows={rows}
-          loading={loading}
-          company={userInfo?.company}
-          onEdit={(l) => {
-            setEditing(l)
-            setShowForm(false)
-            window.scrollTo({ top: 0, behavior: "smooth" })
-          }}
-          onConvert={handleConvert}
-          convertingId={convertingId}
-        />
-      </div>
+      <LeadFormDrawer
+        open={drawerOpen}
+        editing={editing}
+        defaultSalesPerson={userInfo?.salesperson ?? undefined}
+        defaultSenderEmail={userInfo?.email ?? undefined}
+        company={userInfo?.company}
+        onSuccess={handleSuccess}
+        onClose={() => { setDrawerOpen(false); setEditing(null) }}
+      />
     </div>
+  )
+}
+
+export default function SalesLeadsPage() {
+  return (
+    <Suspense>
+      <SalesLeadsPageContent />
+    </Suspense>
   )
 }
