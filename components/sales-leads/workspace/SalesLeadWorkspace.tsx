@@ -1,10 +1,11 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { Pencil } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { generateSalesLeadPdf } from "@/lib/sales-lead-pdf"
 import type { SalesLead } from "@/components/sales-leads/SalesLeadList"
-import { LeadListPane } from "./LeadListPane"
+import { LeadListPane, toolbarBtn } from "./LeadListPane"
 import { LeadDetailPane } from "./LeadDetailPane"
 import { LeadDetailsPanel } from "./LeadDetailsPanel"
 import { EMPTY_FILTERS, filterLeads, filterOptions, type LeadFilters } from "./lead-utils"
@@ -136,8 +137,19 @@ export function SalesLeadWorkspace({
       />
 
       <aside aria-label="Lead details" className="hidden min-h-0 w-[392px] shrink-0 flex-col border-l border-border xl:flex">
-        <div className="flex h-14 shrink-0 items-center justify-center border-b border-border px-4">
+        <div className="relative flex h-14 shrink-0 items-center justify-center border-b border-border px-4">
           <h2 className="text-sm font-medium leading-none text-foreground">Details</h2>
+          {current && (
+            <button
+              type="button"
+              onClick={() => onEdit(current)}
+              className={cn(toolbarBtn, "absolute right-4 text-primary hover:text-primary")}
+              title="Edit this lead's details"
+            >
+              <Pencil className="h-3 w-3" strokeWidth={1.75} />
+              Edit
+            </button>
+          )}
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto">
           {loading ? <LeadDetailsPanel lead={null} loading /> : details}

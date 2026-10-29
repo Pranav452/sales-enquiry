@@ -68,8 +68,8 @@ function IconBtn({ label, onClick, disabled, children }: {
   )
 }
 
-function TopBar({ lead, position, total, onPrev, onNext, onBack, onDownloadPdf, downloading }: Pick<
-  DetailPaneProps, "lead" | "position" | "total" | "onPrev" | "onNext" | "onBack" | "onDownloadPdf" | "downloading"
+function TopBar({ lead, position, total, onPrev, onNext, onBack, onEdit, onDownloadPdf, downloading }: Pick<
+  DetailPaneProps, "lead" | "position" | "total" | "onPrev" | "onNext" | "onBack" | "onEdit" | "onDownloadPdf" | "downloading"
 >) {
   const mailto = lead ? agentMailto(lead) : null
   return (
@@ -95,6 +95,16 @@ function TopBar({ lead, position, total, onPrev, onNext, onBack, onDownloadPdf, 
         </div>
       </div>
       <div className="flex items-center gap-3">
+        <button
+          type="button"
+          disabled={!lead}
+          onClick={() => lead && onEdit(lead)}
+          className={cn(toolbarBtn, "border-primary/60! text-primary hover:bg-primary/10 hover:text-primary")}
+          title="Edit this lead"
+        >
+          <Pencil className="h-3 w-3" strokeWidth={1.75} />
+          <span className="hidden sm:inline">Edit lead</span>
+        </button>
         {mailto ? (
           <a href={mailto} className={toolbarBtn} title={`Email ${lead?.agent_email ?? "agent"}`}>
             <Mail className="h-3 w-3" strokeWidth={1.75} />
