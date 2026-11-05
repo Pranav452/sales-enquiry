@@ -81,6 +81,8 @@ const TYPE_LABELS: Record<string, string> = {
   WARM_CALL:     "Warm Call",
   CLIENT_VISIT:  "Client Visit",
   VISIT_SECURED: "Visit — Secured",
+  SHIPPING_LINE_VISIT: "Shipping Line Visit",
+  CALL_SECURED:  "Called & Secured",
 }
 
 function formatDate(d: string | null) {

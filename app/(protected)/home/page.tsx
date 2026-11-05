@@ -5,7 +5,8 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
-import { ACTIVITY_TYPE_MAP, getRank, getRankProgress, getNextRank } from "@/lib/constants/activities"
+import { ACTIVITY_TYPE_MAP } from "@/lib/constants/activities"
+import { VoyageHomeCard } from "@/components/game/hub/VoyageHomeCard"
 import { useChatDock } from "@/lib/store/chatDock"
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -184,51 +185,6 @@ function StatCard({
   )
 }
 
-// ─── XP / rank mini card ─────────────────────────────────────
-
-function RankCard({ xp, weekXp }: { xp: number; weekXp: number }) {
-  const rank     = getRank(xp)
-  const nextRank = getNextRank(xp)
-  const progress = getRankProgress(xp)
-
-  return (
-    <Link href="/activities" className={cn(
-      "rounded-xl border-2 p-4 flex items-start gap-4",
-      "hover:shadow-sm transition-all group",
-      rank.color, rank.bg
-    )}>
-      <div className={cn(
-        "h-10 w-10 rounded-full border-2 flex items-center justify-center shrink-0 font-black text-xs",
-        rank.color, rank.text
-      )}>
-        {rank.rank.slice(0, 2).toUpperCase()}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-2">
-          <p className={cn("text-lg font-bold leading-tight", rank.text)}>{rank.rank}</p>
-          <span className={cn("text-xs font-semibold", rank.text)}>{xp} XP</span>
-        </div>
-        {weekXp > 0 && (
-          <p className="text-[11px] text-muted-foreground mt-0.5">+{weekXp} XP this week</p>
-        )}
-        {/* Progress bar */}
-        <div className="mt-2 h-1.5 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
-          <div
-            className={cn("h-full rounded-full transition-all duration-500", rank.barColor)}
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-        {nextRank && (
-          <p className="text-[10px] text-muted-foreground mt-1">
-            {nextRank.minXp - xp} XP to <strong>{nextRank.rank}</strong>
-          </p>
-        )}
-      </div>
-      <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:opacity-80 shrink-0 mt-1 transition-colors" />
-    </Link>
-  )
-}
-
 // ─── Custom chart tooltip ─────────────────────────────────────
 
 function ChartTooltip({ active, payload, label }: {
@@ -340,8 +296,6 @@ export default function HomePage() {
 
   const actStats  = data?.activity.stats
   const enqStats  = data?.enquiry.stats
-  const xp        = actStats?.total_xp ?? 0
-  const weekXp    = actStats?.week_xp  ?? 0
 
   // Fill missing days in chart with zeros
   const chartData = (() => {
@@ -572,8 +526,8 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* ── Rank card ────────────────────────────────────────── */}
-      <RankCard xp={xp} weekXp={weekXp} />
+      {/* ── Voyage card ──────────────────────────────────────── */}
+      <VoyageHomeCard />
 
       {/* ── Weekly activity chart ─────────────────────────────── */}
       <div className="rounded-xl border border-border bg-card overflow-hidden">

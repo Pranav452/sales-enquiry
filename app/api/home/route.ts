@@ -99,10 +99,10 @@ export async function GET() {
       SELECT
         SUM(POINTS)   AS total_xp,
         COUNT(*)      AS total_activities,
-        SUM(CASE WHEN ACTIVITY_DATE >= @week_start  AND ACTIVITY_TYPE IN ('COLD_CALL','WARM_CALL') THEN 1 ELSE 0 END) AS week_calls,
+        SUM(CASE WHEN ACTIVITY_DATE >= @week_start  AND ACTIVITY_TYPE IN ('COLD_CALL','WARM_CALL','CALL_SECURED') THEN 1 ELSE 0 END) AS week_calls,
         SUM(CASE WHEN ACTIVITY_DATE >= @week_start  AND ACTIVITY_TYPE IN ('CLIENT_VISIT','VISIT_SECURED') THEN 1 ELSE 0 END) AS week_visits,
         SUM(CASE WHEN ACTIVITY_DATE >= @week_start  THEN POINTS ELSE 0 END) AS week_xp,
-        SUM(CASE WHEN ACTIVITY_DATE >= @month_start AND ACTIVITY_TYPE IN ('COLD_CALL','WARM_CALL') THEN 1 ELSE 0 END) AS month_calls,
+        SUM(CASE WHEN ACTIVITY_DATE >= @month_start AND ACTIVITY_TYPE IN ('COLD_CALL','WARM_CALL','CALL_SECURED') THEN 1 ELSE 0 END) AS month_calls,
         SUM(CASE WHEN ACTIVITY_DATE >= @month_start AND ACTIVITY_TYPE IN ('CLIENT_VISIT','VISIT_SECURED') THEN 1 ELSE 0 END) AS month_visits,
         SUM(CASE WHEN ACTIVITY_DATE >= @month_start THEN POINTS ELSE 0 END) AS month_xp
       FROM [dbo].[TBL_CALLS_VISITS]
@@ -136,7 +136,7 @@ export async function GET() {
     const chartResult = await chartReq.query(`
       SELECT
         ACTIVITY_DATE AS date,
-        SUM(CASE WHEN ACTIVITY_TYPE IN ('COLD_CALL','WARM_CALL') THEN 1 ELSE 0 END) AS calls,
+        SUM(CASE WHEN ACTIVITY_TYPE IN ('COLD_CALL','WARM_CALL','CALL_SECURED') THEN 1 ELSE 0 END) AS calls,
         SUM(CASE WHEN ACTIVITY_TYPE IN ('CLIENT_VISIT','VISIT_SECURED') THEN 1 ELSE 0 END) AS visits,
         SUM(POINTS) AS xp
       FROM [dbo].[TBL_CALLS_VISITS]

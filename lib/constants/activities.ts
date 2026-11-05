@@ -54,7 +54,29 @@ export const ACTIVITY_TYPES: ActivityTypeDef[] = [
     color:       "bg-cyan-100 dark:bg-cyan-900/40",
     textColor:   "text-cyan-700 dark:text-cyan-300",
   },
+  {
+    value:       "CALL_SECURED",
+    label:       "Called & Secured",
+    points:      3,
+    description: "Call that resulted in a confirmed shipment or booking",
+    color:       "bg-emerald-100 dark:bg-emerald-900/40",
+    textColor:   "text-emerald-700 dark:text-emerald-300",
+  },
 ]
+
+// ─── Activity type groups (keep SQL + game engine in sync) ────
+
+/** Phone activities — counted as "calls" in stats */
+export const CALL_ACTIVITY_TYPES = ["COLD_CALL", "WARM_CALL", "CALL_SECURED"] as const
+/** In-person client activities — counted as "visits" in stats */
+export const VISIT_ACTIVITY_TYPES = ["CLIENT_VISIT", "VISIT_SECURED"] as const
+/** Activities that closed business — counted as "secured" in stats */
+export const SECURED_ACTIVITY_TYPES = ["VISIT_SECURED", "CALL_SECURED"] as const
+
+/** Comma-separated quoted list for SQL IN (...) clauses — constants only, never user input */
+export function sqlInList(types: readonly string[]): string {
+  return types.map((t) => `'${t}'`).join(",")
+}
 
 export const ACTIVITY_TYPE_MAP: Record<string, ActivityTypeDef> =
   Object.fromEntries(ACTIVITY_TYPES.map((t) => [t.value, t]))

@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
       const res = await r.query(`
         SELECT
           SALES_PERSON AS sales_person,
-          SUM(CASE WHEN ACTIVITY_TYPE IN ('COLD_CALL','WARM_CALL') THEN 1 ELSE 0 END) AS calls,
+          SUM(CASE WHEN ACTIVITY_TYPE IN ('COLD_CALL','WARM_CALL','CALL_SECURED') THEN 1 ELSE 0 END) AS calls,
           SUM(CASE WHEN ACTIVITY_TYPE IN ('CLIENT_VISIT','VISIT_SECURED') THEN 1 ELSE 0 END) AS visits,
           SUM(CASE WHEN ISNULL(STATUS,'') NOT IN ('NO_ANSWER','INVALID_NUMBER','BUSY','') THEN 1 ELSE 0 END) AS reached
         FROM [dbo].[TBL_CALLS_VISITS]
