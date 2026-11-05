@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* dark: utilities follow the app theme toggle (next-themes adds .dark), not the OS setting */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: 0 0% 100%;
   --foreground: 222.2 84% 4.9%;
