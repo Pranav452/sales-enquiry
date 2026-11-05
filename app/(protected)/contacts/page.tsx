@@ -88,6 +88,7 @@ const TYPE_STYLE: Record<string, { dot: string; icon: React.ReactNode; label: st
   WARM_CALL:     { dot: "bg-amber-500",  icon: <PhoneForwarded />, label: "Warm Call" },
   CLIENT_VISIT:  { dot: "bg-green-500",  icon: <Users />,          label: "Client Visit" },
   VISIT_SECURED: { dot: "bg-purple-600", icon: <Trophy />,         label: "Visit Secured" },
+  CALL_SECURED:  { dot: "bg-emerald-600", icon: <Trophy />,        label: "Called & Secured" },
 }
 
 // ─── Helpers ───────────────────────────────────────────────────
@@ -335,7 +336,7 @@ function ClientDetailModal({
             </span>
             {/* Type breakdown */}
             <div className="flex items-center gap-2 ml-auto">
-              {(["COLD_CALL","WARM_CALL","CLIENT_VISIT","VISIT_SECURED"] as const).map((type) => {
+              {(["COLD_CALL","WARM_CALL","CLIENT_VISIT","VISIT_SECURED","CALL_SECURED"] as const).map((type) => {
                 const count = history.filter((h) => h.activity_type === type).length
                 if (!count) return null
                 const s = TYPE_STYLE[type]

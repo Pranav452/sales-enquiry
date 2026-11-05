@@ -12,6 +12,7 @@ import {
   ACTIVITY_TYPE_MAP,
 } from "@/lib/constants/activities"
 import { BRANCHES, MANILAL_SALES_PERSONS, LINKS_SALES_PERSONS } from "@/lib/constants/dropdowns"
+import { emitActivityLogged } from "@/lib/game/events"
 
 const ALL_SALES_PERSONS = [...new Set([...LINKS_SALES_PERSONS, ...MANILAL_SALES_PERSONS])].sort()
 
@@ -22,7 +23,7 @@ interface Props {
   defaultSalesPerson?:  string
   defaultBranch?:       string
   defaultValues?:       Partial<FormState>
-  onSuccess?:           (id: string, points: number, isEdit: boolean) => void
+  onSuccess?:           (id: string, points: number, isEdit: boolean, activityType: string) => void
   onCancel?:            () => void
 }
 
@@ -183,7 +184,8 @@ export function ActivityForm({ editingId, defaultSalesPerson, defaultBranch, def
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? "Save failed")
-      onSuccess?.(json.id ?? editingId ?? "", json.points ?? previewPoints ?? 1, !!editingId)
+      if (!editingId) emitActivityLogged({ activityType: form.activity_type, points: json.points ?? previewPoints ?? 1 })
+      onSuccess?.(json.id ?? editingId ?? "", json.points ?? previewPoints ?? 1, !!editingId, form.activity_type)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unknown error")
     } finally {
@@ -243,7 +245,17 @@ export function ActivityForm({ editingId, defaultSalesPerson, defaultBranch, def
           )}
           {form.activity_type === "VISIT_SECURED" && (
             <p className="text-[11px] text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/30 rounded px-2 py-1.5 mt-0.5">
-              Log this when a visit <strong>results in a confirmed shipment or booking</strong>. This is your highest-value activity at 3 XP.
+              Log this when a visit <strong>results in a confirmed shipment or booking</strong>. Top-value activity at 3 XP.
+            </p>
+          )}
+          {form.activity_type === "CALL_SECURED" && (
+            <p className="text-[11px] text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 rounded px-2 py-1.5 mt-0.5">
+              Log this when a <strong>phone call confirms a shipment or booking</strong> — no visit needed. Top-value activity at 3 XP.
+            </p>
+          )}
+          {form.activity_type === "SHIPPING_LINE_VISIT" && (
+            <p className="text-[11px] text-cyan-700 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/30 rounded px-2 py-1.5 mt-0.5">
+              Log this when you <strong>visit a shipping line office</strong> in person. Each visit earns 2 XP.
             </p>
           )}
         </div>

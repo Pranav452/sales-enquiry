@@ -28,9 +28,9 @@ export async function GET(req: NextRequest) {
       const r = await pool.request().query(`
         SELECT
           COUNT(*) AS total,
-          SUM(CASE WHEN ACTIVITY_TYPE IN ('COLD_CALL','WARM_CALL') THEN 1 ELSE 0 END)  AS total_calls,
+          SUM(CASE WHEN ACTIVITY_TYPE IN ('COLD_CALL','WARM_CALL','CALL_SECURED') THEN 1 ELSE 0 END)  AS total_calls,
           SUM(CASE WHEN ACTIVITY_TYPE IN ('CLIENT_VISIT','VISIT_SECURED') THEN 1 ELSE 0 END) AS total_visits,
-          SUM(CASE WHEN ACTIVITY_TYPE = 'VISIT_SECURED' THEN 1 ELSE 0 END) AS total_secured,
+          SUM(CASE WHEN ACTIVITY_TYPE IN ('VISIT_SECURED','CALL_SECURED') THEN 1 ELSE 0 END) AS total_secured,
           SUM(CASE WHEN STATUS = 'INTERESTED' THEN 1 ELSE 0 END)           AS total_interested,
           SUM(POINTS) AS total_xp
         FROM [dbo].[TBL_CALLS_VISITS]
@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
         SELECT
           ACTIVITY_DATE AS date,
           COUNT(*) AS total,
-          SUM(CASE WHEN ACTIVITY_TYPE IN ('COLD_CALL','WARM_CALL') THEN 1 ELSE 0 END)  AS calls,
+          SUM(CASE WHEN ACTIVITY_TYPE IN ('COLD_CALL','WARM_CALL','CALL_SECURED') THEN 1 ELSE 0 END)  AS calls,
           SUM(CASE WHEN ACTIVITY_TYPE IN ('CLIENT_VISIT','VISIT_SECURED') THEN 1 ELSE 0 END) AS visits,
           SUM(POINTS) AS xp
         FROM [dbo].[TBL_CALLS_VISITS]
@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
           SUM(CASE WHEN ACTIVITY_TYPE = 'COLD_CALL'     THEN 1 ELSE 0 END) AS cold_calls,
           SUM(CASE WHEN ACTIVITY_TYPE = 'WARM_CALL'     THEN 1 ELSE 0 END) AS warm_calls,
           SUM(CASE WHEN ACTIVITY_TYPE = 'CLIENT_VISIT'  THEN 1 ELSE 0 END) AS visits,
-          SUM(CASE WHEN ACTIVITY_TYPE = 'VISIT_SECURED' THEN 1 ELSE 0 END) AS secured,
+          SUM(CASE WHEN ACTIVITY_TYPE IN ('VISIT_SECURED','CALL_SECURED') THEN 1 ELSE 0 END) AS secured,
           SUM(CASE WHEN STATUS = 'INTERESTED'           THEN 1 ELSE 0 END) AS interested,
           SUM(CASE WHEN STATUS = 'SECURED'              THEN 1 ELSE 0 END) AS status_secured
         FROM [dbo].[TBL_CALLS_VISITS]
@@ -132,7 +132,7 @@ export async function GET(req: NextRequest) {
           ISNULL(BRANCH, 'Unknown') AS branch,
           COUNT(*) AS total,
           SUM(POINTS) AS xp,
-          SUM(CASE WHEN ACTIVITY_TYPE = 'VISIT_SECURED' THEN 1 ELSE 0 END) AS secured
+          SUM(CASE WHEN ACTIVITY_TYPE IN ('VISIT_SECURED','CALL_SECURED') THEN 1 ELSE 0 END) AS secured
         FROM [dbo].[TBL_CALLS_VISITS]
         WHERE BRANCH IS NOT NULL AND BRANCH != ''
         GROUP BY BRANCH
@@ -149,17 +149,17 @@ export async function GET(req: NextRequest) {
         SELECT
           SUM(POINTS) AS total_xp,
           COUNT(*) AS total_activities,
-          SUM(CASE WHEN ACTIVITY_TYPE IN ('COLD_CALL','WARM_CALL') THEN 1 ELSE 0 END)  AS total_calls,
+          SUM(CASE WHEN ACTIVITY_TYPE IN ('COLD_CALL','WARM_CALL','CALL_SECURED') THEN 1 ELSE 0 END)  AS total_calls,
           SUM(CASE WHEN ACTIVITY_TYPE IN ('CLIENT_VISIT','VISIT_SECURED') THEN 1 ELSE 0 END) AS total_visits,
-          SUM(CASE WHEN ACTIVITY_TYPE = 'VISIT_SECURED' THEN 1 ELSE 0 END) AS total_secured,
+          SUM(CASE WHEN ACTIVITY_TYPE IN ('VISIT_SECURED','CALL_SECURED') THEN 1 ELSE 0 END) AS total_secured,
           SUM(CASE WHEN STATUS = 'INTERESTED' THEN 1 ELSE 0 END) AS total_interested,
           -- This week
           SUM(CASE WHEN ACTIVITY_DATE >= CONVERT(varchar(10), DATEADD(day, -7,  GETDATE()), 120) THEN POINTS ELSE 0 END) AS week_xp,
-          SUM(CASE WHEN ACTIVITY_DATE >= CONVERT(varchar(10), DATEADD(day, -7,  GETDATE()), 120) AND ACTIVITY_TYPE IN ('COLD_CALL','WARM_CALL') THEN 1 ELSE 0 END) AS week_calls,
+          SUM(CASE WHEN ACTIVITY_DATE >= CONVERT(varchar(10), DATEADD(day, -7,  GETDATE()), 120) AND ACTIVITY_TYPE IN ('COLD_CALL','WARM_CALL','CALL_SECURED') THEN 1 ELSE 0 END) AS week_calls,
           SUM(CASE WHEN ACTIVITY_DATE >= CONVERT(varchar(10), DATEADD(day, -7,  GETDATE()), 120) AND ACTIVITY_TYPE IN ('CLIENT_VISIT','VISIT_SECURED') THEN 1 ELSE 0 END) AS week_visits,
           -- This month
           SUM(CASE WHEN ACTIVITY_DATE >= CONVERT(varchar(10), DATEADD(day, -30, GETDATE()), 120) THEN POINTS ELSE 0 END) AS month_xp,
-          SUM(CASE WHEN ACTIVITY_DATE >= CONVERT(varchar(10), DATEADD(day, -30, GETDATE()), 120) AND ACTIVITY_TYPE IN ('COLD_CALL','WARM_CALL') THEN 1 ELSE 0 END) AS month_calls,
+          SUM(CASE WHEN ACTIVITY_DATE >= CONVERT(varchar(10), DATEADD(day, -30, GETDATE()), 120) AND ACTIVITY_TYPE IN ('COLD_CALL','WARM_CALL','CALL_SECURED') THEN 1 ELSE 0 END) AS month_calls,
           SUM(CASE WHEN ACTIVITY_DATE >= CONVERT(varchar(10), DATEADD(day, -30, GETDATE()), 120) AND ACTIVITY_TYPE IN ('CLIENT_VISIT','VISIT_SECURED') THEN 1 ELSE 0 END) AS month_visits
         FROM [dbo].[TBL_CALLS_VISITS]
         WHERE CREATED_BY = @created_by

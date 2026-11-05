@@ -81,6 +81,8 @@ const TYPE_COLORS: Record<string, string> = {
   WARM_CALL:     "#14b8a6",
   CLIENT_VISIT:  "#7c3aed",
   VISIT_SECURED: "#22c55e",
+  SHIPPING_LINE_VISIT: "#06b6d4",
+  CALL_SECURED:  "#10b981",
 }
 
 export function TypeBreakdownChart() {
