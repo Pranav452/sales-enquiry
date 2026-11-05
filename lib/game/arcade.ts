@@ -1,8 +1,9 @@
 // ============================================================
 // The Grand Voyage — Arcade registry
-// Each game unlocks at a level. Game components live in
-// components/game/arcade/games/<id>.tsx (default export) and
-// implement ArcadeGameProps.
+// Each game unlocks at a level (admins can preview everything).
+// Game components live in components/game/arcade/games/<id>.tsx
+// (default export, implements ArcadeGameProps); rules live in
+// components/game/arcade/rules/<id>.ts (default export GameRules).
 // ============================================================
 
 export interface ArcadeGameResult {
@@ -17,51 +18,74 @@ export interface ArcadeGameProps {
   onGameOver: (result: ArcadeGameResult) => void
 }
 
+export type ArcadeCategory = "board" | "cards" | "puzzle"
+
+export const ARCADE_CATEGORIES: { id: ArcadeCategory; label: string }[] = [
+  { id: "board",  label: "Board games" },
+  { id: "cards",  label: "Card games" },
+  { id: "puzzle", label: "Puzzles" },
+]
+
 export interface ArcadeGameDef {
   id:          string
   name:        string
-  tagline:     string
-  howTo:       string
+  category:    ArcadeCategory
+  /** one line shown on the game card */
+  description: string
+  /** e.g. "1 player vs computer" */
+  players:     string
   unlockLevel: number
   icon:        string      // lucide-react icon name
-  accent:      string      // hex
+  /** dialog width: md ~640px, lg ~880px, xl ~1120px */
+  size:        "md" | "lg" | "xl"
 }
 
 export const ARCADE_GAMES: ArcadeGameDef[] = [
-  { id: "anchors",     name: "Knots & Anchors",    unlockLevel: 1,  icon: "Anchor",     accent: "#38bdf8",
-    tagline: "Three in a row against the harbour master.",
-    howTo: "Best of 5 rounds vs the bot. Win = 3 pts, draw = 1 pt." },
-  { id: "cargo-match", name: "Cargo Match",         unlockLevel: 4,  icon: "Boxes",      accent: "#f59e0b",
-    tagline: "Flip the containers, pair the cargo.",
-    howTo: "Match all 8 pairs. Fewer moves and less time = higher score." },
-  { id: "lighthouse",  name: "Lighthouse Signals",  unlockLevel: 8,  icon: "Lightbulb",  accent: "#facc15",
-    tagline: "Repeat the beacon sequence. It only gets longer.",
-    howTo: "Watch the lights, repeat the pattern. Score = longest sequence." },
-  { id: "teu-2048",    name: "TEU Stacker",         unlockLevel: 12, icon: "Container",  accent: "#f97316",
-    tagline: "Merge containers. Reach the 2048 TEU mega-vessel.",
-    howTo: "Arrow keys or swipe. Equal stacks merge. Score = merged TEU." },
-  { id: "minesweep",   name: "Strait Sweeper",      unlockLevel: 16, icon: "Bomb",       accent: "#ef4444",
-    tagline: "Chart a safe channel through the minefield.",
-    howTo: "Reveal every safe cell. Right-click / long-press to flag." },
-  { id: "convoy",      name: "Convoy",              unlockLevel: 21, icon: "Ship",       accent: "#22c55e",
-    tagline: "Lead the convoy, collect cargo, never ram yourself.",
-    howTo: "Arrow keys / WASD / swipe. Each cargo = 10 pts." },
-  { id: "port-battle", name: "Port Battle",         unlockLevel: 31, icon: "Swords",     accent: "#a855f7",
-    tagline: "Four in a row against a rival forwarder.",
-    howTo: "Drop discs, connect four. Win fast for a bigger score." },
-  { id: "locode",      name: "LOCODE",              unlockLevel: 41, icon: "Globe2",     accent: "#14b8a6",
-    tagline: "Guess the 5-letter UN/LOCODE port in 6 tries.",
-    howTo: "Green = right spot, amber = wrong spot. Fewer guesses = more points." },
-  { id: "ice-breaker", name: "Ice Breaker",         unlockLevel: 61, icon: "Snowflake",  accent: "#7dd3fc",
-    tagline: "Slide the ice floes back into order.",
-    howTo: "Order tiles 1-15. Fewer moves and less time = higher score." },
-  { id: "kraken-hunt", name: "Kraken Hunt",         unlockLevel: 81, icon: "Crosshair",  accent: "#e11d48",
-    tagline: "Hunt the enemy fleet before it finds yours.",
-    howTo: "Place your fleet, then fire. Sink all ships to win." },
+  // ── Board games ──
+  { id: "snakes-ladders", name: "Snakes & Ladders", category: "board",  unlockLevel: 1,  icon: "Dices",       size: "lg",
+    players: "2-4 players vs computer", description: "Classic 100-square race. Climb ladders, dodge snakes, land exactly on 100." },
+  { id: "connect-four",   name: "Connect Four",     category: "board",  unlockLevel: 3,  icon: "CircleDot",   size: "md",
+    players: "1 player vs computer",    description: "Drop discs and line up four in a row before the computer does." },
+  { id: "reversi",        name: "Reversi",          category: "board",  unlockLevel: 3,  icon: "Disc",        size: "md",
+    players: "1 player vs computer",    description: "Outflank and flip your opponent's discs. Most discs at the end wins." },
+  { id: "checkers",       name: "Checkers",         category: "board",  unlockLevel: 6,  icon: "Grid2x2",     size: "md",
+    players: "1 player vs computer",    description: "Draughts with forced captures, multi-jumps and kings." },
+  { id: "ludo",           name: "Ludo",             category: "board",  unlockLevel: 10, icon: "Dice5",       size: "lg",
+    players: "2-4 players vs computer", description: "Roll a six to leave base, capture rivals and bring all four tokens home." },
+  { id: "chess",          name: "Chess",            category: "board",  unlockLevel: 15, icon: "ChessKnight", size: "lg",
+    players: "1 player vs computer",    description: "Full chess rules against a computer opponent with three difficulty levels." },
+  // ── Card games ──
+  { id: "klondike",       name: "Solitaire",        category: "cards",  unlockLevel: 1,  icon: "Spade",       size: "xl",
+    players: "1 player",                description: "Klondike solitaire. Build the four foundations from Ace to King." },
+  { id: "blackjack",      name: "Blackjack",        category: "cards",  unlockLevel: 1,  icon: "Club",        size: "lg",
+    players: "1 player vs dealer",      description: "Beat the dealer to 21 with hit, stand, double down and split." },
+  { id: "crazy-eights",   name: "Crazy Eights",     category: "cards",  unlockLevel: 6,  icon: "Layers",      size: "lg",
+    players: "1 player vs 3 computers", description: "Match suit or rank, play eights as wild, and empty your hand first." },
+  { id: "freecell",       name: "FreeCell",         category: "cards",  unlockLevel: 6,  icon: "Columns4",    size: "xl",
+    players: "1 player",                description: "Solitaire with four free cells. Almost every deal can be solved." },
+  { id: "spider",         name: "Spider Solitaire", category: "cards",  unlockLevel: 10, icon: "Layers3",     size: "xl",
+    players: "1 player",                description: "Build King-to-Ace runs in suit to clear the table. 1, 2 or 4 suits." },
+  { id: "hearts",         name: "Hearts",           category: "cards",  unlockLevel: 20, icon: "Heart",       size: "xl",
+    players: "1 player vs 3 computers", description: "Trick-taking: avoid hearts and the Queen of Spades, or shoot the moon." },
+  // ── Puzzles ──
+  { id: "minesweeper",    name: "Minesweeper",      category: "puzzle", unlockLevel: 1,  icon: "Bomb",        size: "lg",
+    players: "1 player",                description: "Clear the field without hitting a mine. Beginner, Intermediate, Expert." },
+  { id: "sudoku",         name: "Sudoku",           category: "puzzle", unlockLevel: 3,  icon: "Grid3x3",     size: "md",
+    players: "1 player",                description: "Fill the 9x9 grid so every row, column and box has 1 to 9." },
 ]
 
 export const ARCADE_GAME_MAP: Record<string, ArcadeGameDef> =
   Object.fromEntries(ARCADE_GAMES.map((g) => [g.id, g]))
+
+/** Structured "How to play" content for a game. */
+export interface GameRules {
+  objective: string
+  setup?:    string[]
+  play:      string[]
+  controls:  string[]
+  scoring:   string[]
+  tips?:     string[]
+}
 
 // ─── Local persistence (tokens + personal bests) ──────────────
 

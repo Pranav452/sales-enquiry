@@ -10,8 +10,8 @@ import type { ArcadeGameProps } from "@/lib/game/arcade"
 
 function Loading() {
   return (
-    <div role="status" className="flex min-h-[320px] flex-col items-center justify-center gap-2 text-sm text-slate-400">
-      <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+    <div className="flex min-h-[320px] flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
+      <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
       Loading game...
     </div>
   )
@@ -19,14 +19,18 @@ function Loading() {
 
 // next/dynamic options must be object literals (SWC transform requirement).
 export const GAME_COMPONENTS: Record<string, ComponentType<ArcadeGameProps>> = {
-  "anchors":     dynamic(() => import("./games/anchors"), { ssr: false, loading: Loading }),
-  "cargo-match": dynamic(() => import("./games/cargo-match"), { ssr: false, loading: Loading }),
-  "lighthouse":  dynamic(() => import("./games/lighthouse"), { ssr: false, loading: Loading }),
-  "teu-2048":    dynamic(() => import("./games/teu-2048"), { ssr: false, loading: Loading }),
-  "minesweep":   dynamic(() => import("./games/minesweep"), { ssr: false, loading: Loading }),
-  "convoy":      dynamic(() => import("./games/convoy"), { ssr: false, loading: Loading }),
-  "port-battle": dynamic(() => import("./games/port-battle"), { ssr: false, loading: Loading }),
-  "locode":      dynamic(() => import("./games/locode"), { ssr: false, loading: Loading }),
-  "ice-breaker": dynamic(() => import("./games/ice-breaker"), { ssr: false, loading: Loading }),
-  "kraken-hunt": dynamic(() => import("./games/kraken-hunt"), { ssr: false, loading: Loading }),
+  "snakes-ladders": dynamic(() => import("./games/snakes-ladders"), { ssr: false, loading: Loading }),
+  "connect-four": dynamic(() => import("./games/connect-four"), { ssr: false, loading: Loading }),
+  "reversi": dynamic(() => import("./games/reversi"), { ssr: false, loading: Loading }),
+  "checkers": dynamic(() => import("./games/checkers"), { ssr: false, loading: Loading }),
+  "ludo": dynamic(() => import("./games/ludo"), { ssr: false, loading: Loading }),
+  "chess": dynamic(() => import("./games/chess"), { ssr: false, loading: Loading }),
+  "klondike": dynamic(() => import("./games/klondike"), { ssr: false, loading: Loading }),
+  "blackjack": dynamic(() => import("./games/blackjack"), { ssr: false, loading: Loading }),
+  "crazy-eights": dynamic(() => import("./games/crazy-eights"), { ssr: false, loading: Loading }),
+  "freecell": dynamic(() => import("./games/freecell"), { ssr: false, loading: Loading }),
+  "spider": dynamic(() => import("./games/spider"), { ssr: false, loading: Loading }),
+  "hearts": dynamic(() => import("./games/hearts"), { ssr: false, loading: Loading }),
+  "minesweeper": dynamic(() => import("./games/minesweeper"), { ssr: false, loading: Loading }),
+  "sudoku": dynamic(() => import("./games/sudoku"), { ssr: false, loading: Loading }),
 }
