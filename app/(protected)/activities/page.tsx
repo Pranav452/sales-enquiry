@@ -1,32 +1,36 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState, type ComponentProps } from "react"
-import dynamic from "next/dynamic"
-import { MotionConfig } from "framer-motion"
-import { Award, Gamepad2, Hexagon, Layers, List, Plus, Users, X } from "lucide-react"
+// GAMES DISABLED (perf) — Grand Voyage / Arcade / Hexagone commented out, not deleted.
+// To restore: uncomment every block marked "GAMES DISABLED" in this file.
+// import dynamic from "next/dynamic"
+// import { MotionConfig } from "framer-motion"
+// import { Award, Gamepad2, Hexagon, Layers, List, Plus, Users, X } from "lucide-react"
+import { List, Plus, X } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { ActivityForm } from "@/components/activities/ActivityForm"
 import { ActivityList, type Activity } from "@/components/activities/ActivityList"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useGameStore } from "@/lib/game/store"
-import { ProgressCard } from "@/components/game/hub/ProgressCard"
-import { QuestBoard } from "@/components/game/hub/QuestBoard"
-import { Leaderboard } from "@/components/game/hub/Leaderboard"
-import { Progression } from "@/components/game/hub/Progression"
-import { TrophyCabinet } from "@/components/game/hub/TrophyCabinet"
-import { HubEmpty, HubError, HubSkeleton, PanelMessage } from "@/components/game/hub/HubStates"
-
-// The Arcade and Hexagone tabs (Hexagone has a three.js stage) only load
-// when their tab is opened.
-const ArcadePanel = dynamic(
-  () => import("@/components/game/arcade/ArcadePanel").then((m) => m.ArcadePanel),
-  { ssr: false, loading: () => <PanelMessage title="Arcade" body="Loading..." /> },
-)
-const Hexagone = dynamic(
-  () => import("@/components/game/hexagone/Hexagone").then((m) => m.Hexagone),
-  { ssr: false, loading: () => <PanelMessage title="Hexagone" body="Loading..." /> },
-)
+// GAMES DISABLED
+// import { useGameStore } from "@/lib/game/store"
+// import { ProgressCard } from "@/components/game/hub/ProgressCard"
+// import { QuestBoard } from "@/components/game/hub/QuestBoard"
+// import { Leaderboard } from "@/components/game/hub/Leaderboard"
+// import { Progression } from "@/components/game/hub/Progression"
+// import { TrophyCabinet } from "@/components/game/hub/TrophyCabinet"
+// import { HubEmpty, HubError, HubSkeleton, PanelMessage } from "@/components/game/hub/HubStates"
+//
+// // The Arcade and Hexagone tabs (Hexagone has a three.js stage) only load
+// // when their tab is opened.
+// const ArcadePanel = dynamic(
+//   () => import("@/components/game/arcade/ArcadePanel").then((m) => m.ArcadePanel),
+//   { ssr: false, loading: () => <PanelMessage title="Arcade" body="Loading..." /> },
+// )
+// const Hexagone = dynamic(
+//   () => import("@/components/game/hexagone/Hexagone").then((m) => m.Hexagone),
+//   { ssr: false, loading: () => <PanelMessage title="Hexagone" body="Loading..." /> },
+// )
 
 interface UserInfo { role: string; salesperson: string | null }
 
@@ -36,11 +40,12 @@ type HubTab = "log" | "leaderboard" | "trophies" | "progression" | "arcade" | "h
 
 const TABS: { value: HubTab; label: string; icon: typeof List }[] = [
   { value: "log",         label: "Activity log", icon: List },
-  { value: "leaderboard", label: "Leaderboard",  icon: Users },
-  { value: "trophies",    label: "Trophies",     icon: Award },
-  { value: "progression", label: "Progression",  icon: Layers },
-  { value: "arcade",      label: "Arcade",       icon: Gamepad2 },
-  { value: "hexagone",    label: "Hexagone",     icon: Hexagon },
+  // GAMES DISABLED
+  // { value: "leaderboard", label: "Leaderboard",  icon: Users },
+  // { value: "trophies",    label: "Trophies",     icon: Award },
+  // { value: "progression", label: "Progression",  icon: Layers },
+  // { value: "arcade",      label: "Arcade",       icon: Gamepad2 },
+  // { value: "hexagone",    label: "Hexagone",     icon: Hexagon },
 ]
 
 function isHubTab(v: string): v is HubTab {
@@ -57,14 +62,15 @@ export default function ActivitiesPage() {
   const [scrollTick, setScrollTick]             = useState(0)
   const formRef = useRef<HTMLDivElement>(null)
 
-  const data    = useGameStore((s) => s.data)
-  const loading = useGameStore((s) => s.loading)
-  const error   = useGameStore((s) => s.error)
-  const ensure  = useGameStore((s) => s.ensure)
-  const refreshGame = useGameStore((s) => s.refresh)
-  const me = data?.me ?? null
-
-  useEffect(() => { void ensure() }, [ensure])
+  // GAMES DISABLED
+  // const data    = useGameStore((s) => s.data)
+  // const loading = useGameStore((s) => s.loading)
+  // const error   = useGameStore((s) => s.error)
+  // const ensure  = useGameStore((s) => s.ensure)
+  // const refreshGame = useGameStore((s) => s.refresh)
+  // const me = data?.me ?? null
+  //
+  // useEffect(() => { void ensure() }, [ensure])
 
   useEffect(() => {
     const supabase = createClient()
@@ -97,19 +103,20 @@ export default function ActivitiesPage() {
     setFollowUpDefaults(null)
   }
 
-  function handleFormSuccess(_id: string, _points: number, isEdit: boolean) {
+  function handleFormSuccess() {
     closeForm()
     setRefresh((v) => v + 1)
-    // New activities refresh the game via the activity-logged event;
-    // edits can change XP too, so refresh explicitly.
-    if (isEdit) void refreshGame()
+    // GAMES DISABLED — was (signature: _id, _points, isEdit):
+    // // New activities refresh the game via the activity-logged event;
+    // // edits can change XP too, so refresh explicitly.
+    // if (isEdit) void refreshGame()
   }
 
   const isAdmin = userInfo?.role === "admin"
   const formOpen = showForm || !!editingActivity
 
   return (
-    <MotionConfig reducedMotion="user">
+    // GAMES DISABLED — page was wrapped in <MotionConfig reducedMotion="user">
       <div className="mx-auto max-w-screen-xl space-y-4 p-4">
 
         {/* ── Header ──────────────────────────────────────── */}
@@ -117,7 +124,8 @@ export default function ActivitiesPage() {
           <div>
             <h1 className="text-xl font-semibold text-foreground">Activity Tracker</h1>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              Log calls and visits to earn XP, complete quests and progress through levels.
+              {/* GAMES DISABLED — was: Log calls and visits to earn XP, complete quests and progress through levels. */}
+              Log calls and visits with your clients.
             </p>
           </div>
           <Button size="sm" onClick={openNewForm} className="shrink-0 gap-1.5">
@@ -167,7 +175,7 @@ export default function ActivitiesPage() {
           </div>
         )}
 
-        {/* ── Progress + Quests ───────────────────────────── */}
+        {/* ── Progress + Quests ─── GAMES DISABLED ─────────────
         {me ? (
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
             <ProgressCard me={me} />
@@ -180,10 +188,12 @@ export default function ActivitiesPage() {
         ) : (
           <HubEmpty onLogActivity={openNewForm} />
         )}
+        */}
 
         {/* ── Hub tabs ─────────────────────────────────────── */}
         <Tabs value={tab} onValueChange={(v) => { if (isHubTab(v)) setTab(v) }}>
-          <div className="-mx-4 overflow-x-auto px-4 pb-1">
+          {/* Tab bar hidden while only the activity log tab is enabled (games disabled) */}
+          <div className={TABS.length > 1 ? "-mx-4 overflow-x-auto px-4 pb-1" : "hidden"}>
             <TabsList className="h-auto gap-1 p-1">
               {TABS.map((t) => {
                 const Icon = t.icon
@@ -234,6 +244,7 @@ export default function ActivitiesPage() {
             </div>
           </TabsContent>
 
+          {/* GAMES DISABLED — leaderboard / trophies / progression / arcade / hexagone tabs
           <TabsContent value="leaderboard" className="mt-3">
             {data ? (
               <Leaderboard board={data.board} isAdmin={data.isAdmin} />
@@ -273,8 +284,9 @@ export default function ActivitiesPage() {
               <PanelMessage title="Hexagone" body={error ? "Hexagone could not be loaded." : "Loading..."} />
             )}
           </TabsContent>
+          */}
         </Tabs>
       </div>
-    </MotionConfig>
+    // GAMES DISABLED — </MotionConfig>
   )
 }

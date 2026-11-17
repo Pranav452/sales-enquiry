@@ -12,7 +12,8 @@ import {
   ACTIVITY_TYPE_MAP,
 } from "@/lib/constants/activities"
 import { BRANCHES, MANILAL_SALES_PERSONS, LINKS_SALES_PERSONS } from "@/lib/constants/dropdowns"
-import { emitActivityLogged } from "@/lib/game/events"
+// GAMES DISABLED (perf)
+// import { emitActivityLogged } from "@/lib/game/events"
 
 const ALL_SALES_PERSONS = [...new Set([...LINKS_SALES_PERSONS, ...MANILAL_SALES_PERSONS])].sort()
 
@@ -184,7 +185,7 @@ export function ActivityForm({ editingId, defaultSalesPerson, defaultBranch, def
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? "Save failed")
-      if (!editingId) emitActivityLogged({ activityType: form.activity_type, points: json.points ?? previewPoints ?? 1 })
+      // GAMES DISABLED: if (!editingId) emitActivityLogged({ activityType: form.activity_type, points: json.points ?? previewPoints ?? 1 })
       onSuccess?.(json.id ?? editingId ?? "", json.points ?? previewPoints ?? 1, !!editingId, form.activity_type)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unknown error")

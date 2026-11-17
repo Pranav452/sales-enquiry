@@ -6,11 +6,16 @@ import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 import { ACTIVITY_TYPE_MAP } from "@/lib/constants/activities"
-import { VoyageHomeCard } from "@/components/game/hub/VoyageHomeCard"
+// GAMES DISABLED (perf)
+// import { VoyageHomeCard } from "@/components/game/hub/VoyageHomeCard"
 import { useChatDock } from "@/lib/store/chatDock"
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
-} from "recharts"
+import dynamic from "next/dynamic"
+
+// Perf: recharts is lazy-loaded so it is not in the home page's first bundle.
+const WeeklyActivityChart = dynamic(() => import("@/components/home/WeeklyActivityChart"), {
+  ssr: false,
+  loading: () => <div className="h-[160px] rounded-md bg-muted/40" />,
+})
 import {
   ArrowRight,
   Bell,
@@ -185,28 +190,7 @@ function StatCard({
   )
 }
 
-// ─── Custom chart tooltip ─────────────────────────────────────
-
-function ChartTooltip({ active, payload, label }: {
-  active?: boolean
-  payload?: { name: string; value: number; fill: string }[]
-  label?: string
-}) {
-  if (!active || !payload?.length) return null
-  const date = label
-    ? new Date(label + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })
-    : label
-  return (
-    <div className="rounded-lg border border-border bg-card px-3 py-2 shadow-lg text-xs space-y-1">
-      <p className="font-semibold text-foreground">{date}</p>
-      {payload.map((p) => (
-        <p key={p.name} style={{ color: p.fill }} className="font-medium">
-          {p.name}: {p.value}
-        </p>
-      ))}
-    </div>
-  )
-}
+// Chart tooltip moved to components/home/WeeklyActivityChart.tsx (lazy-loaded)
 
 // ─── Main page ────────────────────────────────────────────────
 
@@ -526,8 +510,9 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* ── Voyage card ──────────────────────────────────────── */}
+      {/* ── Voyage card ── GAMES DISABLED (perf)
       <VoyageHomeCard />
+      */}
 
       {/* ── Weekly activity chart ─────────────────────────────── */}
       <div className="rounded-xl border border-border bg-card overflow-hidden">
@@ -549,28 +534,7 @@ export default function HomePage() {
         </div>
         <div className="p-4">
           {hasActivity ? (
-            <ResponsiveContainer width="100%" height={160}>
-              <BarChart data={chartData} barSize={14} barGap={3}>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis
-                  dataKey="date"
-                  tickFormatter={(d) => new Date(d + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short" })}
-                  tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  allowDecimals={false}
-                  tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                  axisLine={false}
-                  tickLine={false}
-                  width={24}
-                />
-                <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="calls"  name="Calls"  fill="hsl(217,91%,60%)" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="visits" name="Visits" fill="hsl(160,60%,45%)" radius={[3, 3, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <WeeklyActivityChart data={chartData} />
           ) : (
             <div className="h-[160px] flex flex-col items-center justify-center text-center gap-2">
               <Phone className="h-8 w-8 text-muted-foreground/30" />

@@ -12,6 +12,8 @@ export function QueryProvider({ children }: { children: ReactNode }) {
           queries: {
             staleTime: 1000 * 30, // 30 seconds
             retry: 1,
+            // Perf: don't refetch every query each time the tab regains focus
+            refetchOnWindowFocus: false,
           },
         },
       })
