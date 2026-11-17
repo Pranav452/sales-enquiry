@@ -35,6 +35,7 @@ const SELECT_COLS = `
   RATE_FCL                AS rate_fcl,
   RATE_LCL                AS rate_lcl,
   RATE_VALIDITY           AS rate_validity,
+  RATE_NOTES              AS rate_notes,
   AGENT_COMPANY           AS agent_company,
   ORIGIN_COUNTRY          AS origin_country,
   ORIGIN_PORT_CODE        AS origin_port_code,
@@ -148,6 +149,7 @@ export async function POST(req: NextRequest) {
           .input("rate_fcl",            trunc(body.rate_fcl, 500))
           .input("rate_lcl",            trunc(body.rate_lcl, 500))
           .input("rate_validity",       trunc(body.rate_validity, 255))
+          .input("rate_notes",          trunc(body.rate_notes, 8000))
           .input("agent_company",       trunc(body.agent_company, 255))
           .input("origin_country",      trunc(body.origin_country, 100))
           .input("origin_port_code",    trunc(body.origin_port_code, 10))
@@ -171,7 +173,7 @@ export async function POST(req: NextRequest) {
               SHIPPER_ADDRESS, CONSIGNEE_ADDRESS, CONSIGNEE_WEBSITE,
               MODE_OF_TRANSPORT, ORIGIN_PORT, DEST_PORT,
               COMMODITY, HS_CODE, SPECIAL_REQUIREMENTS,
-              RATE_FCL, RATE_LCL, RATE_VALIDITY,
+              RATE_FCL, RATE_LCL, RATE_VALIDITY, RATE_NOTES,
               AGENT_COMPANY, ORIGIN_COUNTRY, ORIGIN_PORT_CODE, DEST_PORT_CODE,
               RATE_CURRENCY, RATE_20GP, RATE_40HC,
               CONSIGNEE_CONTACT, CONSIGNEE_EMAIL, CONSIGNEE_PHONE,
@@ -186,7 +188,7 @@ export async function POST(req: NextRequest) {
               @shipper_address, @consignee_address, @consignee_website,
               @mode_of_transport, @origin_port, @dest_port,
               @commodity, @hs_code, @special_requirements,
-              @rate_fcl, @rate_lcl, @rate_validity,
+              @rate_fcl, @rate_lcl, @rate_validity, @rate_notes,
               @agent_company, @origin_country, @origin_port_code, @dest_port_code,
               @rate_currency, @rate_20gp, @rate_40hc,
               @consignee_contact, @consignee_email, @consignee_phone,
@@ -250,6 +252,7 @@ interface LeadPayload {
   rate_fcl?:             string | null
   rate_lcl?:             string | null
   rate_validity?:        string | null
+  rate_notes?:           string | null
   agent_company?:        string | null
   origin_country?:       string | null
   origin_port_code?:     string | null

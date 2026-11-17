@@ -40,6 +40,7 @@ export interface SalesLeadPdfData {
   rate_fcl?:             string | null
   rate_lcl?:             string | null
   rate_validity?:        string | null
+  rate_notes?:           string | null
   remarks?:              string | null
   remarks_2?:            string | null
   notes?:                string | null
@@ -1247,6 +1248,20 @@ function ratesCard(c: Ctx): Card {
         fillRoundRect(doc, ix, t, goldW, goldH, 8, C.gold)
         pen.lines(goldLines, ix + goldW / 2, t + 8, S.pillGold, "center")
       },
+    })
+  }
+
+  // Free-text clauses (terms, free days, exclusions …): full width, one unit per
+  // line so a long list can run on to the next page.
+  const notes = str(lead.rate_notes)
+  if (notes) {
+    units.push({ h: 1, gap: 16, edge: true, draw: (t) => line(doc, ix, t + 0.5, rEnd, t + 0.5, 1, C.rule) })
+    units.push({ h: pen.lh(S.fieldLbl), gap: 14, draw: (t) => pen.text("NOTES / TERMS & CONDITIONS", ix, t, S.fieldLbl) })
+    const noteLH = pen.lh(S.detailPara)
+    pen.wrap(notes, S.detailPara, rw).forEach((ln, k) => {
+      units.push(ln
+        ? { h: noteLH, gap: k === 0 ? 8 : 0, draw: (t) => pen.text(ln, ix, t, S.detailPara) }
+        : { h: noteLH * 0.6, edge: true, draw: () => {} })
     })
   }
   return { units, split: "tall", padT: CARD_PAD_V, padB: CARD_PAD_V, frame: whiteFrame(c) }

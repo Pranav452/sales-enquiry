@@ -325,6 +325,12 @@ function RatesCard({ lead }: { lead: SalesLead }) {
           {str(lead.rate_validity) && <span className={TEXT_DIM}> · validity {fmtDate(lead.rate_validity)}</span>}
         </p>
       )}
+      {str(lead.rate_notes) && (
+        <div className="mt-4 space-y-2 border-t border-border pt-3">
+          <p className={cn("text-xs leading-none", TEXT_DIM)}>Notes / Terms &amp; Conditions</p>
+          <p className="whitespace-pre-line break-words text-sm leading-relaxed text-foreground">{lead.rate_notes}</p>
+        </div>
+      )}
     </div>
   )
 }
