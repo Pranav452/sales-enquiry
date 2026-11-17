@@ -49,6 +49,7 @@ interface FormState {
   rate_fcl:             string
   rate_lcl:             string
   rate_validity:        string
+  rate_notes:           string
   agent_company:        string
   origin_country:       string
   origin_port_code:     string
@@ -71,7 +72,7 @@ const EMPTY: FormState = {
   shipper_address: "", consignee_address: "", consignee_website: "",
   mode_of_transport: "", origin_port: "", dest_port: "",
   commodity: "", hs_code: "", special_requirements: "",
-  rate_fcl: "", rate_lcl: "", rate_validity: "",
+  rate_fcl: "", rate_lcl: "", rate_validity: "", rate_notes: "",
   agent_company: "", origin_country: "", origin_port_code: "", dest_port_code: "",
   rate_currency: "USD", rate_20gp: "", rate_40hc: "",
   consignee_contact: "", consignee_email: "", consignee_phone: "",
@@ -132,6 +133,7 @@ export function SalesLeadForm({ editing, defaultSalesPerson, defaultSenderEmail,
         rate_fcl:             editing.rate_fcl             ?? "",
         rate_lcl:             editing.rate_lcl             ?? "",
         rate_validity:        editing.rate_validity         ?? "",
+        rate_notes:           editing.rate_notes           ?? "",
         agent_company:        editing.agent_company        ?? "",
         origin_country:       editing.origin_country       ?? "",
         origin_port_code:     editing.origin_port_code     ?? "",
@@ -374,7 +376,7 @@ export function SalesLeadForm({ editing, defaultSalesPerson, defaultSenderEmail,
           <Field label="FCL Rate — 40' HC">
             <Input value={form.rate_40hc} onChange={(e) => set("rate_40hc", e.target.value)} placeholder="e.g. 2100" className="h-9 text-sm" />
           </Field>
-          <Field label="FCL Rate — Other / Notes">
+          <Field label="FCL Rate — Other">
             <Input value={form.rate_fcl} onChange={(e) => set("rate_fcl", e.target.value)} placeholder="e.g. 40' RF: USD 3500" className="h-9 text-sm" />
           </Field>
           <Field label="LCL Rate (per CBM)">
@@ -382,6 +384,18 @@ export function SalesLeadForm({ editing, defaultSalesPerson, defaultSenderEmail,
           </Field>
           <Field label="Validity">
             <Input value={form.rate_validity} onChange={(e) => set("rate_validity", e.target.value)} placeholder="e.g. 30 days" className="h-9 text-sm" />
+          </Field>
+        </div>
+        <div className="mt-3">
+          <Field label="Notes / Terms & Conditions">
+            <textarea
+              value={form.rate_notes}
+              onChange={(e) => set("rate_notes", e.target.value)}
+              rows={10}
+              maxLength={8000}
+              placeholder={"One clause per line, e.g.\n1. Rates valid till 30th Nov, subject to space and equipment availability.\n2. 14 free days at destination.\n3. Booking cancellation charges USD 100 per container.\n4. Excludes destination local charges, duties and taxes."}
+              className={cn(textareaCls, "min-h-[220px] leading-relaxed")}
+            />
           </Field>
         </div>
       </div>

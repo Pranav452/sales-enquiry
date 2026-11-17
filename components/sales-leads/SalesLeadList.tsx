@@ -41,6 +41,7 @@ export interface SalesLead {
   rate_fcl?:             string | null
   rate_lcl?:             string | null
   rate_validity?:        string | null
+  rate_notes?:           string | null
   agent_company?:        string | null
   origin_country?:       string | null
   origin_port_code?:     string | null

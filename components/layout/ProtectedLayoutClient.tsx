@@ -38,8 +38,9 @@ import { useChatGlobalRealtime } from "@/components/chat/useChatGlobalRealtime"
 import { ChatDock } from "@/components/chat/ChatDock"
 import { CalculatorWidget } from "@/components/calculator/CalculatorWidget"
 import { usePushNotifications } from "@/lib/hooks/usePushNotifications"
-import { GameCelebrations } from "@/components/game/celebrations/GameCelebrations"
-import { PetCompanion } from "@/components/game/pet/PetCompanion"
+// GAMES DISABLED (perf) — global game overlays commented out, not deleted.
+// import { GameCelebrations } from "@/components/game/celebrations/GameCelebrations"
+// import { PetCompanion } from "@/components/game/pet/PetCompanion"
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -624,11 +625,13 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
       {/* ── Global calculator — floating button bottom-left ─── */}
       <CalculatorWidget />
 
-      {/* ── Grand Voyage: level-ups, arena reveals, quest + XP toasts ── */}
+      {/* GAMES DISABLED (perf)
+      ── Grand Voyage: level-ups, arena reveals, quest + XP toasts ──
       <GameCelebrations />
 
-      {/* ── Grand Voyage: draggable crewmate pet, follows across pages ── */}
+      ── Grand Voyage: draggable crewmate pet, follows across pages ──
       <PetCompanion />
+      */}
     </div>
   )
 }

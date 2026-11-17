@@ -35,6 +35,7 @@ const SELECT_COLS = `
   RATE_FCL                AS rate_fcl,
   RATE_LCL                AS rate_lcl,
   RATE_VALIDITY           AS rate_validity,
+  RATE_NOTES              AS rate_notes,
   AGENT_COMPANY           AS agent_company,
   ORIGIN_COUNTRY          AS origin_country,
   ORIGIN_PORT_CODE        AS origin_port_code,
@@ -155,6 +156,7 @@ export async function PATCH(
     if (body.rate_fcl             !== undefined) { request.input("rate_fcl",            trunc(body.rate_fcl, 500));            sets.push("RATE_FCL = @rate_fcl") }
     if (body.rate_lcl             !== undefined) { request.input("rate_lcl",            trunc(body.rate_lcl, 500));            sets.push("RATE_LCL = @rate_lcl") }
     if (body.rate_validity        !== undefined) { request.input("rate_validity",       trunc(body.rate_validity, 255));       sets.push("RATE_VALIDITY = @rate_validity") }
+    if (body.rate_notes           !== undefined) { request.input("rate_notes",          trunc(body.rate_notes, 8000));         sets.push("RATE_NOTES = @rate_notes") }
     if (body.agent_company        !== undefined) { request.input("agent_company",       trunc(body.agent_company, 255));       sets.push("AGENT_COMPANY = @agent_company") }
     if (body.origin_country       !== undefined) { request.input("origin_country",      trunc(body.origin_country, 100));      sets.push("ORIGIN_COUNTRY = @origin_country") }
     if (body.origin_port_code     !== undefined) { request.input("origin_port_code",    trunc(body.origin_port_code, 10));     sets.push("ORIGIN_PORT_CODE = @origin_port_code") }
@@ -221,6 +223,7 @@ interface LeadPayload {
   rate_fcl?:             string | null
   rate_lcl?:             string | null
   rate_validity?:        string | null
+  rate_notes?:           string | null
   agent_company?:        string | null
   origin_country?:       string | null
   origin_port_code?:     string | null

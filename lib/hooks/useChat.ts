@@ -33,7 +33,8 @@ export function useRooms() {
       const res = await apiFetch("/api/chat/rooms")
       return res.json()
     },
-    refetchInterval: 15_000, // lighter poll — realtime handles live updates
+    // Perf: was 15_000. Realtime channel already pushes new messages; this is only a safety net.
+    refetchInterval: 60_000,
   })
 }
 

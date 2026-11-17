@@ -204,7 +204,7 @@ const SEARCH_FIELDS: (keyof SalesLead)[] = [
   "shipper_address", "consignee_address", "consignee_website", "mode_of_transport",
   "origin_port", "dest_port", "origin_country", "origin_port_code", "dest_port_code",
   "commodity", "hs_code", "special_requirements", "rate_fcl", "rate_lcl", "rate_20gp",
-  "rate_40hc", "rate_currency", "rate_validity", "consignee_contact", "consignee_email",
+  "rate_40hc", "rate_currency", "rate_validity", "rate_notes", "consignee_contact", "consignee_email",
   "consignee_phone", "sender_designation", "sender_email", "sender_phone",
 ]
 
