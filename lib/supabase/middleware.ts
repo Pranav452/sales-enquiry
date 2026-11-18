@@ -25,11 +25,13 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // Perf: getClaims() verifies the JWT locally (ES256 + cached JWKS) and still
+  // refreshes an expired session, instead of a Supabase Auth round trip per request.
+  const { data: claimsData } = await supabase.auth.getClaims()
+  const user = claimsData?.claims?.sub ? { id: claimsData.claims.sub as string } : null
 
   const { pathname } = request.nextUrl
+
 
   // Public client-facing rate sheet pages — no login required
   if (pathname.startsWith("/r/")) {

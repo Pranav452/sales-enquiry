@@ -27,12 +27,24 @@ export async function GET() {
     const enqOwnerClause =
       auth.role !== "admin" ? "WHERE CREATED_BY = @created_by" : ""
 
-    const req = pool.request()
-    req.input("today",      today)
-    req.input("created_by", auth.userId)
+    const firstOfMonth = today.slice(0, 8) + "01"
+    const weekAgo = new Date()
+    weekAgo.setDate(weekAgo.getDate() - 6)
+    const weekStart  = weekAgo.toISOString().split("T")[0]
+    const monthStart = firstOfMonth
 
-    // ── 1. Reminders (today + overdue) ───────────────────────────
-    const remResult = await req.query(`
+    // Perf: all six reads go to the (remote, ~400 ms away) DB as ONE batch —
+    // one round trip instead of six sequential ones. Result sets come back in order.
+    const req = pool.request()
+    req.input("today",          today)
+    req.input("created_by",     auth.userId)
+    req.input("first_of_month", firstOfMonth)
+    req.input("week_start",     weekStart)
+    req.input("month_start",    monthStart)
+
+    const batch = await req.query(`
+      -- 1. Reminders (today + overdue)
+
       SELECT TOP 20
         CAST(ID AS varchar(20)) AS id,
         CLIENT_NAME             AS client_name,
@@ -45,29 +57,19 @@ export async function GET() {
         AND REMINDER_DATE IS NOT NULL
         AND REMINDER_DATE <= @today
         ${actOwnerClause}
-      ORDER BY REMINDER_DATE ASC
-    `)
+      ORDER BY REMINDER_DATE ASC;
 
-    // ── 2. Enquiry stats + recent 5 ──────────────────────────────
-    const firstOfMonth = today.slice(0, 8) + "01"
+      -- 2a. Enquiry stats
 
-    const enqReq = pool.request()
-    enqReq.input("created_by",     auth.userId)
-    enqReq.input("first_of_month", firstOfMonth)
-
-    const enqStatsResult = await enqReq.query(`
       SELECT
         COUNT(*) AS total,
         SUM(CASE WHEN STATUS IN ('FOLLOW UP','NO FEEDBACK','PENDING','QUOTED') THEN 1 ELSE 0 END) AS in_progress,
         SUM(CASE WHEN STATUS = 'WIN' AND ENQRECPTDT >= @first_of_month         THEN 1 ELSE 0 END) AS won_month
       FROM [dbo].[TBL_ADMIN_SALESENQUIRY]
-      ${enqOwnerClause}
-    `)
+      ${enqOwnerClause};
 
-    const enqRecentReq = pool.request()
-    enqRecentReq.input("created_by", auth.userId)
+      -- 2b. Recent 5 enquiries
 
-    const enqRecentResult = await enqRecentReq.query(`
       SELECT TOP 5
         CAST(PK_ID AS varchar(20))  AS id,
         ENQREFNO                    AS enq_ref_no,
@@ -80,22 +82,10 @@ export async function GET() {
         CONVERT(varchar(19), MAKERDT, 120) AS created_at
       FROM [dbo].[TBL_ADMIN_SALESENQUIRY]
       ${enqOwnerClause}
-      ORDER BY MAKERDT DESC
-    `)
+      ORDER BY MAKERDT DESC;
 
-    // ── 3. Activity personal stats ───────────────────────────────
-    const weekAgo = new Date()
-    weekAgo.setDate(weekAgo.getDate() - 6)
-    const weekStart = weekAgo.toISOString().split("T")[0]
+      -- 3. Activity personal stats
 
-    const monthStart = today.slice(0, 8) + "01"
-
-    const actStatsReq = pool.request()
-    actStatsReq.input("created_by",  auth.userId)
-    actStatsReq.input("week_start",  weekStart)
-    actStatsReq.input("month_start", monthStart)
-
-    const actStatsResult = await actStatsReq.query(`
       SELECT
         SUM(POINTS)   AS total_xp,
         COUNT(*)      AS total_activities,
@@ -106,14 +96,10 @@ export async function GET() {
         SUM(CASE WHEN ACTIVITY_DATE >= @month_start AND ACTIVITY_TYPE IN ('CLIENT_VISIT','VISIT_SECURED') THEN 1 ELSE 0 END) AS month_visits,
         SUM(CASE WHEN ACTIVITY_DATE >= @month_start THEN POINTS ELSE 0 END) AS month_xp
       FROM [dbo].[TBL_CALLS_VISITS]
-      WHERE CREATED_BY = @created_by
-    `)
+      WHERE CREATED_BY = @created_by;
 
-    // ── 4. Recent activities (last 5) ────────────────────────────
-    const actRecentReq = pool.request()
-    actRecentReq.input("created_by", auth.userId)
+      -- 4. Recent activities (last 5)
 
-    const actRecentResult = await actRecentReq.query(`
       SELECT TOP 5
         CAST(ID AS varchar(20)) AS id,
         ACTIVITY_DATE           AS activity_date,
@@ -125,15 +111,10 @@ export async function GET() {
         NOTES                   AS notes
       FROM [dbo].[TBL_CALLS_VISITS]
       WHERE CREATED_BY = @created_by
-      ORDER BY CREATED_AT DESC
-    `)
+      ORDER BY CREATED_AT DESC;
 
-    // ── 5. Weekly chart (last 7 days, calls + visits per day) ────
-    const chartReq = pool.request()
-    chartReq.input("created_by", auth.userId)
-    chartReq.input("week_start", weekStart)
+      -- 5. Weekly chart (last 7 days, calls + visits per day)
 
-    const chartResult = await chartReq.query(`
       SELECT
         ACTIVITY_DATE AS date,
         SUM(CASE WHEN ACTIVITY_TYPE IN ('COLD_CALL','WARM_CALL','CALL_SECURED') THEN 1 ELSE 0 END) AS calls,
@@ -145,17 +126,19 @@ export async function GET() {
       GROUP BY ACTIVITY_DATE
       ORDER BY ACTIVITY_DATE ASC
     `)
+    const sets = batch.recordsets as unknown as Record<string, unknown>[][]
+    const [remRows, enqStatsRows, enqRecentRows, actStatsRows, actRecentRows, chartRows] = sets
 
     return NextResponse.json({
-      reminders:     remResult.recordset,
+      reminders:     remRows,
       enquiry: {
-        stats:  enqStatsResult.recordset[0] ?? { total: 0, in_progress: 0, won_month: 0 },
-        recent: enqRecentResult.recordset,
+        stats:  enqStatsRows[0] ?? { total: 0, in_progress: 0, won_month: 0 },
+        recent: enqRecentRows,
       },
       activity: {
-        stats:       actStatsResult.recordset[0] ?? {},
-        recent:      actRecentResult.recordset,
-        weekly_chart: chartResult.recordset,
+        stats:       actStatsRows[0] ?? {},
+        recent:      actRecentRows,
+        weekly_chart: chartRows,
       },
     })
   } catch (err: unknown) {

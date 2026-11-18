@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
+import { useUser } from "@/components/layout/UserContext"
 import { cn } from "@/lib/utils"
 import { ACTIVITY_TYPE_MAP } from "@/lib/constants/activities"
 // GAMES DISABLED (perf)
@@ -198,9 +198,11 @@ export default function HomePage() {
   const router = useRouter()
   const { openChat } = useChatDock()
 
-  const [displayName,   setDisplayName]   = useState("")
-  const [userId,        setUserId]        = useState("")
-  const [userRole,      setUserRole]      = useState("")
+  // User info comes from the protected layout (no extra Supabase round trips)
+  const me = useUser()
+  const displayName = me?.fullName || me?.email || ""
+  const userId      = me?.id ?? ""
+  const userRole    = me?.role ?? ""
   const [data,          setData]          = useState<HomeData | null>(null)
   const [chatRooms,     setChatRooms]     = useState<ChatRoom[]>([])
   const [loading,       setLoading]       = useState(true)
@@ -209,21 +211,7 @@ export default function HomePage() {
   const [testEmailBusy, setTestEmailBusy] = useState(false)
   const [testEmailResult, setTestEmailResult] = useState<string | null>(null)
 
-  // ── Load user info + home data ───────────────────────────────
-  useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) return
-      const { data: profile } = await supabase
-        .from("user_profiles")
-        .select("full_name, role, salesperson")
-        .eq("id", user.id)
-        .single()
-      setDisplayName(profile?.full_name ?? user.email ?? "")
-      setUserId(user.id)
-      setUserRole(profile?.role ?? "")
-    })
-  }, [])
+  // ── Load home data ────────────────────────────────────────
 
   const fetchData = useCallback(async () => {
     try {

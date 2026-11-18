@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { FastLink } from "@/components/ui/fast-link"
 import { usePathname, useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
 import { useCallback, useEffect, useRef, useState } from "react"
@@ -38,6 +39,7 @@ import { useChatGlobalRealtime } from "@/components/chat/useChatGlobalRealtime"
 import { ChatDock } from "@/components/chat/ChatDock"
 import { CalculatorWidget } from "@/components/calculator/CalculatorWidget"
 import { usePushNotifications } from "@/lib/hooks/usePushNotifications"
+import { UserProvider } from "@/components/layout/UserContext"
 // GAMES DISABLED (perf) — global game overlays commented out, not deleted.
 // import { GameCelebrations } from "@/components/game/celebrations/GameCelebrations"
 // import { PetCompanion } from "@/components/game/pet/PetCompanion"
@@ -91,10 +93,13 @@ function useNotifications(userId: string) {
   }, [])
 
   useEffect(() => {
-    fetchAll()
-    // Poll every 5 minutes
-    const interval = setInterval(fetchAll, 5 * 60 * 1000)
-    return () => clearInterval(interval)
+    // Perf: let the page's own data load first, then fetch notifications.
+    const first = setTimeout(fetchAll, 1500)
+    // Poll every 5 minutes, but skip while the tab is in the background.
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") fetchAll()
+    }, 5 * 60 * 1000)
+    return () => { clearTimeout(first); clearInterval(interval) }
   }, [fetchAll])
 
   const unreadRooms  = chatRooms.filter((r) => r.unread_count > 0)
@@ -323,6 +328,11 @@ function NotificationPanel({
   )
 }
 
+/** Bust the server-side profile cache (lib/auth/session.ts keys on the "pv" cookie). */
+function bumpProfileVersion() {
+  document.cookie = `pv=${Date.now()}; path=/; max-age=31536000; samesite=lax`
+}
+
 // ─── Main layout ──────────────────────────────────────────────
 
 interface Props {
@@ -332,6 +342,8 @@ interface Props {
   company: string
   userId: string
   email: string
+  salesperson?: string | null
+  fullName?: string | null
   children: React.ReactNode
 }
 
@@ -340,7 +352,7 @@ const COMPANY_LABELS: Record<string, string> = {
   links: "Sales bridge - Links",
 }
 
-export function ProtectedLayoutClient({ role, displayName, branch, company, userId, email, children }: Props) {
+export function ProtectedLayoutClient({ role, displayName, branch, company, userId, email, salesperson = null, fullName = null, children }: Props) {
   const pathname = usePathname()
   const router   = useRouter()
   const supabase = createClient()
@@ -384,6 +396,7 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
       .from("user_profiles")
       .update({ company: newCompany })
       .eq("id", userId)
+    bumpProfileVersion()
     router.refresh()
   }
 
@@ -426,6 +439,7 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
   ]
 
   return (
+    <UserProvider value={{ id: userId, email, role, company, salesperson, fullName, branch }}>
     <div className="flex flex-col h-screen overflow-hidden bg-background">
 
       {/* ── Top Header ─────────────────────────────────────────── */}
@@ -562,7 +576,7 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
                         : pathname.startsWith(href)
 
             return (
-              <Link
+              <FastLink
                 key={href}
                 href={href}
                 className={cn(
@@ -582,7 +596,7 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
                 >
                   {label}
                 </span>
-              </Link>
+              </FastLink>
             )
           })}
 
@@ -633,5 +647,6 @@ export function ProtectedLayoutClient({ role, displayName, branch, company, user
       <PetCompanion />
       */}
     </div>
+    </UserProvider>
   )
 }

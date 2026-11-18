@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation"
-import { createClient } from "@/lib/supabase/server"
+import { getProfile, getSessionUser } from "@/lib/auth/session"
 import { ProtectedLayoutClient } from "@/components/layout/ProtectedLayoutClient"
 
 export default async function ProtectedLayout({
@@ -7,19 +7,10 @@ export default async function ProtectedLayout({
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
+  const user = await getSessionUser()
   if (!user) redirect("/login")
 
-  const { data: profile } = await supabase
-    .from("user_profiles")
-    .select("role, full_name, branch, email, company")
-    .eq("id", user.id)
-    .single()
+  const profile = await getProfile(user)
 
   const role = profile?.role ?? "sales"
   const displayName = profile?.full_name || user.email || "User"
@@ -29,7 +20,7 @@ export default async function ProtectedLayout({
   const email = profile?.email || user.email || ""
 
   return (
-    <ProtectedLayoutClient role={role} displayName={displayName} branch={branch} company={company} userId={user.id} email={email}>
+    <ProtectedLayoutClient role={role} displayName={displayName} branch={branch} company={company} userId={user.id} email={email} salesperson={profile?.salesperson ?? null} fullName={profile?.full_name ?? null}>
       {children}
     </ProtectedLayoutClient>
   )
