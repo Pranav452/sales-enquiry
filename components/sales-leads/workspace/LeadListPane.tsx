@@ -1,7 +1,7 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Calendar, Filter, Inbox, Plus, Search, SearchX, X } from "lucide-react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { AlertCircle, Calendar, ChevronLeft, ChevronRight, Filter, Inbox, Plus, Search, SearchX, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { LEAD_STATUS_MAP } from "@/lib/constants/sales-leads"
 import type { SalesLead } from "@/components/sales-leads/SalesLeadList"
@@ -16,6 +16,7 @@ import {
   useDismiss,
   type LeadFilters,
 } from "./lead-utils"
+import { LEAD_PAGE_SIZE as PAGE_SIZE } from "./lead-queries"
 
 // Shared geometry for the bordered top-bar buttons (Figma: p-8, 12px icon, 12px label, r-6)
 export const toolbarBtn = cn(
@@ -29,8 +30,20 @@ export const toolbarBtn = cn(
 type Option = { value: string; label: string }
 
 interface ListPaneProps {
+  /** Leads on the current page (already searched / filtered by the server). */
   rows: SalesLead[]
-  filtered: SalesLead[]
+  /** Leads matching the current search + filters, across all pages. */
+  total: number
+  /** Every visible lead, ignoring search + filters (null until known). */
+  allTotal: number | null
+  /** WON leads among `total`. */
+  won: number
+  page: number
+  totalPages: number
+  onPageChange: (page: number) => void
+  /** A page / refresh is loading in the background (current rows stay on screen). */
+  paging?: boolean
+  error?: string | null
   loading: boolean
   selectedId: string | null
   search: string
@@ -260,7 +273,8 @@ export function ListMessage({ icon: Icon, title, body, action }: {
 }
 
 export function LeadListPane({
-  rows, filtered, loading, selectedId, search, onSearchChange, filters, onFiltersChange,
+  rows, total, allTotal, won, page, totalPages, onPageChange, paging = false, error,
+  loading, selectedId, search, onSearchChange, filters, onFiltersChange,
   options, onSelect, onNew, className,
 }: ListPaneProps) {
   const listRef = useRef<HTMLDivElement>(null)
@@ -278,9 +292,9 @@ export function LeadListPane({
     field: f.label,
     value: f.key === "status" ? LEAD_STATUS_MAP[filters.status]?.label ?? filters.status : filters[f.key],
   }))
-  const won = useMemo(() => filtered.filter((r) => r.status === "WON").length, [filtered])
-  const narrowed = filtered.length !== rows.length
   const hasQuery = chips.length > 0 || search.trim() !== ""
+  const narrowed = hasQuery && allTotal !== null && allTotal !== total
+  const countNoun = (narrowed ? allTotal ?? total : total) !== 1 ? "leads" : "lead"
 
   return (
     <section aria-label="Sales leads" className={cn("min-h-0 flex-col", className)}>
@@ -333,19 +347,21 @@ export function LeadListPane({
             onRemove={() => onFiltersChange({ ...filters, [c.key]: "" })}
           />
         ))}
-        {!loading && rows.length > 0 && (
+        {!loading && total > 0 && (
           <p className={cn("text-xs leading-none", TEXT_DIM, chips.length > 0 && "ml-auto")}>
-            {narrowed ? `${filtered.length} of ${rows.length}` : filtered.length} lead{(narrowed ? rows.length : filtered.length) !== 1 ? "s" : ""}
+            {narrowed ? `${total} of ${allTotal}` : total} {countNoun}
             {" · "}{won} won
           </p>
         )}
       </div>
 
       {/* Results */}
-      <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto">
+      <div ref={listRef} aria-busy={paging || undefined} className="min-h-0 flex-1 overflow-y-auto">
         {loading ? (
           Array.from({ length: 6 }, (_, i) => <RowSkeleton key={i} />)
-        ) : rows.length === 0 ? (
+        ) : error && rows.length === 0 ? (
+          <ListMessage icon={AlertCircle} title="Could not load leads" body={error} />
+        ) : rows.length === 0 && !hasQuery && page === 1 ? (
           <ListMessage
             icon={Inbox}
             title="No leads yet"
@@ -356,7 +372,7 @@ export function LeadListPane({
               </button>
             }
           />
-        ) : filtered.length === 0 ? (
+        ) : rows.length === 0 ? (
           <ListMessage
             icon={SearchX}
             title="No leads match"
@@ -372,11 +388,43 @@ export function LeadListPane({
             ) : undefined}
           />
         ) : (
-          filtered.map((lead) => (
+          rows.map((lead) => (
             <LeadRow key={lead.id} lead={lead} selected={lead.id === selectedId} now={now} onSelect={onSelect} />
           ))
         )}
       </div>
+
+      {/* Pager */}
+      {!loading && totalPages > 1 && (
+        <nav aria-label="Lead pages" className="flex h-12 shrink-0 items-center justify-between gap-2 border-t border-border px-4">
+          <p className={cn("text-xs leading-none tabular-nums", TEXT_DIM)} aria-live="polite">
+            {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total}
+          </p>
+          <div className="flex items-center gap-2">
+            <span className={cn("text-xs leading-none tabular-nums", TEXT_DIM)}>
+              Page {page} of {totalPages}
+            </span>
+            <button
+              type="button"
+              aria-label="Previous page"
+              disabled={page <= 1 || paging}
+              onClick={() => onPageChange(page - 1)}
+              className={cn(toolbarBtn, "w-[30px] px-0")}
+            >
+              <ChevronLeft className="h-3.5 w-3.5" strokeWidth={1.75} />
+            </button>
+            <button
+              type="button"
+              aria-label="Next page"
+              disabled={page >= totalPages || paging}
+              onClick={() => onPageChange(page + 1)}
+              className={cn(toolbarBtn, "w-[30px] px-0")}
+            >
+              <ChevronRight className="h-3.5 w-3.5" strokeWidth={1.75} />
+            </button>
+          </div>
+        </nav>
+      )}
     </section>
   )
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { useUser } from "@/components/layout/UserContext"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -470,17 +471,8 @@ export function EnquiryForm({ onSuccess, editingEnquiry, onEditComplete, prefill
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, boolean>>>({})
-  const [company, setCompany] = useState<string>("links")
-
-  // Load user's company to show the right sales person list
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return
-      supabase.from("user_profiles").select("company").eq("id", user.id).single()
-        .then(({ data }) => { if (data?.company) setCompany(data.company) })
-    })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  // Company comes from the protected layout's user context (no extra Supabase round trips)
+  const company = useUser()?.company || "links"
 
   const salesPersonList = company === "manilal" ? MANILAL_SALES_PERSONS : LINKS_SALES_PERSONS
 

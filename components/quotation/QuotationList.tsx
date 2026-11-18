@@ -1,14 +1,17 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useMemo, useState } from "react"
+import { usePagedList, useDebounced } from "@/lib/hooks/usePagedList"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { CheckCircle2, Copy, FileDown, FilePlus, Link2, Pencil, Send, XCircle } from "lucide-react"
+import { CheckCircle2, Copy, FilePlus, Link2, Pencil, Send, XCircle } from "lucide-react"
 import { quotationStatusLabel, quotationStatusVariant } from "@/lib/constants/quotation-status"
 import { LinkEnquiryDialog } from "@/components/quotation/LinkEnquiryDialog"
+
+const PER_PAGE = 20
 
 interface Quotation {
   QUOT_ID: number
@@ -34,15 +37,15 @@ interface Quotation {
 
 export function QuotationList() {
   const router = useRouter()
-  const [quotations, setQuotations] = useState<Quotation[]>([])
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState<string | null>(null)
   const [search, setSearch] = useState("")
   const [page, setPage] = useState(1)
+  const debouncedSearch = useDebounced(search.trim(), 300)
+  const params = useMemo(() => ({ q: debouncedSearch }), [debouncedSearch])
+  const { rows: pageItems, total, totalPages, isLoading: loading, isFetching, error: loadError, invalidate } =
+    usePagedList<Quotation>("/api/quotations", page, params, PER_PAGE)
   const [approvingId, setApprovingId] = useState<number | null>(null)
   const [actingId, setActingId] = useState<number | null>(null)
   const [linkTarget, setLinkTarget] = useState<Quotation | null>(null)
-  const PER_PAGE = 20
 
   async function handleApprove(q: Quotation) {
     if (!window.confirm(`Approve ${q.QUOT_REF_NO}? The linked contact will be promoted to CLIENT.`)) return
@@ -53,7 +56,7 @@ export function QuotationList() {
       if (!res.ok) {
         alert(data.error ?? "Approval failed")
       } else {
-        await load()
+        await invalidate()
       }
     } finally {
       setApprovingId(null)
@@ -69,7 +72,7 @@ export function QuotationList() {
       if (!res.ok) {
         alert(data?.error ?? `Failed to ${action} quotation`)
       } else {
-        await load()
+        await invalidate()
       }
     } finally {
       setActingId(null)
@@ -90,42 +93,11 @@ export function QuotationList() {
         alert(data?.error ?? "Could not create the enquiry")
         return
       }
-      await load()
+      await invalidate()
     } finally {
       setActingId(null)
     }
   }
-
-  async function load() {
-    setLoading(true)
-    setLoadError(null)
-    try {
-      const res = await fetch("/api/quotations")
-      if (res.ok) {
-        setQuotations(await res.json())
-      } else {
-        const data = await res.json().catch(() => null)
-        setLoadError(data?.error ?? `Failed to load quotations (${res.status})`)
-      }
-    } catch {
-      setLoadError("Failed to load quotations — check your connection.")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => { load() }, [])
-
-  const filtered = quotations.filter((q) => {
-    const s = search.toLowerCase()
-    return !s || [
-      q.QUOT_REF_NO, q.ENQ_REF_NO, q.SHIPPER, q.POL, q.POD,
-      q.MODE, q.EXIM, q.SALES_PERSON, q.BRANCH,
-    ].some((v) => v?.toLowerCase().includes(s))
-  })
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE))
-  const pageItems = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE)
 
   function formatDate(raw: string | null) {
     if (!raw) return "-"
@@ -142,7 +114,7 @@ export function QuotationList() {
           className="max-w-xs"
         />
         <span className="text-sm text-muted-foreground ml-auto">
-          {filtered.length} record{filtered.length !== 1 ? "s" : ""}
+          {total} record{total !== 1 ? "s" : ""}
         </span>
       </div>
 
@@ -153,7 +125,7 @@ export function QuotationList() {
       ) : pageItems.length === 0 ? (
         <p className="text-sm text-muted-foreground py-8 text-center">No quotations found.</p>
       ) : (
-        <div className="rounded-lg border border-border overflow-x-auto">
+        <div className={cn("rounded-lg border border-border overflow-x-auto transition-opacity", isFetching && "opacity-60")}>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50">
@@ -328,7 +300,7 @@ export function QuotationList() {
           onOpenChange={(v) => { if (!v) setLinkTarget(null) }}
           quotId={linkTarget.QUOT_ID}
           quotRefNo={linkTarget.QUOT_REF_NO}
-          onLinked={() => { setLinkTarget(null); load() }}
+          onLinked={() => { setLinkTarget(null); invalidate() }}
         />
       )}
     </div>

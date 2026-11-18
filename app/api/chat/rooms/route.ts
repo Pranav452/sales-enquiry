@@ -57,15 +57,20 @@ export async function GET() {
 
   const roomIds = memberRows.map((r) => r.room_id)
 
-  // Rooms, members, messages, unread counts — all in parallel
-  const [roomsRes, membersRes, messagesRes, unreadRes] = await Promise.all([
+  // Rooms, members, last message per room, unread counts — all in parallel.
+  // Perf: only the latest message of each room is fetched (one tiny LIMIT 1
+  // query per room, run concurrently) instead of every message ever sent.
+  const [roomsRes, membersRes, lastMsgResults, unreadRes] = await Promise.all([
     supabase.from("chat_rooms").select("*").in("id", roomIds),
     supabase.from("chat_members").select("room_id, user_id, joined_at").in("room_id", roomIds),
-    supabase
-      .from("chat_messages")
-      .select("id, room_id, sender_id, content, created_at")
-      .in("room_id", roomIds)
-      .order("created_at", { ascending: false }),
+    Promise.all(roomIds.map((rid) =>
+      supabase
+        .from("chat_messages")
+        .select("id, room_id, sender_id, content, created_at")
+        .eq("room_id", rid)
+        .order("created_at", { ascending: false })
+        .limit(1),
+    )),
     supabase.rpc("get_room_unread_counts", {
       p_user_id:  auth.userId,
       p_room_ids: roomIds,
@@ -74,7 +79,9 @@ export async function GET() {
 
   if (roomsRes.error)   return NextResponse.json({ error: roomsRes.error.message },   { status: 500 })
   if (membersRes.error) return NextResponse.json({ error: membersRes.error.message }, { status: 500 })
-  if (messagesRes.error) return NextResponse.json({ error: messagesRes.error.message }, { status: 500 })
+  const msgErr = lastMsgResults.find((r) => r.error)?.error
+  if (msgErr) return NextResponse.json({ error: msgErr.message }, { status: 500 })
+  const messagesRes = { data: lastMsgResults.flatMap((r) => r.data ?? []) }
 
   // Resolve names in one batch
   const allUserIds = [

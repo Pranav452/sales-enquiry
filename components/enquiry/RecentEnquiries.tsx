@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { usePagedList, useDebounced } from "@/lib/hooks/usePagedList"
 import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -64,37 +65,27 @@ const COLS = ["Enq No", "Date", "Shipper", "Consignee", "Sales Person", "Branch"
 
 export function RecentEnquiries({ refreshKey }: RecentEnquiriesProps) {
   const router = useRouter()
-  const [rows, setRows] = useState<RecentEnquiry[]>([])
-  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
+  const debouncedSearch = useDebounced(search.trim(), 300)
+  const params = useMemo(() => ({ mine: true, q: debouncedSearch }), [debouncedSearch])
+  const { rows: rawRows, isLoading, isFetching, refetch } = usePagedList<RecentEnquiry>(
+    "/api/enquiries",
+    1,
+    params,
+    5
+  )
+  const filteredRows = useMemo(
+    () => rawRows.map((r) => ({ ...r, sales_person: resolveSalesPerson(r.sales_person) })),
+    [rawRows]
+  )
 
+  const firstKey = useRef(true)
   useEffect(() => {
-    async function load() {
-      setLoading(true)
-      const res = await fetch("/api/enquiries?mine=true")
-      if (!res.ok) { setLoading(false); return }
-      const json = await res.json()
-      setRows(
-        (json as RecentEnquiry[])
-          .slice(0, 5)
-          .map((r) => ({ ...r, sales_person: resolveSalesPerson(r.sales_person) }))
-      )
-      setLoading(false)
-    }
-    load()
-  }, [refreshKey])
+    if (firstKey.current) { firstKey.current = false; return }
+    void refetch()
+  }, [refreshKey, refetch])
 
-  const filteredRows = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    if (!q) return rows
-    return rows.filter((r) =>
-      Object.values(r).some(
-        (v) => v !== null && v !== undefined && String(v).toLowerCase().includes(q)
-      )
-    )
-  }, [rows, search])
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="mt-8 pt-6 border-t border-border">
         <p className="text-xs text-muted-foreground text-center py-6">Loading recent enquiries...</p>
@@ -102,7 +93,7 @@ export function RecentEnquiries({ refreshKey }: RecentEnquiriesProps) {
     )
   }
 
-  if (rows.length === 0) return null
+  if (filteredRows.length === 0 && !search && !debouncedSearch) return null
 
   return (
     <div className="mt-8 pt-6 border-t border-border">
@@ -121,7 +112,7 @@ export function RecentEnquiries({ refreshKey }: RecentEnquiriesProps) {
         />
       </div>
 
-      <div className="rounded-lg border border-border overflow-hidden">
+      <div className={cn("rounded-lg border border-border overflow-hidden transition-opacity", isFetching && "opacity-60")}>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>

@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
+import { usePagedList, useDebounced } from "@/lib/hooks/usePagedList"
 import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -74,45 +75,26 @@ interface EnquiryListProps {
 
 export function EnquiryList({ onSelectEnquiry, editingId, navigateOnEdit }: EnquiryListProps) {
   const router = useRouter()
-  const [rows, setRows] = useState<Enquiry[]>([])
-  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [page, setPage] = useState(1)
-
-  const filteredRows = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    if (!q) return rows
-    return rows.filter((r) =>
-      Object.values(r).some(
-        (v) => v !== null && v !== undefined && String(v).toLowerCase().includes(q)
-      )
-    )
-  }, [rows, search])
-
-  useEffect(() => {
-    setPage(1)
-  }, [search])
-
-  const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE))
-  const paginatedRows = filteredRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const debouncedSearch = useDebounced(search.trim(), 300)
+  const params = useMemo(() => ({ q: debouncedSearch }), [debouncedSearch])
+  const { rows: rawRows, total, totalPages, isLoading, isFetching } = usePagedList<Enquiry>(
+    "/api/enquiries",
+    page,
+    params,
+    PAGE_SIZE
+  )
+  const paginatedRows = useMemo(
+    () => rawRows.map((r) => ({ ...r, sales_person: resolveSalesPerson(r.sales_person) })),
+    [rawRows]
+  )
 
   const pageNumbers = useMemo(() => {
     if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i + 1)
     const start = Math.max(1, Math.min(page - 2, totalPages - 4))
     return Array.from({ length: 5 }, (_, i) => start + i)
   }, [page, totalPages])
-
-  useEffect(() => {
-    async function load() {
-      const res = await fetch("/api/enquiries")
-      if (res.ok) {
-        const data: Enquiry[] = await res.json()
-        setRows(data.map((r) => ({ ...r, sales_person: resolveSalesPerson(r.sales_person) })))
-      }
-      setLoading(false)
-    }
-    load()
-  }, [])
 
   function handleQuotationClick(r: Enquiry) {
     // No quotation yet → create one pre-linked to this enquiry.
@@ -133,7 +115,7 @@ export function EnquiryList({ onSelectEnquiry, editingId, navigateOnEdit }: Enqu
     }
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="px-6 py-8 text-sm text-muted-foreground text-center">
         Loading enquiries...
@@ -141,7 +123,7 @@ export function EnquiryList({ onSelectEnquiry, editingId, navigateOnEdit }: Enqu
     )
   }
 
-  if (rows.length === 0) {
+  if (total === 0 && !debouncedSearch && !search) {
     return (
       <div className="px-6 py-8 text-sm text-muted-foreground text-center">
         No enquiries found.
@@ -158,13 +140,13 @@ export function EnquiryList({ onSelectEnquiry, editingId, navigateOnEdit }: Enqu
           type="search"
           placeholder="Search across all fields — Enq No, Shipper, Consignee, Status, POL, POD, Mode, Country, Agent..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => { setSearch(e.target.value); setPage(1) }}
           className="max-w-sm"
           aria-label="Search enquiries"
         />
       </div>
 
-      <div className="overflow-x-auto">
+      <div className={cn("overflow-x-auto transition-opacity", isFetching && "opacity-60")}>
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-border">
@@ -278,7 +260,7 @@ export function EnquiryList({ onSelectEnquiry, editingId, navigateOnEdit }: Enqu
       {totalPages > 1 && (
         <div className="px-6 py-3 border-t border-border flex items-center justify-between gap-2 text-xs text-muted-foreground">
           <span>
-            {filteredRows.length} result{filteredRows.length !== 1 ? "s" : ""}
+            {total} result{total !== 1 ? "s" : ""}
           </span>
           <div className="flex items-center gap-1">
             <Button

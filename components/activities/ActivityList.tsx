@@ -1,6 +1,8 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import { usePagedList, useDebounced } from "@/lib/hooks/usePagedList"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Pencil, PhoneForwarded, ChevronDown, ChevronUp } from "lucide-react"
@@ -35,6 +37,7 @@ export interface Activity {
 }
 
 const PAGE_SIZE = 20
+const ENDPOINT  = "/api/activities"
 
 interface Props {
   onEdit?:      (a: Activity) => void
@@ -205,8 +208,6 @@ function ActivityRow({
 }
 
 export function ActivityList({ onEdit, onFollowUp, refresh = 0 }: Props) {
-  const [rows, setRows]       = useState<Activity[]>([])
-  const [loading, setLoading] = useState(true)
   const [search, setSearch]   = useState("")
   const [page, setPage]       = useState(1)
 
@@ -214,43 +215,47 @@ export function ActivityList({ onEdit, onFollowUp, refresh = 0 }: Props) {
   const [filterStatus, setFilterStatus] = useState("")
   const [filterBranch, setFilterBranch] = useState("")
 
+  const q = useDebounced(search.trim(), 300)
+
+  const params = useMemo(
+    () => ({ q, type: filterType, status: filterStatus, branch: filterBranch }),
+    [q, filterType, filterStatus, filterBranch],
+  )
+  const { rows: paginated, total, totalPages, isLoading, isFetching, invalidate } =
+    usePagedList<Activity>(ENDPOINT, page, params, PAGE_SIZE)
+
+  // Same key + url as usePagedList's query, so this shares its fetch/cache and just reads totalPoints.
+  const pointsQuery = useQuery({
+    queryKey: [ENDPOINT, { ...params, page, limit: PAGE_SIZE }],
+    queryFn: async ({ signal }) => {
+      const sp = new URLSearchParams()
+      for (const [k, v] of Object.entries({ ...params, page, limit: PAGE_SIZE })) if (v) sp.set(k, String(v))
+      const res = await fetch(`${ENDPOINT}?${sp.toString()}`, { signal })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error((json as { error?: string }).error ?? `Request failed (${res.status})`)
+      return json as { data: Activity[]; total: number; totalPoints?: number }
+    },
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+  })
+  const totalXp = pointsQuery.data?.totalPoints ?? 0
+
+  useEffect(() => { setPage(1) }, [q, filterType, filterStatus, filterBranch])
+
+  const first = useRef(true)
   useEffect(() => {
-    setLoading(true)
-    fetch("/api/activities")
-      .then((r) => r.json())
-      .then((data: Activity[]) => setRows(Array.isArray(data) ? data : []))
-      .catch(() => setRows([]))
-      .finally(() => setLoading(false))
+    if (first.current) { first.current = false; return }
+    void invalidate()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refresh])
 
-  const filtered = useMemo(() => {
-    let result = rows
-    if (filterType)   result = result.filter((r) => r.activity_type === filterType)
-    if (filterStatus) result = result.filter((r) => r.status === filterStatus)
-    if (filterBranch) result = result.filter((r) => r.branch === filterBranch)
-    if (search.trim()) {
-      const q = search.trim().toLowerCase()
-      result = result.filter((r) =>
-        [r.client_name, r.contact_person, r.sales_person, r.notes, r.commodity, r.pol, r.pod]
-          .some((v) => v?.toLowerCase().includes(q))
-      )
-    }
-    return result
-  }, [rows, filterType, filterStatus, filterBranch, search])
-
-  useEffect(() => { setPage(1) }, [search, filterType, filterStatus, filterBranch])
-
-  const totalPages  = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const paginated   = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
   const pageNumbers = useMemo(() => {
     if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i + 1)
     const start = Math.max(1, Math.min(page - 2, totalPages - 4))
     return Array.from({ length: 5 }, (_, i) => start + i)
   }, [page, totalPages])
 
-  const totalXp = filtered.reduce((s, r) => s + (r.points ?? 0), 0)
-
-  if (loading) return (
+  if (isLoading) return (
     <div className="py-10 text-sm text-center text-muted-foreground">Loading activities…</div>
   )
 
@@ -283,8 +288,8 @@ export function ActivityList({ onEdit, onFollowUp, refresh = 0 }: Props) {
           onChange={setFilterBranch}
           placeholder="All Branches"
         />
-        <div className="ml-auto text-xs text-muted-foreground">
-          {filtered.length} records · <span className="font-semibold text-foreground">{totalXp} XP</span>
+        <div className={cn("ml-auto text-xs text-muted-foreground transition-opacity", isFetching && "opacity-60")}>
+          {total} records · <span className="font-semibold text-foreground">{totalXp} XP</span>
         </div>
       </div>
 
@@ -301,7 +306,7 @@ export function ActivityList({ onEdit, onFollowUp, refresh = 0 }: Props) {
       </div>
 
       {/* ── List ────────────────────────────────────────── */}
-      <div>
+      <div className={cn("transition-opacity", isFetching && "opacity-70")}>
         {paginated.length === 0 ? (
           <div className="py-10 text-sm text-center text-muted-foreground">No activities found.</div>
         ) : (
@@ -314,7 +319,7 @@ export function ActivityList({ onEdit, onFollowUp, refresh = 0 }: Props) {
       {/* ── Pagination ──────────────────────────────────── */}
       {totalPages > 1 && (
         <div className="px-4 py-3 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
-          <span>{filtered.length} result{filtered.length !== 1 ? "s" : ""}</span>
+          <span>{total} result{total !== 1 ? "s" : ""}</span>
           <div className="flex items-center gap-1">
             <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs"
               onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>

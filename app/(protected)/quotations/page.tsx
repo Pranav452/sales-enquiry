@@ -1,11 +1,10 @@
 import { redirect } from "next/navigation"
-import { createClient } from "@/lib/supabase/server"
+import { getSessionUser } from "@/lib/auth/session"
 import { QuotationList } from "@/components/quotation/QuotationList"
 import Link from "next/link"
 
 export default async function QuotationsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) redirect("/login")
 
   return (

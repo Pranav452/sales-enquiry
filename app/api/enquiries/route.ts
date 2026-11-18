@@ -3,6 +3,8 @@ import { getAuthContext } from "@/lib/api-auth"
 import { getPool } from "@/lib/mssql/client"
 import { insertEnquiry, type EnquiryPayload } from "@/lib/mssql/insert-enquiry"
 import { enquiryVisibilityCondition } from "@/lib/mssql/enquiry-access"
+import { pagedQuery, readPaging, readSearch } from "@/lib/mssql/paginate"
+import { SALESPERSON_CODE_MAP } from "@/lib/constants/dropdowns"
 
 // ─── Column map (app field → MSSQL column) ───────────────────
 // ENQRECPTDT is varchar(10) — store as 'YYYY-MM-DD' string
@@ -78,16 +80,55 @@ export async function GET(_req: NextRequest) {
     const pool = await getPool(auth.company)
     const req = pool.request()
 
-    const mine = _req.nextUrl.searchParams.get("mine") === "true"
-    let where = ""
+    const sp = _req.nextUrl.searchParams
+    const mine = sp.get("mine") === "true"
+    const conds: string[] = []
     if (mine) {
       // Recent tab — only rows this user created in the new system
       req.input("created_by", auth.userId)
-      where = "WHERE CREATED_BY = @created_by"
+      conds.push("e.CREATED_BY = @created_by")
     } else {
       // Shared with the link-enquiry suggestion search — see lib/mssql/enquiry-access
       const cond = enquiryVisibilityCondition(req, auth, "e.")
-      if (cond) where = `WHERE ${cond}`
+      if (cond) conds.push(`(${cond})`)
+    }
+
+    const paged = sp.has("page")
+    const q = paged ? readSearch(sp) : null
+    if (q) {
+      req.input("q", q.replace(/[\[%_]/g, "[$&]")) // escape LIKE wildcards
+      const searchCols = [
+        "e.ENQREFNO", "e.SHIPPER", "e.CONSIGNEE", "e.POL", "e.POD", "e.SALESPERSON",
+        "e.BRANCH", "e.STATUS", "e.REMARK", "e.EMAIL_SUBJECT", "e.AGENT_NAME",
+      ]
+      const parts = searchCols.map((c) => `${c} LIKE '%' + @q + '%'`)
+      // Sales person is displayed by name but stored as a legacy code for old rows.
+      const ql = q.toLowerCase()
+      const codes = Object.entries(SALESPERSON_CODE_MAP)
+        .filter(([, name]) => name.toLowerCase().includes(ql))
+        .map(([code]) => code)
+      if (codes.length) {
+        const names = codes.map((c, i) => {
+          req.input(`sp${i}`, c)
+          return `@sp${i}`
+        })
+        parts.push(`e.SALESPERSON IN (${names.join(", ")})`)
+      }
+      conds.push(`(${parts.join(" OR ")})`)
+    }
+    const where = conds.join(" AND ")
+
+    if (paged) {
+      const { page, limit } = readPaging(sp)
+      const { rows, total } = await pagedQuery(req, {
+        select: `${SELECT_COLS}, ${QUOTATION_COLS}`,
+        from: `[dbo].[TBL_ADMIN_SALESENQUIRY] e ${QUOTATION_APPLY}`,
+        where: where || undefined,
+        orderBy: "e.PK_ID DESC",
+        page,
+        limit,
+      })
+      return NextResponse.json({ data: rows, total, page, limit })
     }
 
     const result = await req.query(`
@@ -95,7 +136,7 @@ export async function GET(_req: NextRequest) {
       ${QUOTATION_COLS}
       FROM [dbo].[TBL_ADMIN_SALESENQUIRY] e
       ${QUOTATION_APPLY}
-      ${where}
+      ${where ? `WHERE ${where}` : ""}
       ORDER BY e.PK_ID DESC
     `)
 

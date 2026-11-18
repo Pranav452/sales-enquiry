@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { displayStatus } from "@/lib/constants/dropdowns"
 
@@ -97,24 +98,41 @@ function groupBySessions(entries: AuditEntry[]) {
 export default function AuditPage() {
   const [list, setList]           = useState<AuditSummary[]>([])
   const [loading, setLoading]     = useState(true)
+  const [loadedPage, setLoadedPage] = useState(0)
+  const [page, setPage]           = useState(1)
+  const fetching = loadedPage !== 0 && loadedPage !== page
+  const [total, setTotal]         = useState(0)
   const [error, setError]         = useState<string | null>(null)
   const [selected, setSelected]   = useState<AuditSummary | null>(null)
   const [detail, setDetail]       = useState<AuditEntry[]>([])
   const [detailLoading, setDetailLoading] = useState(false)
 
+  const PAGE_SIZE = 20
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+
   useEffect(() => {
-    fetch("/api/audit")
+    let cancelled = false
+    fetch(`/api/audit?page=${page}&limit=${PAGE_SIZE}`)
       .then(async (res) => {
         if (res.status === 403) throw new Error("Admin access required")
         if (!res.ok) throw new Error("Failed to load audit log")
         return res.json()
       })
-      .then((data) => { setList(data); setLoading(false) })
+      .then((json: { data: AuditSummary[]; total: number }) => {
+        if (cancelled) return
+        setList(json.data)
+        setTotal(json.total)
+        setLoading(false)
+        setLoadedPage(page)
+      })
       .catch((err: unknown) => {
+        if (cancelled) return
         setError(err instanceof Error ? err.message : "Error")
         setLoading(false)
+        setLoadedPage(page)
       })
-  }, [])
+    return () => { cancelled = true }
+  }, [page])
 
   function handleSelect(row: AuditSummary) {
     setSelected(row)
@@ -142,11 +160,11 @@ export default function AuditPage() {
         <div className="px-4 py-4 border-b border-border">
           <h1 className="text-sm font-semibold text-foreground">Audit Log</h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {list.length} enquir{list.length === 1 ? "y" : "ies"} with changes
+            {total} enquir{total === 1 ? "y" : "ies"} with changes
           </p>
         </div>
 
-        <div className="flex-1 overflow-y-auto divide-y divide-border">
+        <div className={`flex-1 overflow-y-auto divide-y divide-border transition-opacity ${fetching ? "opacity-60" : ""}`}>
           {list.length === 0 ? (
             <div className="px-4 py-8 text-xs text-muted-foreground text-center">
               No changes recorded yet.
@@ -177,6 +195,20 @@ export default function AuditPage() {
             </button>
           ))}
         </div>
+
+        {totalPages > 1 && (
+          <div className="px-3 py-2 border-t border-border flex items-center justify-between gap-2 text-xs text-muted-foreground">
+            <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs"
+              disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+              Prev
+            </Button>
+            <span>{page} / {totalPages}</span>
+            <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs"
+              disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+              Next
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* ── Right: Detail pane ─────────────────────────────────── */}

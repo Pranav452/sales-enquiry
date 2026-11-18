@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getAuthContext } from "@/lib/api-auth"
 import { getPool } from "@/lib/mssql/client"
-import { LEAD_STATUS_VALUES } from "@/lib/constants/sales-leads"
+import { LEAD_STATUSES, LEAD_STATUS_VALUES } from "@/lib/constants/sales-leads"
+import { pagedQuery, readPaging, readSearch } from "@/lib/mssql/paginate"
 
 const SELECT_COLS = `
   CAST(ID AS varchar(20)) AS id,
@@ -51,36 +52,98 @@ const SELECT_COLS = `
   SENDER_PHONE            AS sender_phone
 `
 
+// Free-text search columns (one bound @q, literal substring match)
+const SEARCH_COLS = [
+  "REF_CODE", "SENT_BY", "SHIPPER", "CITY", "CONSIGNEE", "DEST_COUNTRY",
+  "AGENT_NAME", "AGENT_COMPANY", "AGENT_EMAIL", "REMARKS", "REMARKS_2", "NOTES",
+  "COMMODITY", "HS_CODE", "MODE_OF_TRANSPORT", "ORIGIN_COUNTRY",
+  "ORIGIN_PORT", "DEST_PORT", "ORIGIN_PORT_CODE", "DEST_PORT_CODE",
+]
+
+/** Escape LIKE wildcards so the search is a plain substring match. */
+function likeLiteral(v: string): string {
+  return v.replace(/\[/g, "[[]").replace(/%/g, "[%]").replace(/_/g, "[_]")
+}
+
 // ─── GET /api/sales-leads ─────────────────────────────────────
-export async function GET(_req: NextRequest) {
+// Without `page`: bare array of every visible lead (legacy).
+// With `page`:    { data, total, page, limit, won } — filtered by q / status / person / country.
+export async function GET(request: NextRequest) {
   const auth = await getAuthContext()
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   try {
     const pool = await getPool(auth.company)
     const req  = pool.request()
+    const sp   = request.nextUrl.searchParams
 
-    let where = ""
+    const conds: string[] = []
     if (auth.role !== "admin") {
       // Non-admins see leads they created or leads sent under their salesperson name
       req.input("created_by", auth.userId)
       req.input("sp", (auth.salesperson ?? "").toUpperCase())
-      where = "WHERE (CREATED_BY = @created_by OR UPPER(SENT_BY) = @sp)"
+      conds.push("(CREATED_BY = @created_by OR UPPER(SENT_BY) = @sp)")
     }
 
-    const result = await req.query(`
-      SELECT ${SELECT_COLS}
-      FROM [dbo].[TBL_SALES_LEADS]
-      ${where}
-      ORDER BY ID DESC
-    `)
+    if (!sp.has("page")) {
+      const result = await req.query(`
+        SELECT ${SELECT_COLS}
+        FROM [dbo].[TBL_SALES_LEADS]
+        ${conds.length ? `WHERE ${conds.join(" AND ")}` : ""}
+        ORDER BY ID DESC
+      `)
+      return NextResponse.json(result.recordset)
+    }
 
-    return NextResponse.json(result.recordset)
+    const { page, limit } = readPaging(sp)
+
+    const status = (sp.get("status") ?? "").trim()
+    if (status) {
+      if (!LEAD_STATUS_VALUES.has(status)) return NextResponse.json({ error: "Invalid status" }, { status: 400 })
+      req.input("status", status)
+      conds.push("STATUS = @status")
+    }
+    const person = readSearch(sp, "person", 50)
+    if (person) {
+      req.input("person", person)
+      conds.push("SENT_BY = @person")
+    }
+    const country = readSearch(sp, "country", 150)
+    if (country) {
+      req.input("country", country)
+      conds.push("DEST_COUNTRY = @country")
+    }
+
+    const q = readSearch(sp)
+    if (q) {
+      req.input("q", likeLiteral(q))
+      const ors = SEARCH_COLS.map((c) => `${c} LIKE '%' + @q + '%'`)
+      // Status is stored as a code; match its display label too ("won", "quoted"…)
+      const ql = q.toLowerCase()
+      const statusHits = LEAD_STATUSES.filter((s) => s.label.toLowerCase().includes(ql)).map((s) => s.value)
+      statusHits.forEach((v, i) => req.input(`qs${i}`, v))
+      if (statusHits.length) ors.push(`STATUS IN (${statusHits.map((_, i) => `@qs${i}`).join(", ")})`)
+      conds.push(`(${ors.join(" OR ")})`)
+    }
+
+    const { rows, total } = await pagedQuery<SalesLeadRow>(req, {
+      select: `SUM(CASE WHEN STATUS = 'WON' THEN 1 ELSE 0 END) OVER () AS __won, ${SELECT_COLS}`,
+      from: "[dbo].[TBL_SALES_LEADS]",
+      where: conds.join(" AND ") || undefined,
+      orderBy: "ID DESC",
+      page, limit,
+    })
+
+    const won = rows.length ? Number(rows[0].__won ?? 0) : 0
+    const data = rows.map(({ __won, ...rest }) => { void __won; return rest })
+    return NextResponse.json({ data, total, page, limit, won })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Database error"
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
+
+type SalesLeadRow = Record<string, unknown> & { __won?: number }
 
 // ─── POST /api/sales-leads ────────────────────────────────────
 export async function POST(req: NextRequest) {

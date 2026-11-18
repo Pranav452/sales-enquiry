@@ -1,17 +1,11 @@
 import { redirect } from "next/navigation"
-import { createClient } from "@/lib/supabase/server"
+import { getProfile, getSessionUser } from "@/lib/auth/session"
 import { RateManageTable } from "@/components/rates/RateManageTable"
 
 export default async function ManageRatesPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) redirect("/login")
-
-  const { data: profile } = await supabase
-    .from("user_profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single()
+  const profile = await getProfile(user)
 
   if (profile?.role !== "admin") redirect("/rates")
 

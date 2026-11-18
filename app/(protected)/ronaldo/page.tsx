@@ -1,16 +1,10 @@
 import { redirect } from "next/navigation"
-import { createClient } from "@/lib/supabase/server"
+import { getProfile, getSessionUser } from "@/lib/auth/session"
 
 export default async function RonaldoPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) redirect("/login")
-
-  const { data: profile } = await supabase
-    .from("user_profiles")
-    .select("email")
-    .eq("id", user.id)
-    .single()
+  const profile = await getProfile(user)
 
   const email = profile?.email || user.email || ""
   if (email !== "sales2.bom@manilal.com") redirect("/enquiry")

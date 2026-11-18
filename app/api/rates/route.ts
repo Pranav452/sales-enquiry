@@ -31,6 +31,8 @@ const SELECT_COLS = `
 // ?origin_country=INDIA&dest_country=BRAZIL  → search by route (plain array)
 // ?admin=true&page=1&limit=20&origin_port=X&dest_port=Y&shipping_line=Z
 //                                            → paginated admin list { data, total }
+let lastExpiredCleanup = 0
+
 export async function GET(req: NextRequest) {
   const auth = await getAuthContext()
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -52,16 +54,18 @@ export async function GET(req: NextRequest) {
   try {
     const pool    = await getPool("manilal")
 
-    // ── Hard-delete expired rates (fire-and-forget) ───────────
+    // ── Hard-delete expired rates (truly fire-and-forget) ─────
     // Rates where VALID_TO is set and is before today are deleted from the DB entirely.
-    // Wrapped in try/catch so a cleanup failure never blocks the main query.
-    try {
-      await pool.request().query(`
+    // Perf: run at most once an hour per server process and don't await it, so
+    // it no longer adds a DB round trip in front of every rate search.
+    if (Date.now() - lastExpiredCleanup > 60 * 60 * 1000) {
+      lastExpiredCleanup = Date.now()
+      pool.request().query(`
         DELETE FROM [dbo].[FREIGHT_RATES]
         WHERE VALID_TO IS NOT NULL
           AND VALID_TO < CONVERT(date, GETDATE())
-      `)
-    } catch { /* non-critical — proceed with read */ }
+      `).catch(() => { /* non-critical */ })
+    }
 
     const request = pool.request()
 
