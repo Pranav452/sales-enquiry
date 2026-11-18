@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getAuthContext } from "@/lib/api-auth"
 import { getPool } from "@/lib/mssql/client"
+import { pagedQuery, readPaging, readSearch } from "@/lib/mssql/paginate"
 import { getActivityPoints, ACTIVITY_TYPE_MAP } from "@/lib/constants/activities"
 
 const SELECT_COLS = `
@@ -27,29 +28,65 @@ const SELECT_COLS = `
 `
 
 // ─── GET /api/activities ──────────────────────────────────────
-export async function GET(_req: NextRequest) {
+export async function GET(req: NextRequest) {
   const auth = await getAuthContext()
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   try {
-    const pool = await getPool(auth.company)
-    const req  = pool.request()
+    const pool   = await getPool(auth.company)
+    const params = req.nextUrl.searchParams
+    const paged  = params.has("page")
 
-    let where = ""
-    if (auth.role !== "admin") {
-      // Non-admins only see their own activity rows
-      req.input("created_by", auth.userId)
-      where = "WHERE CREATED_BY = @created_by"
+    // Builds a request + WHERE with all inputs bound (called once per query).
+    const build = () => {
+      const request = pool.request()
+      const conds: string[] = []
+      if (auth.role !== "admin") {
+        // Non-admins only see their own activity rows
+        request.input("created_by", auth.userId)
+        conds.push("CREATED_BY = @created_by")
+      }
+      const q = readSearch(params)
+      if (q) {
+        request.input("q", q)
+        conds.push(
+          "(" + ["CLIENT_NAME", "CONTACT_PERSON", "SALES_PERSON", "NOTES", "COMMODITY", "POL", "POD"]
+            .map((c) => `${c} LIKE '%' + @q + '%'`).join(" OR ") + ")"
+        )
+      }
+      for (const [param, col] of [["type", "ACTIVITY_TYPE"], ["status", "STATUS"], ["branch", "BRANCH"]] as const) {
+        const v = readSearch(params, param, 50)
+        if (v) {
+          request.input(param, v)
+          conds.push(`${col} = @${param}`)
+        }
+      }
+      return { request, where: conds.join(" AND ") }
     }
 
-    const result = await req.query(`
-      SELECT ${SELECT_COLS}
-      FROM [dbo].[TBL_CALLS_VISITS]
-      ${where}
-      ORDER BY ACTIVITY_DATE DESC, ID DESC
-    `)
+    const from = "[dbo].[TBL_CALLS_VISITS]"
 
-    return NextResponse.json(result.recordset)
+    if (!paged) {
+      const { request, where } = build()
+      const result = await request.query(`
+        SELECT ${SELECT_COLS}
+        FROM ${from}
+        ${where ? `WHERE ${where}` : ""}
+        ORDER BY ACTIVITY_DATE DESC, ID DESC
+      `)
+      return NextResponse.json(result.recordset)
+    }
+
+    const { page, limit } = readPaging(params)
+    const a = build()
+    const b = build()
+    const [{ rows, total }, sum] = await Promise.all([
+      pagedQuery(a.request, { select: SELECT_COLS, from, where: a.where, orderBy: "ACTIVITY_DATE DESC, ID DESC", page, limit }),
+      b.request.query(`SELECT ISNULL(SUM(POINTS), 0) AS pts FROM ${from} ${b.where ? `WHERE ${b.where}` : ""}`),
+    ])
+    const totalPoints = Number(sum.recordset[0]?.pts ?? 0)
+
+    return NextResponse.json({ data: rows, total, page, limit, totalPoints })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Database error"
     return NextResponse.json({ error: message }, { status: 500 })

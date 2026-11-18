@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getAuthContext } from "@/lib/api-auth"
 import { getPool, sql, friendlyDbError } from "@/lib/mssql/client"
 import { generateQuotRefNo, generateLinkedQuotRefNo } from "@/lib/mssql/quot-ref"
+import { pagedQuery, readPaging, readSearch } from "@/lib/mssql/paginate"
 import { buildLocalBlob, buildCcBlob } from "@/lib/quotation-charges"
 
 // ─── GET — list quotations ────────────────────────────────────
@@ -12,34 +13,61 @@ export async function GET(req: NextRequest) {
 
   const { role, company, salesperson } = auth
   const pool = await getPool(company)
+  const sp = req.nextUrl.searchParams
+  const paged = sp.has("page")
 
-  const whereClause = role === "admin"
-    ? ""
-    : "WHERE q.CREATED_BY = @created_by"
+  const request = pool.request()
+  const conds: string[] = []
+  if (role !== "admin") {
+    request.input("created_by", sql.NVarChar, salesperson ?? auth.email)
+    conds.push("q.CREATED_BY = @created_by")
+  }
+  const term = paged ? readSearch(sp) : null
+  if (term) {
+    request.input("q", sql.NVarChar, term.replace(/[\[%_]/g, "[$&]")) // escape LIKE wildcards
+    const cols = [
+      "q.QUOT_REF_NO", "e.ENQREFNO", "q.SHIPPER", "q.POL", "q.POD",
+      "q.MODE", "q.EXIM", "q.SALES_PERSON", "q.BRANCH",
+    ]
+    conds.push(`(${cols.map((c) => `${c} LIKE '%' + @q + '%'`).join(" OR ")})`)
+  }
+  const where = conds.join(" AND ")
 
   // List view only renders/searches a handful of light columns. Select
   // exactly those — the heavy NVARCHAR(MAX) blobs (LOCAL_CHARGES,
-  // CC_CHARGES, TRANSPORT_COST, CLAUSES) are never shown here and were
-  // bloating the payload for every row. The full record is fetched
-  // per-quotation by the [id] route when editing.
-  const result = await pool
-    .request()
-    .input("created_by", sql.NVarChar, salesperson ?? auth.email)
-    .query(`
-      SELECT
+  // CC_CHARGES, TRANSPORT_COST, CLAUSES) are never shown here. The full
+  // record is fetched per-quotation by the [id] route when editing.
+  const select = `
         q.QUOT_ID, q.QUOT_REF_NO, q.QUOT_DATE, q.MODE, q.EXIM, q.SHIPPER,
         q.POL, q.POD, q.SHIPMENT_TYPE, q.TOTAL_INR, q.TOTAL_DISPLAY,
         q.DISPLAY_CURRENCY, q.SHIPPING_LINE, q.QUOTED_RATE, q.ENQ_ID,
         q.SALES_PERSON, q.BRANCH, ISNULL(q.STATUS, 'DRAFT') AS STATUS,
         q.CREATED_AT,
-        e.ENQREFNO AS ENQ_REF_NO
-      FROM [dbo].[TBL_QUOTATIONS] q
-      LEFT JOIN [dbo].[TBL_ADMIN_SALESENQUIRY] e ON e.PK_ID = q.ENQ_ID
-      ${whereClause}
+        e.ENQREFNO AS ENQ_REF_NO`
+  const from = `[dbo].[TBL_QUOTATIONS] q
+      LEFT JOIN [dbo].[TBL_ADMIN_SALESENQUIRY] e ON e.PK_ID = q.ENQ_ID`
+
+  try {
+    if (paged) {
+      const { page, limit } = readPaging(sp)
+      const { rows, total } = await pagedQuery(request, {
+        select, from, where: where || undefined,
+        orderBy: "q.CREATED_AT DESC, q.QUOT_ID DESC",
+        page, limit,
+      })
+      return NextResponse.json({ data: rows, total, page, limit })
+    }
+
+    const result = await request.query(`
+      SELECT ${select}
+      FROM ${from}
+      ${where ? `WHERE ${where}` : ""}
       ORDER BY q.CREATED_AT DESC
     `)
-
-  return NextResponse.json(result.recordset)
+    return NextResponse.json(result.recordset)
+  } catch (err: unknown) {
+    return NextResponse.json({ error: friendlyDbError(err) }, { status: 500 })
+  }
 }
 
 // ─── POST — create quotation ──────────────────────────────────

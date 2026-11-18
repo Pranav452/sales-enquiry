@@ -1,15 +1,16 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import { useUser } from "@/components/layout/UserContext"
+import { usePagedList, useDebounced, type PagedResponse } from "@/lib/hooks/usePagedList"
 import { ActivityForm } from "@/components/activities/ActivityForm"
 import { Timeline, type TimelineItem } from "@/components/ui/timeline"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
-import * as XLSX from "xlsx"
 import {
   Upload, Search, X, Trash2, Phone, Mail, FileDown,
   MapPin, User, AlertCircle, CheckCircle2, ChevronLeft,
@@ -66,6 +67,17 @@ interface ParsedRow {
 }
 
 type RowField = keyof ParsedRow
+
+type DeadFilter = "active" | "dead" | "all"
+
+interface ContactCounts {
+  imported: number
+  activity: number
+  dead:     number
+  active:   number
+}
+
+type ContactsResponse = PagedResponse<Contact> & { counts?: ContactCounts }
 
 // ─── Constants ─────────────────────────────────────────────────
 
@@ -728,8 +740,6 @@ function ExcelFormatHint({ onUpload }: { onUpload: () => void }) {
 export default function ContactsPage() {
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const [contacts,    setContacts]    = useState<Contact[]>([])
-  const [loading,     setLoading]     = useState(true)
   const [query,       setQuery]       = useState("")
   const [page,        setPage]        = useState(1)
 
@@ -743,57 +753,34 @@ export default function ContactsPage() {
   const [detailContact, setDetailContact] = useState<Contact | null>(null)
 
   // Dead lead filter: "active" | "dead" | "all"
-  const [deadFilter, setDeadFilter] = useState<"active" | "dead" | "all">("active")
+  const [deadFilter, setDeadFilter] = useState<DeadFilter>("active")
 
-  const [userInfo, setUserInfo] = useState<{ role: string; salesperson: string | null } | null>(null)
+  const user = useUser()
 
-  useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) return
-      const { data } = await supabase
-        .from("user_profiles")
-        .select("role, salesperson")
-        .eq("id", user.id)
-        .single()
-      setUserInfo({ role: data?.role ?? "sales", salesperson: data?.salesperson ?? null })
-    })
-  }, [])
+  // Server-side search + filter + paging
+  const debouncedQuery = useDebounced(query.trim(), 300)
+  const listParams = useMemo(() => ({ q: debouncedQuery, dead: deadFilter }), [debouncedQuery, deadFilter])
+  const {
+    rows: pageContacts, total, totalPages, isLoading: loading, isFetching, invalidate,
+  } = usePagedList<Contact>("/api/contacts", page, listParams, PAGE_SIZE)
 
-  const fetchContacts = useCallback(async () => {
-    setLoading(true)
-    try {
-      const res = await fetch("/api/contacts")
-      if (res.ok) setContacts(await res.json())
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => { fetchContacts() }, [fetchContacts])
-
-  const filtered = contacts.filter((c) => {
-    // Dead lead filter
-    const dead = !!c.is_dead_lead
-    if (deadFilter === "active" && dead)  return false
-    if (deadFilter === "dead"   && !dead) return false
-    // Text search
-    if (!query) return true
-    const q = query.toLowerCase()
-    return (
-      c.shipper_name?.toLowerCase().includes(q)   ||
-      c.consignee_name?.toLowerCase().includes(q) ||
-      c.mode?.toLowerCase().includes(q)           ||
-      c.pol?.toLowerCase().includes(q)            ||
-      c.pod?.toLowerCase().includes(q)            ||
-      c.contact_person?.toLowerCase().includes(q) ||
-      c.contact_number?.toLowerCase().includes(q) ||
-      c.email?.toLowerCase().includes(q)
-    )
+  // The paged response also carries whole-set header counts. Read them from the
+  // same cache entry usePagedList fills (no extra request).
+  const { data: pagedData } = useQuery<ContactsResponse>({
+    queryKey: ["/api/contacts", { ...listParams, page, limit: PAGE_SIZE }],
+    enabled: false,
+    placeholderData: keepPreviousData,
   })
+  const counts = pagedData?.counts
+  const importedCount = counts?.imported ?? 0
+  const activityCount = counts?.activity ?? 0
+  const allCount      = importedCount + activityCount
 
-  const totalPages   = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const pageContacts = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  // A delete/toggle can shrink the result set below the current page
+  useEffect(() => {
+    if (!loading && page > totalPages) setPage(totalPages)
+  }, [loading, page, totalPages])
+
   function handleQueryChange(v: string) { setQuery(v); setPage(1) }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -831,38 +818,35 @@ export default function ContactsPage() {
       const parts = [`${json.inserted} contact${json.inserted !== 1 ? "s" : ""} imported`]
       if (json.skipped > 0) parts.push(`${json.skipped} skipped (already exist)`)
       setImportMsg(parts.join(" · ") + ".")
-      fetchContacts()
+      void invalidate()
     } finally { setImporting(false) }
   }
 
   async function handleToggleDeadLead(contact: Contact) {
     const newVal = !contact.is_dead_lead
-    // Optimistically update local state
-    setContacts((prev) =>
-      prev.map((c) => c.id === contact.id ? { ...c, is_dead_lead: newVal } : c)
-    )
     try {
       await fetch("/api/contacts/dead-lead", {
         method:  "PATCH",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({ client_name: contact.shipper_name || contact.consignee_name, is_dead_lead: newVal }),
       })
-    } catch {
-      // Revert on failure
-      setContacts((prev) =>
-        prev.map((c) => c.id === contact.id ? { ...c, is_dead_lead: !newVal } : c)
-      )
+    } finally {
+      void invalidate()
     }
   }
 
   async function handleDelete(id: string) {
     if (!id.startsWith("c_")) return
     if (!confirm("Delete this contact?")) return
-    await fetch(`/api/contacts/${id.slice(2)}`, { method: "DELETE" })
-    setContacts((prev) => prev.filter((c) => c.id !== id))
+    try {
+      await fetch(`/api/contacts/${id.slice(2)}`, { method: "DELETE" })
+    } finally {
+      void invalidate()
+    }
   }
 
-  function downloadTemplate() {
+  async function downloadTemplate() {
+    const XLSX = await import("xlsx")
     const headers = ["SHIPPER NAME","CONSIGNEE NAME","SEA/AIR","POL","POD","CONTACT PERSON","CONTACT","EMAIL ID"]
     const examples = [
       { "SHIPPER NAME": "ABC Textiles Pvt Ltd", "CONSIGNEE NAME": "Global Traders GmbH", "SEA/AIR": "SEA", "POL": "JNPT", "POD": "HAMBURG", "CONTACT PERSON": "Ramesh Kumar", "CONTACT": "91-9876543210", "EMAIL ID": "ramesh@abctextiles.com" },
@@ -875,9 +859,7 @@ export default function ContactsPage() {
     XLSX.writeFile(wb, "contacts_template.xlsx")
   }
 
-  const isAdmin       = userInfo?.role === "admin"
-  const importedCount = contacts.filter((c) => c.source === "contact").length
-  const activityCount = contacts.filter((c) => c.source === "activity").length
+  const isAdmin = user?.role === "admin"
 
   return (
     <div className="p-4 max-w-screen-xl mx-auto space-y-5">
@@ -887,7 +869,7 @@ export default function ContactsPage() {
         <div>
           <h1 className="text-xl font-semibold text-foreground">Contacts</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {!loading && contacts.length > 0
+            {!loading && allCount > 0
               ? [importedCount > 0 && `${importedCount} imported`, activityCount > 0 && `${activityCount} from Activity Tracker`].filter(Boolean).join(" · ")
               : "Import from Excel · click any card to see call timeline"}
           </p>
@@ -958,9 +940,9 @@ export default function ContactsPage() {
 
         {!loading && (
           <span className="text-xs text-muted-foreground whitespace-nowrap">
-            {filtered.length === contacts.length
-              ? `${contacts.length} contact${contacts.length !== 1 ? "s" : ""}`
-              : `${filtered.length} of ${contacts.length}`}
+            {total === allCount
+              ? `${allCount} contact${allCount !== 1 ? "s" : ""}`
+              : `${total} of ${allCount}`}
           </span>
         )}
       </div>
@@ -969,7 +951,7 @@ export default function ContactsPage() {
       {loading ? (
         <div className="py-16 text-center text-sm text-muted-foreground">Loading contacts…</div>
       ) : pageContacts.length === 0 ? (
-        query ? (
+        debouncedQuery ? (
           <div className="py-20 text-center space-y-2">
             <Search className="h-7 w-7 text-muted-foreground/40 mx-auto" />
             <p className="text-sm font-medium">No contacts match your search</p>
@@ -978,12 +960,15 @@ export default function ContactsPage() {
           <ExcelFormatHint onUpload={() => { setParseError(null); fileRef.current?.click() }} />
         )
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        <div className={cn(
+          "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 transition-opacity",
+          isFetching && "opacity-60"
+        )}>
           {pageContacts.map((c) => (
             <ContactCard
               key={c.id}
               contact={c}
-              query={query}
+              query={debouncedQuery}
               onClick={setDetailContact}
               onDelete={handleDelete}
               onToggleDeadLead={handleToggleDeadLead}
@@ -1024,7 +1009,7 @@ export default function ContactsPage() {
       {detailContact && (
         <ClientDetailModal
           contact={detailContact}
-          defaultSalesPerson={userInfo?.salesperson ?? undefined}
+          defaultSalesPerson={user?.salesperson ?? undefined}
           onClose={() => setDetailContact(null)}
         />
       )}

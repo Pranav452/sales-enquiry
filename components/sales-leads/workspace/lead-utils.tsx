@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react"
 import { Plane, Ship, TrainFront, Truck, MoveRight, type LucideProps } from "lucide-react"
-import { LEAD_STATUSES, LEAD_STATUS_MAP } from "@/lib/constants/sales-leads"
+import { LEAD_STATUS_MAP } from "@/lib/constants/sales-leads"
 import type { SalesLead } from "@/components/sales-leads/SalesLeadList"
 
 // ── Design text roles (Figma "Text/Subtle" and "Text/Disabled") ───────────────
@@ -188,7 +188,7 @@ export function statusLabel(status: string | null | undefined): string {
   return s ? LEAD_STATUS_MAP[s]?.label ?? s : ""
 }
 
-// ── Filtering ─────────────────────────────────────────────────────────────────
+// ── Filters (applied server-side by GET /api/sales-leads) ────────────────────
 
 export interface LeadFilters {
   status: string
@@ -197,43 +197,6 @@ export interface LeadFilters {
 }
 
 export const EMPTY_FILTERS: LeadFilters = { status: "", person: "", country: "" }
-
-const SEARCH_FIELDS: (keyof SalesLead)[] = [
-  "ref_code", "sent_by", "shipper", "shipper_website", "city", "consignee", "dest_country",
-  "agent_name", "agent_email", "agent_company", "remarks", "remarks_2", "notes",
-  "shipper_address", "consignee_address", "consignee_website", "mode_of_transport",
-  "origin_port", "dest_port", "origin_country", "origin_port_code", "dest_port_code",
-  "commodity", "hs_code", "special_requirements", "rate_fcl", "rate_lcl", "rate_20gp",
-  "rate_40hc", "rate_currency", "rate_validity", "rate_notes", "consignee_contact", "consignee_email",
-  "consignee_phone", "sender_designation", "sender_email", "sender_phone",
-]
-
-export function filterLeads(rows: SalesLead[], filters: LeadFilters, search: string): SalesLead[] {
-  let result = rows
-  if (filters.status) result = result.filter((r) => r.status === filters.status)
-  if (filters.person) result = result.filter((r) => r.sent_by === filters.person)
-  if (filters.country) result = result.filter((r) => r.dest_country === filters.country)
-  const q = search.trim().toLowerCase()
-  if (q) {
-    result = result.filter((r) =>
-      SEARCH_FIELDS.some((k) => {
-        const v = r[k]
-        return typeof v === "string" && v.toLowerCase().includes(q)
-      }) || statusLabel(r.status).toLowerCase().includes(q)
-    )
-  }
-  return result
-}
-
-export function filterOptions(rows: SalesLead[]) {
-  const uniq = (vals: (string | null | undefined)[]) =>
-    [...new Set(vals.filter((v): v is string => !!v))].sort()
-  return {
-    statuses: LEAD_STATUSES.map((s) => ({ value: s.value, label: s.label })),
-    persons: uniq(rows.map((r) => r.sent_by)).map((p) => ({ value: p, label: p })),
-    countries: uniq(rows.map((r) => r.dest_country)).map((c) => ({ value: c, label: c })),
-  }
-}
 
 // ── Contact helpers ───────────────────────────────────────────────────────────
 

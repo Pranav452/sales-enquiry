@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState, type ComponentProps } from "r
 // import { MotionConfig } from "framer-motion"
 // import { Award, Gamepad2, Hexagon, Layers, List, Plus, Users, X } from "lucide-react"
 import { List, Plus, X } from "lucide-react"
-import { createClient } from "@/lib/supabase/client"
+import { useUser } from "@/components/layout/UserContext"
 import { ActivityForm } from "@/components/activities/ActivityForm"
 import { ActivityList, type Activity } from "@/components/activities/ActivityList"
 import { Button } from "@/components/ui/button"
@@ -32,8 +32,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 //   { ssr: false, loading: () => <PanelMessage title="Hexagone" body="Loading..." /> },
 // )
 
-interface UserInfo { role: string; salesperson: string | null }
-
 type FormDefaults = NonNullable<ComponentProps<typeof ActivityForm>["defaultValues"]>
 
 type HubTab = "log" | "leaderboard" | "trophies" | "progression" | "arcade" | "hexagone"
@@ -53,7 +51,7 @@ function isHubTab(v: string): v is HubTab {
 }
 
 export default function ActivitiesPage() {
-  const [userInfo, setUserInfo]                 = useState<UserInfo | null>(null)
+  const userInfo                              = useUser()
   const [showForm, setShowForm]                 = useState(false)
   const [editingActivity, setEditing]           = useState<Activity | null>(null)
   const [followUpDefaults, setFollowUpDefaults] = useState<FormDefaults | null>(null)
@@ -71,19 +69,6 @@ export default function ActivitiesPage() {
   // const me = data?.me ?? null
   //
   // useEffect(() => { void ensure() }, [ensure])
-
-  useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) return
-      const { data } = await supabase
-        .from("user_profiles")
-        .select("role, salesperson")
-        .eq("id", user.id)
-        .single()
-      setUserInfo({ role: data?.role ?? "sales", salesperson: data?.salesperson ?? null })
-    })
-  }, [])
 
   // Bring the log/edit form into view whenever it is opened.
   useEffect(() => {

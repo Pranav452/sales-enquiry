@@ -2,63 +2,31 @@
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react"
 import { useSearchParams } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
+import { useQueryClient } from "@tanstack/react-query"
 import { cn } from "@/lib/utils"
 import { LEAD_STATUS_MAP } from "@/lib/constants/sales-leads"
+import { useUser } from "@/components/layout/UserContext"
 import type { SalesLead } from "@/components/sales-leads/SalesLeadList"
 import { SalesLeadWorkspace } from "@/components/sales-leads/workspace/SalesLeadWorkspace"
 import { LeadFormDrawer } from "@/components/sales-leads/workspace/LeadFormDrawer"
+import { invalidateLeads, patchLeadInCache } from "@/components/sales-leads/workspace/lead-queries"
 
-interface UserInfo { role: string; salesperson: string | null; company: string; email: string | null }
 interface Flash { text: string; tone: "success" | "error" }
 
 function SalesLeadsPageContent() {
   const searchParams = useSearchParams()
   const [initialLead] = useState(() => searchParams.get("lead"))
+  const user = useUser()
+  const qc = useQueryClient()
 
-  const [userInfo, setUserInfo]         = useState<UserInfo | null>(null)
-  const [rows, setRows]                 = useState<SalesLead[]>([])
-  const [loading, setLoading]           = useState(true)
   const [selectedId, setSelectedId]     = useState<string | null>(initialLead)
   const [drawerOpen, setDrawerOpen]     = useState(false)
   const [editing, setEditing]           = useState<SalesLead | null>(null)
   const [flash, setFlash]               = useState<Flash | null>(null)
   const [convertingId, setConvertingId] = useState<string | null>(null)
   const [updatingId, setUpdatingId]     = useState<string | null>(null)
+  const [resetToken, setResetToken]     = useState(0)
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) return
-      const { data } = await supabase
-        .from("user_profiles")
-        .select("role, salesperson, company")
-        .eq("id", user.id)
-        .single()
-      setUserInfo({
-        role:        data?.role ?? "sales",
-        salesperson: data?.salesperson ?? null,
-        company:     data?.company ?? "manilal",
-        email:       user.email ?? null,
-      })
-    })
-  }, [])
-
-  // Initial load shows skeletons; later refreshes keep the current view on screen.
-  const fetchLeads = useCallback(async () => {
-    try {
-      const res  = await fetch("/api/sales-leads")
-      const data = await res.json()
-      setRows(Array.isArray(data) ? data : [])
-    } catch {
-      // keep whatever is already on screen; the first load simply stays empty
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => { fetchLeads() }, [fetchLeads])
 
   useEffect(() => () => { if (flashTimer.current) clearTimeout(flashTimer.current) }, [])
 
@@ -88,7 +56,7 @@ function SalesLeadsPageContent() {
           ? `${lead.shipper ?? "Lead"} is already linked to a contact.`
           : `${lead.shipper ?? "Lead"} converted to contact.`
       )
-      fetchLeads()
+      void invalidateLeads(qc)
     } catch (err) {
       showFlash(err instanceof Error ? err.message : "Conversion failed", "error")
     } finally {
@@ -100,7 +68,7 @@ function SalesLeadsPageContent() {
     const label = LEAD_STATUS_MAP[status]?.label ?? status
     setUpdatingId(lead.id)
     // Optimistic: show the new status right away, roll back if the PATCH fails
-    setRows((prev) => prev.map((r) => (r.id === lead.id ? { ...r, status } : r)))
+    patchLeadInCache(qc, lead.id, { status })
     try {
       const res = await fetch(`/api/sales-leads/${lead.id}`, {
         method: "PATCH",
@@ -111,11 +79,11 @@ function SalesLeadsPageContent() {
       if (!res.ok) throw new Error(data.error ?? "Status update failed")
       showFlash(`${lead.shipper ?? "Lead"} marked ${label}.`)
     } catch (err) {
-      setRows((prev) => prev.map((r) => (r.id === lead.id ? { ...r, status: lead.status } : r)))
+      patchLeadInCache(qc, lead.id, { status: lead.status })
       showFlash(err instanceof Error ? err.message : "Status update failed", "error")
     } finally {
       setUpdatingId(null)
-      fetchLeads()
+      void invalidateLeads(qc)
     }
   }
 
@@ -123,19 +91,19 @@ function SalesLeadsPageContent() {
     setDrawerOpen(false)
     setEditing(null)
     showFlash(isEdit ? "Lead updated." : `Lead created${refCode ? ` — ${refCode}` : ""}.`)
-    await fetchLeads()
+    await invalidateLeads(qc)
+    if (!isEdit) setResetToken((t) => t + 1) // new lead sits at the top of the unfiltered list
     if (id) selectLead(String(id))
   }
 
   return (
     <div className="relative h-full min-h-0">
       <SalesLeadWorkspace
-        rows={rows}
-        loading={loading}
-        company={userInfo?.company}
+        company={user?.company}
         selectedId={selectedId}
         onSelect={selectLead}
         initialMobileDetail={!!initialLead}
+        resetToken={resetToken}
         onNew={() => { setEditing(null); setDrawerOpen(true) }}
         onEdit={(lead) => { setEditing(lead); setDrawerOpen(true) }}
         onConvert={handleConvert}
@@ -161,9 +129,9 @@ function SalesLeadsPageContent() {
       <LeadFormDrawer
         open={drawerOpen}
         editing={editing}
-        defaultSalesPerson={userInfo?.salesperson ?? undefined}
-        defaultSenderEmail={userInfo?.email ?? undefined}
-        company={userInfo?.company}
+        defaultSalesPerson={user?.salesperson ?? undefined}
+        defaultSenderEmail={user?.email ?? undefined}
+        company={user?.company}
         onSuccess={handleSuccess}
         onClose={() => { setDrawerOpen(false); setEditing(null) }}
       />

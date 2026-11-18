@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getAuthContext } from "@/lib/api-auth"
 import { getPool } from "@/lib/mssql/client"
-import { ensureContactsTable } from "@/lib/mssql/contacts"
+import sql from "mssql"
+import {
+  ensureContactsTable, ensureContactsTableOnce, contactsCombinedSql, contactsPagedFrom,
+  contactsCountsSql, contactsFilterWhere, escapeLike, readDeadFilter,
+} from "@/lib/mssql/contacts"
+import { pagedQuery, readPaging, readSearch } from "@/lib/mssql/paginate"
 
 type ContactRow = {
   shipper_name:   string
@@ -19,128 +24,71 @@ export async function GET(req: NextRequest) {
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const isAdmin = auth.role === "admin"
+  const params  = req.nextUrl.searchParams
 
   try {
     const pool = await getPool(auth.company)
-    await ensureContactsTable(pool)
+    // DDL/existence checks run once per company per process (not per request).
+    await ensureContactsTableOnce(pool, auth.company)
 
-    const request = pool.request()
-
-    // ── Role-based WHERE fragments ───────────────────────────────────────────
-    // TBL_CONTACTS.CREATED_BY was stored as email; match BOTH email + userId
-    // to cover any format variation in older rows.
-    // TBL_CALLS_VISITS.CREATED_BY stores the Supabase UUID.
-    let part1Where       = ""   // appended after the JOINs in Part 1
-    let part2WhereExtra  = ""   // appended inside Part 2 WHERE
-    let part2NotInExtra  = ""   // extra condition inside the NOT IN sub-SELECT
-
-    if (!isAdmin) {
-      request.input("userEmail", auth.email)
-      request.input("userId",    auth.userId)
-
-      part1Where      = "AND (c.CREATED_BY = @userEmail OR c.CREATED_BY = @userId)"
-      part2WhereExtra = "AND cv.CREATED_BY = @userId"
-      part2NotInExtra = "AND (CREATED_BY = @userEmail OR CREATED_BY = @userId)"
+    const bindRole = (r: sql.Request) => {
+      if (!isAdmin) {
+        r.input("userEmail", auth.email)
+        r.input("userId",    auth.userId)
+      }
+      return r
     }
 
-    // ── Main query ───────────────────────────────────────────────────────────
-    // Part 1 is wrapped in a subquery so ROW_NUMBER can be filtered before
-    // the UNION — avoids MSSQL 2008 issues with windowed cols in outer WHERE.
-    const result = await request.query(`
+    // ── Legacy mode (no `page`): full list as a bare array ──────────────────
+    if (!params.has("page")) {
+      const result = await bindRole(pool.request()).query(`
+        SELECT * FROM (${contactsCombinedSql(isAdmin)}) combined
+        ORDER BY is_dead_lead ASC, created_at DESC, id ASC
+      `)
+      return NextResponse.json(result.recordset)
+    }
 
-      SELECT
-        id, shipper_name, consignee_name, mode, pol, pod,
-        contact_person, contact_number, email,
-        source, activity_count, last_activity_date,
-        created_by, created_at, is_dead_lead, stage
-      FROM (
+    // ── Paged mode: one statement returns the page, the filtered total and
+    //    the whole-set header counts (computed before the filter). ──────────
+    const { page, limit } = readPaging(params)
+    const q    = readSearch(params)
+    const dead = readDeadFilter(params.get("dead"))
 
-        -- ── Part 1: deduplicated Excel-imported contacts ──────────────────
-        SELECT
-          id, shipper_name, consignee_name, mode, pol, pod,
-          contact_person, contact_number, email,
-          source, activity_count, last_activity_date,
-          created_by, created_at, is_dead_lead, stage
-        FROM (
-          SELECT
-            'c_' + CAST(c.ID AS varchar(20))             AS id,
-            ISNULL(c.SHIPPER_NAME,   '')                  AS shipper_name,
-            ISNULL(c.CONSIGNEE_NAME, '')                  AS consignee_name,
-            ISNULL(c.[MODE],         '')                  AS mode,
-            ISNULL(c.POL,            '')                  AS pol,
-            ISNULL(c.POD,            '')                  AS pod,
-            ISNULL(c.CONTACT_PERSON, '')                  AS contact_person,
-            ISNULL(c.CONTACT_NUMBER, '')                  AS contact_number,
-            ISNULL(c.EMAIL,          '')                  AS email,
-            'contact'                                     AS source,
-            ISNULL(act.cnt, 0)                            AS activity_count,
-            act.last_date                                 AS last_activity_date,
-            ISNULL(c.CREATED_BY, '')                      AS created_by,
-            CONVERT(varchar(10), c.CREATED_AT, 120)       AS created_at,
-            ISNULL(f.IS_DEAD_LEAD, 0)                     AS is_dead_lead,
-            ISNULL(c.STAGE, 'CONTACT')                    AS stage,
-            ROW_NUMBER() OVER (
-              PARTITION BY LOWER(RTRIM(LTRIM(ISNULL(c.SHIPPER_NAME, '')))),
-                           ISNULL(c.CREATED_BY, '')
-              ORDER BY c.ID DESC
-            ) AS rn
-          FROM [dbo].[TBL_CONTACTS] c
-          LEFT JOIN (
-            SELECT
-              LOWER(RTRIM(LTRIM(CLIENT_NAME)))               AS cname,
-              COUNT(*)                                       AS cnt,
-              CONVERT(varchar(10), MAX(ACTIVITY_DATE), 120)  AS last_date
-            FROM [dbo].[TBL_CALLS_VISITS]
-            WHERE CLIENT_NAME IS NOT NULL AND CLIENT_NAME != ''
-            GROUP BY LOWER(RTRIM(LTRIM(CLIENT_NAME)))
-          ) act ON LOWER(RTRIM(LTRIM(c.SHIPPER_NAME))) = act.cname
-          LEFT JOIN [dbo].[TBL_CONTACT_FLAGS] f
-            ON LOWER(RTRIM(LTRIM(c.SHIPPER_NAME))) = f.CLIENT_NAME_LOWER
-          WHERE c.SHIPPER_NAME IS NOT NULL AND c.SHIPPER_NAME != ''
-            ${part1Where}
-        ) deduped
-        WHERE rn = 1
+    const request = bindRole(pool.request())
+    if (q) request.input("q", `%${escapeLike(q.toLowerCase())}%`)
 
-        UNION ALL
+    const { rows, total } = await pagedQuery<Record<string, unknown>>(request, {
+      select:  "x.*",
+      from:    contactsPagedFrom(isAdmin),
+      where:   contactsFilterWhere(dead, !!q),
+      orderBy: "x.is_dead_lead ASC, x.created_at DESC, x.id ASC",
+      page, limit,
+    })
 
-        -- ── Part 2: activity-tracker clients not in TBL_CONTACTS ─────────
-        SELECT
-          'a_' + CAST(
-            ROW_NUMBER() OVER (ORDER BY MAX(cv.CREATED_AT) DESC)
-          AS varchar(20))                                   AS id,
-          MAX(cv.CLIENT_NAME)                               AS shipper_name,
-          ''                                                AS consignee_name,
-          ISNULL(MAX(cv.[MODE]), '')                        AS mode,
-          ISNULL(MAX(cv.POL),    '')                        AS pol,
-          ISNULL(MAX(cv.POD),    '')                        AS pod,
-          ISNULL(MAX(cv.CONTACT_PERSON), '')                AS contact_person,
-          ISNULL(MAX(cv.CONTACT_NUMBER), '')                AS contact_number,
-          ISNULL(MAX(cv.EMAIL),          '')                AS email,
-          'activity'                                        AS source,
-          COUNT(*)                                          AS activity_count,
-          CONVERT(varchar(10), MAX(cv.ACTIVITY_DATE), 120)  AS last_activity_date,
-          ISNULL(MAX(cv.CREATED_BY), '')                    AS created_by,
-          CONVERT(varchar(10), MIN(cv.CREATED_AT), 120)     AS created_at,
-          ISNULL(MAX(CAST(f2.IS_DEAD_LEAD AS tinyint)), 0)    AS is_dead_lead,
-          'CONTACT'                                         AS stage
-        FROM [dbo].[TBL_CALLS_VISITS] cv
-        LEFT JOIN [dbo].[TBL_CONTACT_FLAGS] f2
-          ON LOWER(RTRIM(LTRIM(cv.CLIENT_NAME))) = f2.CLIENT_NAME_LOWER
-        WHERE cv.CLIENT_NAME IS NOT NULL AND cv.CLIENT_NAME != ''
-          ${part2WhereExtra}
-          AND LOWER(RTRIM(LTRIM(cv.CLIENT_NAME))) NOT IN (
-            SELECT LOWER(RTRIM(LTRIM(ISNULL(SHIPPER_NAME, ''))))
-            FROM [dbo].[TBL_CONTACTS]
-            WHERE SHIPPER_NAME IS NOT NULL AND SHIPPER_NAME != ''
-              ${part2NotInExtra}
-          )
-        GROUP BY LOWER(RTRIM(LTRIM(cv.CLIENT_NAME)))
+    let counts: { imported: number; activity: number; dead: number; active: number }
+    if (rows.length) {
+      const r0       = rows[0]
+      const imported = Number(r0.__imported ?? 0)
+      const activity = Number(r0.__activity ?? 0)
+      const deadN    = Number(r0.__dead ?? 0)
+      counts = { imported, activity, dead: deadN, active: imported + activity - deadN }
+    } else {
+      // Empty page (no match / past the end): counts need their own query.
+      const c  = await bindRole(pool.request()).query(contactsCountsSql(isAdmin))
+      const r0 = c.recordset[0] ?? {}
+      const imported = Number(r0.imported ?? 0)
+      const activity = Number(r0.activity ?? 0)
+      const deadN    = Number(r0.dead ?? 0)
+      counts = { imported, activity, dead: deadN, active: imported + activity - deadN }
+    }
 
-      ) combined
-      ORDER BY is_dead_lead ASC, created_at DESC
-    `)
+    const data = rows.map((r) => {
+      const { __imported, __activity, __dead, ...rest } = r
+      void __imported; void __activity; void __dead
+      return rest
+    })
 
-    return NextResponse.json(result.recordset)
+    return NextResponse.json({ data, total, page, limit, counts })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error("[contacts GET]", msg)
