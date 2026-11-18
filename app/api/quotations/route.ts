@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getAuthContext } from "@/lib/api-auth"
 import { getPool, sql, friendlyDbError } from "@/lib/mssql/client"
+import { quotLengthError } from "@/lib/quotation-limits"
 import { generateQuotRefNo, generateLinkedQuotRefNo } from "@/lib/mssql/quot-ref"
 import { pagedQuery, readPaging, readSearch } from "@/lib/mssql/paginate"
 import { buildLocalBlob, buildCcBlob } from "@/lib/quotation-charges"
@@ -77,6 +78,10 @@ export async function POST(req: NextRequest) {
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const body = await req.json()
+
+  const lengthError = quotLengthError(body)
+  if (lengthError) return NextResponse.json({ error: lengthError }, { status: 400 })
+
   const { company, salesperson, email } = auth
   const pool = await getPool(company)
 
