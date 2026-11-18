@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Combobox } from "@/components/ui/combobox"
+import { QUOT_TEXT_LIMITS } from "@/lib/quotation-limits"
 import { cn } from "@/lib/utils"
 import {
   MANILAL_SALES_PERSONS,
@@ -1597,7 +1598,7 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
 
           <div className="space-y-1">
             <Label>Shipper</Label>
-            <Input value={form.shipper} onChange={(e) => set("shipper", e.target.value)} placeholder="Shipper name" />
+            <Input value={form.shipper} onChange={(e) => set("shipper", e.target.value)} maxLength={QUOT_TEXT_LIMITS.shipper.max} placeholder="Shipper name" />
           </div>
 
           <div className="space-y-1">
@@ -1712,7 +1713,7 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
             <div className="space-y-1">
               <Label>Shipping Line / Carrier</Label>
-              <Input value={form.shipping_line} onChange={(e) => set("shipping_line", e.target.value)} placeholder="e.g. MSC, COSCO, PIL" />
+              <Input value={form.shipping_line} onChange={(e) => set("shipping_line", e.target.value)} maxLength={QUOT_TEXT_LIMITS.shipping_line.max} placeholder="e.g. MSC, COSCO, PIL" />
             </div>
             <div className="space-y-1">
               <Label>Quoted Rate</Label>
@@ -1727,7 +1728,7 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
             </div>
             <div className="space-y-1">
               <Label>Vessel Name</Label>
-              <Input value={form.vessel_name} onChange={(e) => set("vessel_name", e.target.value)} placeholder="Vessel name" />
+              <Input value={form.vessel_name} onChange={(e) => set("vessel_name", e.target.value)} maxLength={QUOT_TEXT_LIMITS.vessel_name.max} placeholder="Vessel name" />
             </div>
             <div className="space-y-1">
               <Label>ETD at Origin</Label>
@@ -1739,11 +1740,11 @@ export function QuotationForm({ company, editingQuotation, ratePrefill, prefille
             </div>
             <div className="space-y-1">
               <Label>Transit Time</Label>
-              <Input value={form.transit_time} onChange={(e) => set("transit_time", e.target.value)} placeholder="e.g. 14 days" />
+              <Input value={form.transit_time} onChange={(e) => set("transit_time", e.target.value)} maxLength={QUOT_TEXT_LIMITS.transit_time.max} placeholder="e.g. 14 days" />
             </div>
             <div className="space-y-1">
               <Label>Free Time</Label>
-              <Input value={form.free_time} onChange={(e) => set("free_time", e.target.value)} placeholder="e.g. 7 days" />
+              <Input value={form.free_time} onChange={(e) => set("free_time", e.target.value)} maxLength={QUOT_TEXT_LIMITS.free_time.max} placeholder="e.g. 7 days" />
             </div>
             <div className="space-y-1">
               <Label>Routing</Label>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getAuthContext } from "@/lib/api-auth"
 import { getPool, sql } from "@/lib/mssql/client"
 import { buildLocalBlob, buildCcBlob, parseLocalBlob, parseCcBlob } from "@/lib/quotation-charges"
+import { quotLengthError } from "@/lib/quotation-limits"
 
 // ─── GET — single quotation ───────────────────────────────────
 
@@ -66,6 +67,10 @@ export async function PATCH(
 
   const { id } = await params
   const body = await req.json()
+
+  const lengthError = quotLengthError(body)
+  if (lengthError) return NextResponse.json({ error: lengthError }, { status: 400 })
+
   const pool = await getPool(auth.company)
 
   try {
